@@ -78,7 +78,7 @@ require_once __DIR__ . '/../layout/main.php';
                                     <a href="<?php echo BASE_URL; ?>clientes/editar?id=<?php echo htmlspecialchars($cliente['id']); ?>" class="btn btn-info btn-sm" title="Editar Cliente">
                                         ✏️ Editar
                                     </a>
-                                    <a href="<?php echo BASE_URL; ?>ordens?cliente_id=<?php echo htmlspecialchars($cliente['id']); ?>" class="btn btn-success btn-sm" title="Ver Ordens de Serviço">
+                                    <a href="<?php echo BASE_URL; ?>clientes/view?id=<?php echo htmlspecialchars($cliente['id']); ?>" class="btn btn-success btn-sm" title="Ver Ordens de Serviço">
                                         📋 Ordens
                                     </a>
                                     <form action="<?php echo BASE_URL; ?>clientes/deletar" method="POST" style="display: inline;" onsubmit="return confirm('⚠️ Tem certeza que deseja deletar este cliente? Esta ação não pode ser desfeita.');>

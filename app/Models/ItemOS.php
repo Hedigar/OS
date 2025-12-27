@@ -6,30 +6,24 @@ use App\Core\Model;
 
 class ItemOS extends Model
 {
-    protected $table = 'itens_os';
+    protected $table = 'itens_ordem_servico';
 
-    /**
-     * Retorna todos os itens de uma Ordem de Serviço.
-     * @param int $osId ID da Ordem de Serviço
-     * @return array
-     */
-    public function findByOsId(int $osId)
+    public function findByOsId(int $ordemServicoId): array
     {
-        $sql = "SELECT * FROM {$this->table} WHERE os_id = :os_id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['os_id' => $osId]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-    }
+        try {
+            $sql = "SELECT *
+                    FROM {$this->table}
+                    WHERE ordem_servico_id = :ordem_servico_id
+                    ORDER BY id ASC";
 
-    /**
-     * Deleta todos os itens de uma Ordem de Serviço.
-     * @param int $osId ID da Ordem de Serviço
-     * @return bool
-     */
-    public function deleteByOsId(int $osId): bool
-    {
-        $sql = "DELETE FROM {$this->table} WHERE os_id = :os_id";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['os_id' => $osId]);
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':ordem_servico_id', $ordemServicoId);
+            $stmt->execute();
+
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\PDOException $e) {
+            error_log('Erro ao buscar itens da OS: ' . $e->getMessage());
+            return [];
+        }
     }
 }

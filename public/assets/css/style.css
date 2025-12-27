@@ -455,6 +455,21 @@ textarea {
   transform: translateY(-2px);
 }
 
+/* Botão Aviso / Warning (visível em fundo escuro) */
+.btn-warning {
+  background: linear-gradient(135deg, #ffd27a 0%, var(--warning) 100%);
+  color: #111;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 6px 16px rgba(243,156,18,0.18);
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, #f39c12 0%, #d98209 100%);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
 /* Botão Pequeno */
 .btn-sm {
   padding: 0.5rem 1rem;
@@ -740,4 +755,39 @@ tbody tr:last-child td {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-red-light);
+}
+
+
+/* ========================================
+   REGRAS DE IMPRESSÃO
+   ======================================== */
+@media print {
+    /* Esconde elementos de navegação e interface apenas na impressão */
+    header, 
+    nav, 
+    footer, 
+    .sidebar, 
+    .btn, 
+    .no-print {
+        display: none !important;
+    }
+
+    /* Ajusta o corpo da página para impressão */
+    body {
+        background-color: #fff !important;
+        color: #000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Garante que o conteúdo principal ocupe toda a largura */
+    .main-wrapper {
+        display: block !important;
+    }
+    
+    .content {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
 }

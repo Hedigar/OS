@@ -1,152 +1,233 @@
 <?php
-// Não inclui o layout principal para ter uma página limpa para impressão
+/**
+ * ESTA PÁGINA É TOTALMENTE ISOLADA.
+ * O CSS ABAIXO AFETA APENAS ESTA PÁGINA DE IMPRESSÃO.
+ */
 $ordem = $ordem ?? [];
-$itens = $itens ?? [];
-
-// Função auxiliar para formatar moeda
-function formatCurrency($value) {
-    return 'R$ ' . number_format($value, 2, ',', '.');
-}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Imprimir OS #<?php echo htmlspecialchars($ordem['id']); ?></title>
+    <title>Impressão OS #<?php echo $ordem['id'] ?? ''; ?></title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #000; background-color: #fff; }
-        .os-container { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e74c3c; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { color: #e74c3c; font-size: 1.5em; margin: 0; }
-        .header p { font-size: 0.9em; margin: 0; }
-        .section-title { font-size: 1.1em; color: #e74c3c; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px; }
-        .details-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
-        .details-grid div { padding: 5px 0; }
-        .details-grid div strong { display: block; font-size: 0.8em; color: #555; }
-        .details-grid div span { font-size: 0.9em; color: #000; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; }
-        th { background-color: #f2f2f2; color: #333; }
-        .totals-table { width: 50%; float: right; margin-top: 10px; }
-        .totals-table td { border: none; padding: 5px 8px; }
-        .totals-table tr:last-child td { border-top: 2px solid #e74c3c; font-weight: bold; font-size: 1em; }
-        .notes { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; }
-        .notes p { font-size: 0.85em; white-space: pre-wrap; }
-        @media print { .os-container { border: none; padding: 0; } .no-print { display: none; } }
+        /* CSS RESET ESPECÍFICO PARA ESTA PÁGINA */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important; /* Fundo sempre branco */
+            color: #000000 !important; /* Texto sempre preto */
+            font-family: Arial, Helvetica, sans-serif !important;
+            font-size: 12px !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* CONTAINER DA FOLHA A4 */
+        .folha-a4 {
+            width: 190mm;
+            margin: 0 auto;
+            background: #fff;
+        }
+
+        /* CADA VIA DA OS (METADE DA FOLHA) */
+        .via-os {
+            height: 138mm;
+            padding: 5mm;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #eee; /* Borda leve apenas para visualização na tela */
+            margin-bottom: 2mm;
+        }
+
+        @media print {
+            .via-os {
+                border: none; /* Remove borda na impressão */
+            }
+        }
+
+        /* LINHA DE CORTE */
+        .linha-corte {
+            border-top: 1px dashed #000;
+            margin: 5mm 0;
+            position: relative;
+            text-align: center;
+        }
+        
+        .linha-corte:after {
+            content: "✂ Corte aqui";
+            position: absolute;
+            top: -10px;
+            background: #fff;
+            padding: 0 10px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        /* CABEÇALHO */
+        .header-print {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #000;
+            padding-bottom: 3mm;
+            margin-bottom: 5mm;
+        }
+
+        .empresa-nome {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .os-numero {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* BLOCOS DE DADOS */
+        .secao {
+            margin-bottom: 4mm;
+        }
+
+        .secao-titulo {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            background: #f2f2f2 !important;
+            padding: 1mm 2mm;
+            border: 1px solid #000;
+            display: block;
+            margin-bottom: 2mm;
+        }
+
+        .dados-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2mm;
+            padding: 0 2mm;
+        }
+
+        .dado-item {
+            margin-bottom: 1mm;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        /* TEXTO LEGAL */
+        .termos {
+            font-size: 9px;
+            text-align: justify;
+            line-height: 1.2;
+            margin-top: 5mm;
+            padding: 0 2mm;
+        }
+
+        /* ASSINATURAS */
+        .assinaturas-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8mm;
+            padding: 0 5mm;
+        }
+
+        .campo-assinatura {
+            width: 45%;
+            text-align: center;
+            border-top: 1px solid #000;
+            padding-top: 1mm;
+            font-size: 10px;
+        }
+
+        /* UTILITÁRIOS */
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
     </style>
 </head>
-<body onload="window.print()">
-    <div class="os-container">
-        <div class="header">
+<body>
+
+<div class="folha-a4">
+    <?php for ($i = 0; $i < 2; $i++): ?>
+    <div class="via-os">
+        <div class="header-print">
             <div>
-                <h1>ORDEM DE SERVIÇO</h1>
-                <p>Nº: <?php echo htmlspecialchars($ordem['id']); ?></p>
+                <div class="empresa-nome">Myranda Informática</div>
+                <div style="font-size: 10px;">
+                    CNPJ: 13.558.678/0001-36<br>
+                    Av. Getúlio Vargas, 1144 - Centro - Osório/RS<br>
+                    Fone: (51) 3663-6445 | WhatsApp: (51) 98359-1567
+                </div>
             </div>
-            <div>
-                <p>Data de Abertura: <?php echo date('d/m/Y H:i', strtotime($ordem['created_at'])); ?></p>
-                <p>Status: <span style="color: <?php echo htmlspecialchars($ordem['status_cor']); ?>; font-weight: bold;"><?php echo htmlspecialchars($ordem['status_nome']); ?></span></p>
+            <div class="text-right">
+                <div class="os-numero">O.S. #<?php echo str_pad($ordem['id'] ?? '', 5, '0', STR_PAD_LEFT); ?></div>
+                <div class="bold">Data: <?php echo isset($ordem['created_at']) ? date('d/m/Y H:i', strtotime($ordem['created_at'])) : date('d/m/Y H:i'); ?></div>
+                <div style="font-size: 11px; margin-top: 2mm;">Via: <?php echo ($i === 0) ? 'EMPRESA' : 'CLIENTE'; ?></div>
             </div>
         </div>
 
-        <div class="section-title">DADOS DO CLIENTE</div>
-        <div class="details-grid">
-            <div>
-                <strong>Nome:</strong>
-                <span><?php echo htmlspecialchars($ordem['cliente_nome']); ?></span>
-            </div>
-            <div>
-                <strong>Telefone:</strong>
-                <span><?php echo htmlspecialchars($ordem['cliente_telefone'] ?? 'N/A'); ?></span>
-            </div>
-            <div>
-                <strong>Documento:</strong>
-                <span><?php echo htmlspecialchars($ordem['cliente_documento'] ?? 'N/A'); ?></span>
+        <div class="secao">
+            <span class="secao-titulo">Dados do Cliente</span>
+            <div class="dados-grid">
+                <div class="dado-item"><span class="label">Cliente:</span> <?php echo $ordem['cliente_nome'] ?? ''; ?></div>
+                <div class="dado-item"><span class="label">CPF/CNPJ:</span> <?php echo $ordem['cliente_documento'] ?? ''; ?></div>
+                <div class="dado-item"><span class="label">Telefone:</span> <?php echo $ordem['cliente_telefone'] ?? ''; ?></div>
+                <div class="dado-item"><span class="label">Atendente:</span> <?php echo $ordem['atendente_nome'] ?? ''; ?></div>
             </div>
         </div>
 
-        <div class="section-title">DETALHES DO EQUIPAMENTO</div>
-        <div class="details-grid" style="grid-template-columns: 1fr 1fr 1fr;">
-            <div>
-                <strong>Tipo:</strong>
-                <span><?php echo htmlspecialchars($ordem['equipamento_tipo'] ?? 'N/A'); ?></span>
-            </div>
-            <div>
-                <strong>Marca / Modelo:</strong>
-                <span><?php echo htmlspecialchars($ordem['equipamento_marca'] ?? 'N/A'); ?> / <?php echo htmlspecialchars($ordem['equipamento_modelo'] ?? 'N/A'); ?></span>
-            </div>
-            <div>
-                <strong>Serial / Senha:</strong>
-                <span><?php echo htmlspecialchars($ordem['equipamento_serial'] ?? 'N/A'); ?> / <?php echo htmlspecialchars($ordem['equipamento_senha'] ?? 'N/A'); ?></span>
-            </div>
-            <div style="grid-column: 1 / -1;">
-                <strong>Acessórios Deixados:</strong>
-                <span><?php echo htmlspecialchars($ordem['equipamento_acessorios'] ?? 'Nenhum'); ?></span>
-            </div>
-            <div>
-                <strong>Fonte de Alimentação:</strong>
-                <span><?php echo ($ordem['equipamento_fonte'] == 1 ? 'Deixou' : 'Não Deixou'); ?></span>
+        <div class="secao">
+            <span class="secao-titulo">Informações do Equipamento</span>
+            <div class="dados-grid">
+                <div class="dado-item"><span class="label">Equipamento:</span> <?php echo $ordem['equipamento_tipo'] ?? ''; ?></div>
+                <div class="dado-item"><span class="label">Marca/Modelo:</span> <?php echo $ordem['equipamento_marca'] ?? ''; ?></div>
+                <div class="dado-item"><span class="label">Fonte:</span> <?php echo ($ordem['equipamento_fonte'] ?? 0) ? 'Sim' : 'Não'; ?></div>
+                <div class="dado-item"><span class="label">Garantia:</span> <?php echo ($ordem['equipamento_garantia'] ?? 0) ? 'Sim' : 'Não'; ?></div>
+                <div class="dado-item"><span class="label">Senha:</span> <?php echo $ordem['equipamento_senha'] ?? 'N/A'; ?></div>
             </div>
         </div>
 
-        <div class="section-title">DEFEITO E LAUDO</div>
-        <div class="details-grid" style="grid-template-columns: 1fr 1fr;">
-            <div>
-                <strong>Defeito Relatado:</strong>
-                <p style="margin: 5px 0;"><?php echo nl2br(htmlspecialchars($ordem['defeito_relatado'])); ?></p>
-            </div>
-            <div>
-                <strong>Laudo Técnico:</strong>
-                <p style="margin: 5px 0;"><?php echo nl2br(htmlspecialchars($ordem['laudo_tecnico'] ?? 'Aguardando análise.')); ?></p>
+        <div class="secao">
+            <span class="secao-titulo">Problema Relatado</span>
+            <div style="padding: 0 2mm; min-height: 12mm;">
+                <?php echo nl2br($ordem['defeito_relatado'] ?? 'Não informado'); ?>
             </div>
         </div>
 
-        <?php if (!empty($itens)): ?>
-        <div class="section-title">ITENS (PRODUTOS E SERVIÇOS)</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Descrição</th>
-                    <th style="text-align: right;">Qtd</th>
-                    <th style="text-align: right;">Vlr Unit.</th>
-                    <th style="text-align: right;">Vlr Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($itens as $item): ?>
-                    <tr>
-                        <td><?php echo ucfirst($item['tipo_item'] ?? $item['tipo']); ?></td>
-                        <td><?php echo htmlspecialchars($item['descricao']); ?></td>
-                        <td style="text-align: right;"><?php echo htmlspecialchars($item['quantidade']); ?></td>
-                        <td style="text-align: right;"><?php echo formatCurrency($item['valor_unitario']); ?></td>
-                        <td style="text-align: right;"><?php echo formatCurrency($item['valor_total']); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div class="termos">
+            * Será cobrado R$ 100,00 (HORA TÉCNICA) caso o orçamento não seja autorizado.
+            * Não nos responsabilizamos por software ou origem dos equipamentos.
+            * Retirada apenas com esta OS ou documento do proprietário.
+            * Equipamentos não retirados em 30 dias terão taxa de R$ 2,00/dia. Após 90 dias, serão considerados abandonados.
+        </div>
 
-        <table class="totals-table">
-            <tr>
-                <td style="text-align: right;">TOTAL GERAL:</td>
-                <td style="text-align: right;"><?php echo formatCurrency($ordem['valor_total_os']); ?></td>
-            </tr>
-        </table>
-        <?php endif; ?>
-
-        <div style="clear: both;"></div>
-
-        <div class="notes">
-            <div style="width: 48%; float: left;">
-                <p style="font-weight: bold;">Assinatura do Cliente:</p>
-                <div style="border-bottom: 1px solid #000; height: 40px;"></div>
-            </div>
-            <div style="width: 48%; float: right;">
-                <p style="font-weight: bold;">Assinatura do Técnico:</p>
-                <div style="border-bottom: 1px solid #000; height: 40px;"></div>
-            </div>
-            <div style="clear: both;"></div>
+        <div class="assinaturas-area">
+            <div class="campo-assinatura">Data: ____/____/____</div>
+            <div class="campo-assinatura">Assinatura</div>
         </div>
     </div>
+
+    <?php if ($i === 0): ?>
+        <div class="linha-corte"></div>
+    <?php endif; ?>
+
+    <?php endfor; ?>
+</div>
+
+<script>
+    window.onload = function() {
+        window.print();
+        // window.onafterprint = function() { window.close(); };
+    }
+</script>
 </body>
 </html>

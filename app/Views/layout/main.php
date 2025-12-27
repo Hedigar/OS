@@ -32,6 +32,12 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'usuarios') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>usuarios">👤 Usuários</a>
                 </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'despesas') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>despesas">💰 Despesas</a>
+                </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'configuracoes') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>configuracoes">⚙️ Configurações</a>
+                </li>
             </ul>
         </nav>
 

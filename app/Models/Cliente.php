@@ -8,18 +8,6 @@ class Cliente extends Model
 {
     protected $table = 'clientes';
 
-    // Métodos específicos para Cliente podem ser adicionados aqui
-
-    public function getTable()
-    {
-        return $this->table;
-    }
-
-    public function getConnection()
-    {
-        return $this->db;
-    }
-
     /**
      * Busca clientes por nome ou documento.
      * @param string $termo
@@ -27,11 +15,25 @@ class Cliente extends Model
      */
     public function buscarPorTermo(string $termo): array
     {
-        $termo = "%" . $termo . "%";
-        $sql = "SELECT id, nome_completo, documento FROM {$this->table} WHERE nome_completo LIKE :termo OR documento LIKE :termo";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam(':termo', $termo);
-        $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        try {
+            $termoLike = "%" . $termo . "%";
+            // Query simplificada para evitar erros de colunas inexistentes
+            $sql = "SELECT id, nome_completo, documento, telefone_principal 
+                    FROM {$this->table} 
+                    WHERE nome_completo LIKE :termo 
+                    OR documento LIKE :termo 
+                    LIMIT 10";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':termo', $termoLike);
+            $stmt->execute();
+            
+            $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            return $results ?: [];
+        } catch (\PDOException $e) {
+            // Em caso de erro, retorna um array vazio ou loga o erro
+            error_log("Erro na busca de cliente: " . $e->getMessage());
+            return [];
+        }
     }
 }

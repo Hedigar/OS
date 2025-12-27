@@ -16,17 +16,17 @@
 
         .login-container {
             width: 100%;
-            max-width: 420px;
-            padding: 2rem;
+            max-width: 760px;
+            padding: 1.5rem;
         }
 
         .login-card {
             background-color: var(--dark-secondary);
             border: 1px solid var(--dark-tertiary);
             border-radius: 12px;
-            padding: 2.5rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            animation: slideUp 0.5s ease-out;
+            padding: 2rem;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+            animation: slideUp 0.45s ease-out;
         }
 
         @keyframes slideUp {
@@ -46,18 +46,16 @@
         }
 
         .login-header h1 {
-            font-size: 2rem;
-            background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-light) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .login-header p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            margin: 0;
+            display: none;
         }
 
         .login-form {

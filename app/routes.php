@@ -12,6 +12,10 @@ $router->get('logout', 'AuthController@logout');
 
 // Rotas Protegidas (Dashboard)
 $router->get('dashboard', 'DashboardController@index');
+// Configurações
+$router->get('configuracoes', 'ConfiguracoesController@index');
+// Despesas
+$router->get('despesas', 'DespesasController@index');
 
 // Rotas CRUD de Clientes (Exemplo)
 $router->get('usuarios', 'UsuarioController@index');
@@ -29,7 +33,7 @@ $router->get('ordens/view', 'OrdemServicoController@showView'); // Visualizar OS
 $router->get('ordens/print', 'OrdemServicoController@printOS'); // Imprimir OS
 $router->post('ordens/deletar', 'OrdemServicoController@destroy');
 $router->get('ordens/search-client', 'OrdemServicoController@searchClient'); // Busca de cliente para Autocomplete na OS
-$router->get('ordens/search-equipamentos', 'OrdemServicoController@searchPreviousEquipments');
+$router->get('ordens/search-equipamentos', 'OrdemServicoController@searchEquipamentos');
 $router->get('clientes', 'ClienteController@index');
 $router->get('clientes/criar', 'ClienteController@create');
 $router->post('clientes/salvar', 'ClienteController@store');

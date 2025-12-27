@@ -61,10 +61,13 @@ body {
    ======================================== */
 
 .header {
-  background: linear-gradient(135deg, var(--dark-secondary) 0%, var(--dark-tertiary) 100%);
-  border-bottom: 2px solid var(--primary-red);
+  background:
+    linear-gradient(135deg, rgba(0,0,0,0.06), rgba(255,255,255,0.02)),
+    linear-gradient(135deg, var(--primary-red-dark) 0%, var(--primary-red) 60%, var(--primary-red-light) 100%);
+  background-blend-mode: overlay, normal;
+  border-bottom: 1px solid rgba(0,0,0,0.18);
   padding: 1rem 0;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -79,18 +82,26 @@ body {
   padding: 0 2rem;
 }
 
+.header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+  pointer-events: none;
+}
+
 .header span {
   font-size: 1.3rem;
   font-weight: 600;
-  background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-light) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
   letter-spacing: 1px;
 }
 
 .header a {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
@@ -101,7 +112,7 @@ body {
 }
 
 .header a:hover {
-  background-color: var(--primary-red);
+  background-color: rgba(255,255,255,0.12);
   color: var(--text-primary);
 }
 
@@ -175,8 +186,10 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 0 2rem;
 }
 
 /* ========================================

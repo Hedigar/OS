@@ -20,8 +20,9 @@ class Cliente extends Model
             // Query simplificada para evitar erros de colunas inexistentes
             $sql = "SELECT id, nome_completo, documento, telefone_principal 
                     FROM {$this->table} 
-                    WHERE nome_completo LIKE :termo 
-                    OR documento LIKE :termo 
+                    WHERE ativo = 1 
+                    AND (nome_completo LIKE :termo 
+                    OR documento LIKE :termo) 
                     LIMIT 10";
             
             $stmt = $this->db->prepare($sql);

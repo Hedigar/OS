@@ -32,7 +32,7 @@ class OrdemServico extends Model
                 JOIN clientes c ON os.cliente_id = c.id
                 JOIN status_os s ON os.status_atual_id = s.id
                 LEFT JOIN equipamentos e ON os.equipamento_id = e.id
-                WHERE os.id = :id";
+                WHERE os.id = :id AND os.ativo = 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -49,6 +49,7 @@ class OrdemServico extends Model
                 FROM {$this->table} os
                 JOIN clientes c ON os.cliente_id = c.id
                 JOIN status_os s ON os.status_atual_id = s.id
+                WHERE os.ativo = 1
                 ORDER BY os.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
@@ -97,7 +98,7 @@ class OrdemServico extends Model
         $sql = "SELECT os.*, s.nome as status_nome, s.cor as status_cor
                 FROM {$this->table} os
                 JOIN status_os s ON os.status_atual_id = s.id
-                WHERE os.cliente_id = :cliente_id
+                WHERE os.cliente_id = :cliente_id AND os.ativo = 1
                 ORDER BY os.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['cliente_id' => $clienteId]);
@@ -112,7 +113,7 @@ class OrdemServico extends Model
         $sql = "SELECT os.*, s.nome as status_nome, s.cor as status_cor
                 FROM {$this->table} os
                 JOIN status_os s ON os.status_atual_id = s.id
-                WHERE os.equipamento_id = :equipamento_id
+                WHERE os.equipamento_id = :equipamento_id AND os.ativo = 1
                 ORDER BY os.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['equipamento_id' => $equipamentoId]);

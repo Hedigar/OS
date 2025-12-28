@@ -13,7 +13,7 @@ class ItemOS extends Model
         try {
             $sql = "SELECT *
                     FROM {$this->table}
-                    WHERE ordem_servico_id = :ordem_servico_id
+                    WHERE ordem_servico_id = :ordem_servico_id AND ativo = 1
                     ORDER BY id ASC";
 
             $stmt = $this->db->prepare($sql);

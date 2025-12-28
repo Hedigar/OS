@@ -15,7 +15,7 @@ class Equipamento extends Model
     {
         try {
             // Se o erro persistir, verifique se na sua tabela a coluna é 'cliente_id' ou 'ordem_servico_id'
-            $sql = "SELECT * FROM {$this->table} WHERE cliente_id = :cliente_id";
+            $sql = "SELECT * FROM {$this->table} WHERE cliente_id = :cliente_id AND ativo = 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['cliente_id' => $clienteId]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
@@ -32,7 +32,7 @@ class Equipamento extends Model
         if (empty($serial)) return null;
         
         try {
-            $sql = "SELECT * FROM {$this->table} WHERE cliente_id = :cliente_id AND serial = :serial LIMIT 1";
+            $sql = "SELECT * FROM {$this->table} WHERE cliente_id = :cliente_id AND serial = :serial AND ativo = 1 LIMIT 1";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 'cliente_id' => $clienteId,

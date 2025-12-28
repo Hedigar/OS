@@ -29,7 +29,7 @@ use App\Core\Database;
      */
     public function all()
     {
-        $stmt = $this->db->query("SELECT * FROM {$this->table}");
+        $stmt = $this->db->query("SELECT * FROM {$this->table} WHERE ativo = 1");
         return $stmt->fetchAll();
     }
 
@@ -39,7 +39,7 @@ use App\Core\Database;
      */
     public function find(int $id)
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id");
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id AND ativo = 1");
         $stmt->execute(['id' => $id]);
         return $stmt->fetch();
     }
@@ -86,7 +86,7 @@ use App\Core\Database;
      */
     public function delete(int $id)
     {
-        $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE id = :id");
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET ativo = 0 WHERE id = :id");
         return $stmt->execute(['id' => $id]);
     }
 
@@ -98,9 +98,9 @@ use App\Core\Database;
      */
     public function countAll(string $whereClause = '', array $params = []): int
     {
-        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE ativo = 1";
         if (!empty($whereClause)) {
-            $sql .= " WHERE " . $whereClause;
+            $sql .= " AND (" . $whereClause . ")";
         }
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -117,9 +117,9 @@ use App\Core\Database;
      */
     public function getPaginated(int $limit, int $offset, string $whereClause = '', array $params = []): array
     {
-        $sql = "SELECT * FROM {$this->table}";
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
         if (!empty($whereClause)) {
-            $sql .= " WHERE " . $whereClause;
+            $sql .= " AND (" . $whereClause . ")";
         }
         $sql .= " LIMIT :limit OFFSET :offset";
 

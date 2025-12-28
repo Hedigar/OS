@@ -15,7 +15,7 @@ class Usuario extends Model
      */
     public function findByEmail(string $email)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE email = :email";
+        $sql = "SELECT * FROM {$this->table} WHERE email = :email AND ativo = 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['email' => $email]);
         return $stmt->fetch();

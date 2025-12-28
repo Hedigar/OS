@@ -29,15 +29,23 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'ordens') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>ordens">📋 Ordens de Serviço</a>
                 </li>
+                <?php if (\App\Core\Auth::isAdmin()): ?>
                 <li class="<?php echo (isset($current_page) && $current_page === 'usuarios') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>usuarios">👤 Usuários</a>
                 </li>
+                <?php endif; ?>
+
+                <?php if (\App\Core\Auth::isTecnico()): ?>
                 <li class="<?php echo (isset($current_page) && $current_page === 'despesas') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>despesas">💰 Despesas</a>
                 </li>
+                <?php endif; ?>
+
+                <?php if (\App\Core\Auth::isAdmin()): ?>
                 <li class="<?php echo (isset($current_page) && $current_page === 'configuracoes') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>configuracoes">⚙️ Configurações</a>
                 </li>
+                <?php endif; ?>
             </ul>
         </nav>
 

@@ -32,6 +32,28 @@ class Auth
     }
 
     /**
+     * Verifica se o usuário tem perfil de administrador.
+     * @return bool
+     */
+    public static function isAdmin()
+    {
+        $nivel = $_SESSION['user']['nivel_acesso'] ?? '';
+        // Aceita 'admin' (novo) ou '1' (antigo) para não quebrar o acesso durante a migração
+        return $nivel === 'admin' || $nivel === '1' || $nivel === 1;
+    }
+
+    /**
+     * Verifica se o usuário tem perfil de técnico ou superior.
+     * @return bool
+     */
+    public static function isTecnico()
+    {
+        $nivel = $_SESSION['user']['nivel_acesso'] ?? 'usuario';
+        // Admin também é considerado técnico para fins de permissão
+        return self::isAdmin() || $nivel === 'tecnico';
+    }
+
+    /**
      * Faz o login do usuário.
      * @param array $user Dados do usuário.
      */

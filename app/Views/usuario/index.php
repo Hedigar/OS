@@ -26,9 +26,22 @@ require_once __DIR__ . '/../layout/main.php';
                         <td><?= $usuario['id'] ?></td>
                         <td><?= htmlspecialchars($usuario['nome']) ?></td>
                         <td><?= htmlspecialchars($usuario['email']) ?></td>
-                        <td><?= ($usuario['nivel_acesso'] ?? 0) == 1 ? 'Administrador' : 'Padrão' ?></td>
+                        <td>
+                            <?php 
+                            $nivel = $usuario['nivel_acesso'] ?? 'usuario';
+                            if ($nivel === 'admin') echo 'Administrador';
+                            elseif ($nivel === 'tecnico') echo 'Técnico';
+                            else echo 'Padrão';
+                            ?>
+                        </td>
                         <td>
                             <a href="<?= BASE_URL ?>usuarios/form?id=<?= $usuario['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
+                            
+                            <form action="<?= BASE_URL ?>usuarios/resetar-senha" method="POST" style="display:inline-block;">
+                                <input type="hidden" name="id" value="<?= $usuario['id'] ?>">
+                                <button type="submit" class="btn btn-sm btn-info" onclick="return confirm('Resetar senha para 12345678?');">Resetar Senha</button>
+                            </form>
+
                             <form action="<?= BASE_URL ?>usuarios/deletar" method="POST" style="display:inline-block;">
                                 <input type="hidden" name="id" value="<?= $usuario['id'] ?>">
                                 <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja deletar este usuário?');">Deletar</button>

@@ -23,6 +23,9 @@ $router->get('usuarios/form', 'UsuarioController@form'); // Usando 'form' para c
 $router->post('usuarios/salvar', 'UsuarioController@store');
 $router->post('usuarios/atualizar', 'UsuarioController@update');
 $router->post('usuarios/deletar', 'UsuarioController@destroy');
+$router->get('usuarios/trocar-senha', 'UsuarioController@showTrocarSenha');
+$router->post('usuarios/salvar-nova-senha', 'UsuarioController@salvarNovaSenha');
+$router->post('usuarios/resetar-senha', 'UsuarioController@resetarSenha');
 
 // Rotas CRUD de Ordens de Serviço
 $router->get('ordens', 'OrdemServicoController@index');

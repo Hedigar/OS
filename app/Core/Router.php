@@ -37,6 +37,10 @@ class Router
                 $controllerClass = "App\\Controllers\\" . $controllerName;
 
                 if (class_exists($controllerClass)) {
+                    // Define constantes globais para que o BaseController saiba exatamente onde estamos
+                    define('CURRENT_CONTROLLER', $controllerName);
+                    define('CURRENT_ACTION', $action);
+
                     $controller = new $controllerClass();
                     if (method_exists($controller, $action)) {
                         // Chama o método do controller

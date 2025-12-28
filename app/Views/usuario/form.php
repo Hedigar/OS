@@ -28,16 +28,21 @@ $action_url = BASE_URL . ($is_edit ? 'usuarios/atualizar' : 'usuarios/salvar');
             <input type="email" class="form-control" id="email" name="email" value="<?= $is_edit ? htmlspecialchars($usuario['email']) : '' ?>" required>
         </div>
 
-        <div class="mb-3">
-            <label for="senha" class="form-label"><?= $is_edit ? 'Nova Senha (deixe em branco para não alterar)' : 'Senha' ?></label>
-            <input type="password" class="form-control" id="senha" name="<?= $is_edit ? 'nova_senha' : 'senha' ?>" <?= $is_edit ? '' : 'required' ?>>
+        <?php if ($is_edit): ?>
+        <div class="alert alert-warning">
+            Para alterar a senha deste usuário, utilize o botão <strong>Resetar Senha</strong> na listagem de usuários. 
+            Isso definirá a senha como <code>12345678</code> e forçará o usuário a trocá-la no próximo acesso.
         </div>
+        <?php else: ?>
+        <div class="alert alert-info">A senha padrão para novos usuários é: <strong>12345678</strong>. O usuário deverá alterá-la no primeiro acesso.</div>
+        <?php endif; ?>
 
         <div class="mb-3">
             <label for="nivel_acesso" class="form-label">Nível de Acesso</label>
             <select class="form-control" id="nivel_acesso" name="nivel_acesso" required>
-                <option value="1" <?= $is_edit && $usuario['nivel_acesso'] == 1 ? 'selected' : '' ?>>Administrador</option>
-                <option value="0" <?= $is_edit && $usuario['nivel_acesso'] == 0 ? 'selected' : '' ?>>Padrão</option>
+                <option value="admin" <?= $is_edit && $usuario['nivel_acesso'] == 'admin' ? 'selected' : '' ?>>Administrador</option>
+                <option value="tecnico" <?= $is_edit && $usuario['nivel_acesso'] == 'tecnico' ? 'selected' : '' ?>>Técnico</option>
+                <option value="usuario" <?= $is_edit && $usuario['nivel_acesso'] == 'usuario' ? 'selected' : '' ?>>Padrão (Usuário)</option>
             </select>
         </div>
 

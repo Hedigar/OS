@@ -48,8 +48,11 @@ class AuthController extends Controller
             $user = $this->usuarioModel->findByEmail($email);
 
             // Use a senha bruta ($senhaRaw) para o password_verify
-            if ($user && password_verify($senhaRaw, $user['senha_hash'])) {
+            if ($user && password_verify($senhaRaw, $user['senha'])) {
                 Auth::login($user);
+                
+                // Redireciona para o dashboard; se precisar trocar senha, 
+                // o BaseController interceptará e redirecionará corretamente.
                 $this->redirect('dashboard');
             } else {
                 $this->view('auth/login', ['error' => 'E-mail ou senha inválidos.']);

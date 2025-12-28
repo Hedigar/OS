@@ -28,6 +28,7 @@ class AuthController extends Controller
         if (Auth::check()) {
             $this->redirect('dashboard');
         }
+        $logModel = new \App\Models\Log();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 1. Pegamos os valores brutos e removemos espaços extras nas pontas
@@ -50,11 +51,13 @@ class AuthController extends Controller
             // Use a senha bruta ($senhaRaw) para o password_verify
             if ($user && password_verify($senhaRaw, $user['senha'])) {
                 Auth::login($user);
+                $logModel->registrar($user['id'], "Realizou login no sistema");
                 
                 // Redireciona para o dashboard; se precisar trocar senha, 
                 // o BaseController interceptará e redirecionará corretamente.
                 $this->redirect('dashboard');
             } else {
+                $logModel->registrar(null, "Tentativa de login falhou", "E-mail: {$emailRaw}");
                 $this->view('auth/login', ['error' => 'E-mail ou senha inválidos.']);
             }
         } else {
@@ -64,6 +67,8 @@ class AuthController extends Controller
 
     public function logout()
     {
+        $logModel = new \App\Models\Log();
+        $logModel->registrar(Auth::id(), "Realizou logout do sistema");
         Auth::logout();
         $this->redirect('login');
     }

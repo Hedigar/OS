@@ -57,7 +57,8 @@ class ClienteController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = $this->getPostData();
-            if ($this->clienteModel->create($data)) {
+            if ($id = $this->clienteModel->create($data)) {
+                $this->log("Criou novo cliente", "Cliente #{$id} - {$data['nome_completo']}");
                 $this->redirect('clientes');
             } else {
                 $this->render('cliente/form', ['error' => 'Erro ao salvar cliente.', 'cliente' => $data]);
@@ -109,6 +110,7 @@ class ClienteController extends BaseController
 
             $data = $this->getPostData();
             if ($this->clienteModel->update($id, $data)) {
+                $this->log("Atualizou dados do cliente", "Cliente #{$id} - {$data['nome_completo']}");
                 $this->redirect('clientes/view?id=' . $id);
             } else {
                 $this->render('cliente/form', ['error' => 'Erro ao atualizar cliente.', 'cliente' => array_merge($data, ['id' => $id])]);
@@ -138,7 +140,13 @@ class ClienteController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            if ($id) $this->clienteModel->delete($id);
+            if ($id) {
+                $cliente = $this->clienteModel->find($id);
+                $nome = $cliente['nome_completo'] ?? 'N/A';
+                if ($this->clienteModel->delete($id)) {
+                    $this->log("Excluiu cliente", "Cliente #{$id} - {$nome}");
+                }
+            }
         }
         $this->redirect('clientes');
     }

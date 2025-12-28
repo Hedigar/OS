@@ -7,8 +7,17 @@ use App\Core\Auth;
 
 abstract class BaseController extends Controller
 {
+    protected $logModel;
+
     public function __construct()
     {
+        $this->logModel = new \App\Models\Log();
+        
+        // Inicia a sessão se não estiver iniciada
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         // Verifica se o usuário está logado antes de permitir acesso
         if (!Auth::check()) {
             // Verifica se a requisição é AJAX (para não quebrar a busca de clientes)
@@ -83,6 +92,14 @@ abstract class BaseController extends Controller
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->jsonResponse(['error' => 'Método não permitido'], 405);
         }
+        
+        // Verificação básica de CSRF (pode ser expandida com tokens reais)
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        if (!empty($referer) && strpos($referer, $host) === false) {
+            $this->log("Tentativa de CSRF detectada", "Referer: {$referer}");
+            $this->jsonResponse(['error' => 'Origem da requisição inválida'], 403);
+        }
     }
 
     protected function requireAdmin()
@@ -97,5 +114,13 @@ abstract class BaseController extends Controller
         if (!Auth::isTecnico()) {
             $this->redirect('dashboard');
         }
+    }
+
+    /**
+     * Registra uma ação no log do sistema.
+     */
+    protected function log(string $acao, string $referencia = null)
+    {
+        $this->logModel->registrar(Auth::id(), $acao, $referencia);
     }
 }

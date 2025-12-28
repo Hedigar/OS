@@ -130,6 +130,7 @@ class OrdemServicoController extends BaseController
             $osId = $this->osModel->create($osData);
 
             if ($osId) {
+                $this->log("Criou nova Ordem de Serviço", "OS #{$osId}");
                 $this->redirect('clientes/view?id=' . $cliente_id . '&new_os_id=' . $osId);
             } else {
                 $this->redirect('ordens/form?error=Erro ao salvar OS');
@@ -150,6 +151,7 @@ class OrdemServicoController extends BaseController
             ];
 
             if ($this->osModel->update($id, $osData)) {
+                $this->log("Atualizou Ordem de Serviço", "OS #{$id}");
                 $this->redirect('ordens/view?id=' . $id);
             } else {
                 $this->redirect('ordens/form?id=' . $id . '&error=Erro ao atualizar');
@@ -212,7 +214,11 @@ class OrdemServicoController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            if ($id) $this->osModel->delete($id);
+            if ($id) {
+                if ($this->osModel->delete($id)) {
+                    $this->log("Excluiu Ordem de Serviço", "OS #{$id}");
+                }
+            }
         }
         $this->redirect('ordens');
     }

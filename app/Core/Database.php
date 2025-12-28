@@ -28,8 +28,9 @@ class Database
         try {
             $this->conn = new PDO($dsn, $user, $pass, $options);
         } catch (PDOException $e) {
-            // Em um sistema real, você registraria o erro e mostraria uma mensagem amigável.
-            die("Erro de Conexão com o Banco de Dados: " . $e->getMessage());
+            // Em produção, não mostramos o erro detalhado para evitar vazamento de informações
+            error_log("Erro de Conexão com o Banco de Dados: " . $e->getMessage());
+            die("Erro de Conexão: Por favor, tente novamente mais tarde.");
         }
     }
 
@@ -59,8 +60,8 @@ class Database
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            // Em um sistema real, você registraria o erro e mostraria uma mensagem amigável.
-            die("Erro na Consulta SQL: " . $e->getMessage() . " | SQL: " . $sql);
+            error_log("Erro na Consulta SQL: " . $e->getMessage() . " | SQL: " . $sql);
+            die("Erro ao processar a requisição. O administrador foi notificado.");
         }
     }
 }

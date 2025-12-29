@@ -7,7 +7,7 @@ require_once __DIR__ . '/../layout/main.php';
     <!-- CABEÇALHO COM TÍTULO E BOTÃO -->
        <div style="display: flex; justify-content-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
         <h1 class="text-white"><?php echo htmlspecialchars($title ?? 'Clientes'); ?></h1>
-        <a href="<?php echo BASE_URL; ?>clientes/criar" class="btn btn-secondary">
+        <a href="<?php echo BASE_URL; ?>clientes/criar" class="btn btn-outline-secondary rounded-pill px-4 me-2">
             ➕ Novo Cliente
         </a>
     </div>

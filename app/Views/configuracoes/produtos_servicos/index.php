@@ -95,7 +95,7 @@
             <a href="<?= BASE_URL ?>configuracoes" class="btn btn-outline-secondary rounded-pill px-4 me-2">
                 <i class="fas fa-chevron-left me-1"></i> Voltar
             </a>
-            <a href="<?= BASE_URL ?>configuracoes/produtos-servicos/form" class="btn btn-white rounded-pill px-4 shadow-sm">
+            <a href="<?= BASE_URL ?>configuracoes/produtos-servicos/form" class="btn btn-outline-secondary rounded-pill px-4 me-2">
                 <i class="fas fa-plus-circle me-1"></i> Novo Item
             </a>
         </div>

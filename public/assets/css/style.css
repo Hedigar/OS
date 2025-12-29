@@ -395,6 +395,17 @@ textarea {
   letter-spacing: 0.5px;
 }
 
+/* Forçar texto branco em todos os botões (maior especificidade para evitar overrides) */
+a.btn, button.btn, .btn {
+  color: #ffffff !important;
+}
+
+/* Breadcrumb: garantir que o item ativo tenha fonte branca */
+.breadcrumb .breadcrumb-item.active,
+.breadcrumb .breadcrumb-item.active a {
+  color: var(--text-primary) !important;
+}
+
 /* Botão Primário */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-light) 100%);

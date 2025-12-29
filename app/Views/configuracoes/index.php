@@ -19,6 +19,19 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
         </div>
         
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="display-4 mb-3 text-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h5 class="card-title">Usuários</h5>
+                    <p class="card-text text-muted">Gerencie usuários, permissões e redefinições de senha.</p>
+                    <a href="<?= BASE_URL ?>usuarios" class="btn btn-outline-primary">Gerenciar Usuários</a>
+                </div>
+            </div>
+        </div>
+
         <!-- Outros cards de configuração podem ser adicionados aqui -->
     </div>
 

@@ -33,12 +33,13 @@ require_once __DIR__ . '/../layout/main.php';
 
 <div class="container mt-5">
     <h2><?= $title ?></h2>
-    <a href="<?= BASE_URL ?>ordens/form" class="btn btn-secondary">Nova Ordem de Serviço</a>
+    <a href="<?= BASE_URL ?>ordens/form" class="btn btn-outline-secondary rounded-pill px-4 me-2" style="margin-bottom: 1.25rem;">Nova Ordem de Serviço</a>
 
     <?php if (empty($ordens)): ?>
         <div class="alert alert-info">Nenhuma Ordem de Serviço cadastrada.</div>
     <?php else: ?>
-        <div class="card dark-table" style="background-color: var(--dark-secondary); border: 1px solid var(--dark-tertiary);">
+        <div class="card dark-table" style="background-color: var(--dark-secondary); border: 1px solid var(--dark-tertiary); 
+        ">
             <div class="card-body p-0">
                 <table class="table table-striped">
             <thead>

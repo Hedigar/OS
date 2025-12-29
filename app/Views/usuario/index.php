@@ -16,8 +16,24 @@ require_once __DIR__ . '/../layout/main.php';
 ?>
 
 <div class="container mt-5">
-    <h2 class="text-white"><?= $title ?></h2>
-    <a href="<?= BASE_URL ?>usuarios/form" class="btn btn-secondary">Novo Usuário</a>
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap">
+    <div class="me-3">
+        <h2 class="fw-bold mb-0 text-white">
+            <i class="fas fa-users text-primary me-2"></i><?= $title ?>
+        </h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="<?= BASE_URL ?>dashboard">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?= BASE_URL ?>configuracoes">Configurações</a></li>
+                <li class="breadcrumb-item active"><?= $title ?></li>
+            </ol>
+        </nav>
+    </div>
+    <div class="ms-auto" style="display:flex; align-items:flex-start; margin-top: 0.25rem;">
+        <a href="<?= BASE_URL ?>usuarios/form" class="btn btn-secondary">Novo Usuário</a>
+    </div>
+</div>
 
     <?php if (empty($usuarios)): ?>
         <div class="alert alert-info">Nenhum usuário cadastrado.</div>

@@ -32,7 +32,8 @@ class UsuarioController extends BaseController
         $usuarios = $this->usuarioModel->all();
         $this->render('usuario/index', [
             'title' => 'Gerenciar Usuários',
-            'usuarios' => $usuarios
+            'usuarios' => $usuarios,
+            'current_page' => 'usuarios'
         ]);
     }
 
@@ -53,7 +54,8 @@ class UsuarioController extends BaseController
 
         $this->render('usuario/form', [
             'title' => $title,
-            'usuario' => $usuario
+            'usuario' => $usuario,
+            'current_page' => 'usuarios'
         ]);
     }
 

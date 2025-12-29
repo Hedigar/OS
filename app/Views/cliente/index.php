@@ -5,19 +5,19 @@ require_once __DIR__ . '/../layout/main.php';
 
 <div class="container">
     <!-- CABEÇALHO COM TÍTULO E BOTÃO -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-        <h1><?php echo htmlspecialchars($title ?? 'Clientes'); ?></h1>
-        <a href="<?php echo BASE_URL; ?>clientes/criar" class="btn btn-primary">
+       <div style="display: flex; justify-content-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h1 class="text-white"><?php echo htmlspecialchars($title ?? 'Clientes'); ?></h1>
+        <a href="<?php echo BASE_URL; ?>clientes/criar" class="btn btn-secondary">
             ➕ Novo Cliente
         </a>
     </div>
 
     <!-- CARD DE BUSCA -->
-    <div class="card" style="margin-bottom: 2rem;">
+    <div class="card" style="margin-bottom: 2rem; background-color: var(--dark-secondary); border: 1px solid var(--dark-tertiary);">
         <form action="<?php echo BASE_URL; ?>clientes" method="GET">
             <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: end;">
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label for="busca">🔍 Buscar Cliente</label>
+                    <label for="busca" class="text-white">🔍 Buscar Cliente</label>
                     <input
                         type="text"
                         id="busca"
@@ -25,6 +25,7 @@ require_once __DIR__ . '/../layout/main.php';
                         class="form-control"
                         placeholder="Digite o nome ou CPF/CNPJ..."
                         value="<?php echo htmlspecialchars($busca ?? ''); ?>"
+                        style="background-color: var(--dark-tertiary); color: white; border: 1px solid var(--dark-tertiary);"
                     >
                 </div>
                 <button type="submit" class="btn btn-primary">Buscar</button>

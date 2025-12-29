@@ -16,6 +16,7 @@
   --text-primary: #ffffff;
   --text-secondary: #b8bcc4;
   --text-muted: #7a8089;
+  --text-dark: #1a1f2e;
   
   /* Cores de Ação */
   --success: #27ae60;
@@ -114,6 +115,11 @@ body {
 .header a:hover {
   background-color: rgba(255,255,255,0.12);
   color: var(--text-primary);
+}
+
+/* Garantir que o botão 'Sair' no header tenha fonte branca */
+.header a.btn, .header a.btn-primary {
+  color: #ffffff !important;
 }
 
 /* ========================================
@@ -419,6 +425,30 @@ textarea {
   color: var(--primary-red);
 }
 
+/* Ajuste para botões outline que podem estar com contraste ruim */
+.btn-outline-secondary {
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--text-secondary);
+    color: var(--dark-bg);
+}
+
+.btn-light {
+    background-color: var(--dark-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--dark-tertiary);
+}
+
+.btn-light:hover {
+    background-color: var(--dark-secondary);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
 /* Botão Sucesso */
 .btn-success {
   background-color: var(--success);
@@ -461,6 +491,60 @@ textarea {
   color: #111;
   border: 1px solid rgba(0,0,0,0.12);
   box-shadow: 0 6px 16px rgba(243,156,18,0.18);
+
+/* ========================================
+   TABELAS ESCURAS - GARANTIR LINHAS E CELULAS ESCURAS
+   ======================================== */
+
+/* Força tabelas Bootstrap para usar o tema escuro */
+.table,
+.table-responsive .table,
+.table.table-hover,
+.table.table-striped {
+  background-color: transparent !important;
+  color: var(--text-secondary) !important;
+}
+
+.table thead th,
+.table thead td {
+  background-color: var(--dark-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--dark-tertiary) !important;
+}
+
+.table tbody tr {
+  background-color: var(--dark-secondary) !important;
+}
+
+.table tbody tr td,
+.table tbody tr th {
+  background-color: transparent !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--dark-tertiary) !important;
+}
+
+.table.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(255,255,255,0.02) !important;
+}
+
+/* Garantir que mensagens vazias/placeholder não fiquem esbranquiçadas */
+.table .text-muted { color: var(--text-muted) !important; }
+
+/* ========================================
+   BOTÃO BRANCO (para Novo / Sair solicitados)
+   ======================================== */
+.btn-white {
+  background-color: #ffffff !important;
+  color: var(--text-dark) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.btn-white:hover {
+  background-color: #f2f2f2 !important;
+  color: var(--text-dark) !important;
+  transform: translateY(-2px);
+}
+
 }
 
 .btn-warning:hover {
@@ -810,6 +894,7 @@ tbody tr:last-child td {
   --text-primary: #ffffff;
   --text-secondary: #b8bcc4;
   --text-muted: #7a8089;
+  --text-dark: #1a1f2e;
   
   /* Cores de Ação */
   --success: #27ae60;
@@ -1310,6 +1395,30 @@ textarea {
   color: var(--primary-red);
 }
 
+/* Ajuste para botões outline que podem estar com contraste ruim */
+.btn-outline-secondary {
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--text-secondary);
+    color: var(--dark-bg);
+}
+
+.btn-light {
+    background-color: var(--dark-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--dark-tertiary);
+}
+
+.btn-light:hover {
+    background-color: var(--dark-secondary);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
 /* Botão Sucesso */
 .btn-success {
   background-color: var(--success);
@@ -1681,4 +1790,136 @@ tbody tr:last-child td {
         margin: 0 !important;
         width: 100% !important;
     }
+}
+
+/* ========================================
+   SUBMENU E DROPDOWN
+   ======================================== */
+
+.submenu {
+    list-style: none;
+    padding-left: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-left: 2px solid var(--dark-tertiary);
+    margin-bottom: 0.5rem;
+}
+
+.submenu li a {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+    border-left: none;
+}
+
+.submenu li.active a {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: var(--primary-red);
+    font-weight: 500;
+}
+
+.dropdown-toggle::after {
+    content: ' \f107';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-left: auto;
+    transition: transform 0.3s;
+}
+
+.nav-item-dropdown.active .dropdown-toggle::after {
+    transform: rotate(180deg);
+}
+
+/* Garantir que modais do Bootstrap não apareçam no fluxo da página */
+.modal {
+    display: none;
+}
+.modal.show {
+    display: block;
+}
+
+/* ========================================
+   BOOTSTRAP OVERRIDES - REMOVER FUNDOS BRANCOS
+   Garante que classes do Bootstrap use o tema escuro
+   ======================================== */
+
+/* Substitui classes utilitárias que podem trazer fundo branco */
+.bg-white, .bg-light {
+  background-color: var(--dark-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Navbar e componentes de navegação */
+.navbar, .navbar-light, .navbar-dark {
+  background-color: var(--dark-secondary) !important;
+  border-color: var(--dark-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modais, card do bootstrap, dropdowns e popovers */
+.modal-content,
+.dropdown-menu,
+.popover,
+.card {
+  background-color: var(--dark-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--dark-tertiary) !important;
+}
+
+/* Tabelas do Bootstrap */
+.table {
+  background-color: transparent !important;
+  color: var(--text-secondary) !important;
+}
+.table thead th {
+  background-color: var(--dark-tertiary) !important;
+  color: var(--primary-red) !important;
+}
+
+/* Form controls */
+.form-control, .form-select {
+  background-color: var(--dark-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--dark-tertiary) !important;
+}
+
+/* Dropdown items */
+.dropdown-menu .dropdown-item, .dropdown-item {
+  color: var(--text-primary) !important;
+}
+
+/* Botões claros do Bootstrap */
+.btn-outline-light, .btn-light {
+  background-color: var(--dark-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--dark-tertiary) !important;
+}
+
+/* Ajustes de contraste gerais */
+.text-muted { color: var(--text-muted) !important; }
+a { color: var(--primary-red) !important; }
+
+/* Remover possíveis sombras claras aplicadas por libraries */
+.bg-white *, .bg-light * { color: inherit !important; }
+
+/* ===== Ajuste tema escuro para formularios Bootstrap ===== */
+
+.dark-form .form-control,
+.dark-form .form-select,
+.dark-form textarea {
+    background-color: var(--dark-secondary);
+    color: #ffffff;
+    border: 1px solid var(--dark-tertiary);
+}
+
+.dark-form .form-control::placeholder,
+.dark-form textarea::placeholder {
+    color: #b5b5b5;
+}
+
+.dark-form .form-control:focus,
+.dark-form .form-select:focus,
+.dark-form textarea:focus {
+    background-color: var(--dark-secondary);
+    color: #ffffff;
+    border-color: var(--primary-red);
+    box-shadow: none;
 }

@@ -14,6 +14,13 @@ $router->get('logout', 'AuthController@logout');
 $router->get('dashboard', 'DashboardController@index');
 // Configurações
 $router->get('configuracoes', 'ConfiguracoesController@index');
+$router->get('configuracoes/produtos-servicos', 'ProdutoServicoController@index');
+$router->get('configuracoes/produtos-servicos/form', 'ProdutoServicoController@form');
+$router->post('configuracoes/produtos-servicos/salvar', 'ProdutoServicoController@store');
+$router->post('configuracoes/produtos-servicos/atualizar', 'ProdutoServicoController@update');
+$router->post('configuracoes/produtos-servicos/deletar', 'ProdutoServicoController@destroy');
+$router->post('configuracoes/salvar-porcentagem', 'ProdutoServicoController@salvarConfiguracao');
+$router->post('configuracoes/atualizar-precos-massa', 'ProdutoServicoController@atualizarPrecosGlobais');
 // Despesas
 $router->get('despesas', 'DespesasController@index');
 

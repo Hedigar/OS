@@ -7,13 +7,18 @@ $action_url = BASE_URL . ($is_edit ? 'usuarios/atualizar' : 'usuarios/salvar');
 ?>
 
 <div class="container mt-5">
-    <h2><?= $title ?></h2>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card" style="background-color: var(--dark-secondary); border: 1px solid var(--dark-tertiary);">
+                <div class="card-header" style="background-color: var(--dark-tertiary); border-bottom: 1px solid var(--dark-tertiary);">
+                    <h4 class="text-white mb-0"><?= $title ?></h4>
+                </div>
+                <div class="card-body text-white">
+                    <?php if (isset($error)): ?>
+                        <div class="alert alert-danger"><?= $error ?></div>
+                    <?php endif; ?>
 
-    <?php if (isset($error)): ?>
-        <div class="alert alert-danger"><?= $error ?></div>
-    <?php endif; ?>
-
-    <form action="<?= $action_url ?>" method="POST">
+                    <form action="<?= $action_url ?>" method="POST">
         <?php if ($is_edit): ?>
             <input type="hidden" name="id" value="<?= $usuario['id'] ?>">
         <?php endif; ?>
@@ -46,9 +51,15 @@ $action_url = BASE_URL . ($is_edit ? 'usuarios/atualizar' : 'usuarios/salvar');
             </select>
         </div>
 
-        <button type="submit" class="btn btn-success"><?= $is_edit ? 'Atualizar' : 'Salvar' ?></button>
-        <a href="<?= BASE_URL ?>usuarios" class="btn btn-secondary">Cancelar</a>
-    </form>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg"><?= $is_edit ? 'Atualizar' : 'Salvar' ?></button>
+                            <a href="<?= BASE_URL ?>usuarios" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <?php

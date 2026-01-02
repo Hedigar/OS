@@ -161,4 +161,13 @@ class ProdutoServicoController extends BaseController
 
         header('Location: ' . BASE_URL . 'configuracoes/produtos-servicos');
     }
+
+    public function getPorcentagemAjax()
+    {
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        $porcentagem = $this->configModel->getValor('porcentagem_venda') ?? 0;
+        echo json_encode(['valor' => $porcentagem]);
+        exit;
+    }
 }

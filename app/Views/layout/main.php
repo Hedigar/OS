@@ -33,6 +33,9 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'ordens') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>ordens">📋 Ordens de Serviço</a>
                 </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'atendimentos_externos') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>atendimentos-externos">🏠 Atendimento Externo</a>
+                </li>
 
 
                 <?php if (\App\Core\Auth::isTecnico()): ?>

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Cliente;
 use App\Models\OrdemServico;
 use App\Models\Equipamento;
+use App\Models\AtendimentoExterno;
 
 class ClienteController extends BaseController
 {
@@ -76,15 +77,18 @@ class ClienteController extends BaseController
 
         $osModel = new OrdemServico();
         $equipamentoModel = new Equipamento();
+        $atendimentoExternoModel = new AtendimentoExterno();
 
         $historicoOS = $osModel->findByClienteId($id);
         $equipamentos = $equipamentoModel->findByClienteId($id);
+        $historicoExterno = $atendimentoExternoModel->findByClienteId($id);
 
         $this->render('cliente/view', [
             'title' => 'Visualizar Cliente',
             'cliente' => $cliente,
             'historicoOS' => $historicoOS,
-            'equipamentos' => $equipamentos
+            'equipamentos' => $equipamentos,
+            'historicoExterno' => $historicoExterno
         ]);
     }
 

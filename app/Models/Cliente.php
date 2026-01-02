@@ -17,8 +17,8 @@ class Cliente extends Model
     {
         try {
             $termoLike = "%" . $termo . "%";
-            // Query simplificada para evitar erros de colunas inexistentes
-            $sql = "SELECT id, nome_completo, documento, telefone_principal 
+            // Query com todos os campos necessários para o endereço
+            $sql = "SELECT * 
                     FROM {$this->table} 
                     WHERE ativo = 1 
                     AND (nome_completo LIKE :termo 

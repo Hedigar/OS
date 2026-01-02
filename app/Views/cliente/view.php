@@ -17,6 +17,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
         <div>
             <a href="<?php echo BASE_URL; ?>clientes" class="btn btn-secondary btn-sm" style="margin-right: 10px;">← Voltar</a>
             <a href="<?php echo BASE_URL; ?>clientes/editar?id=<?php echo $cliente_id; ?>" class="btn btn-primary btn-sm" style="margin-right: 10px;">✏️ Editar Cliente</a>
+            <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>&cliente_telefone=<?php echo urlencode($cliente['telefone_principal'] ?? ''); ?>&cliente_logradouro=<?php echo urlencode($cliente['endereco_logradouro'] ?? ''); ?>&cliente_numero=<?php echo urlencode($cliente['endereco_numero'] ?? ''); ?>&cliente_bairro=<?php echo urlencode($cliente['endereco_bairro'] ?? ''); ?>&cliente_cidade=<?php echo urlencode($cliente['endereco_cidade'] ?? ''); ?>" class="btn btn-warning btn-sm" style="margin-right: 10px;">🏠 Novo Atendimento Externo</a>
             <a href="<?php echo BASE_URL; ?>ordens/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>" class="btn btn-success btn-sm">➕ Nova OS</a>
         </div>
     </div>
@@ -86,6 +87,47 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- HISTÓRICO DE ATENDIMENTOS EXTERNOS -->
+            <div class="card" style="margin-top: 2rem;">
+                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
+                    🏠 Histórico de Atendimentos Externos
+                </h3>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data Agendada</th>
+                                <th>Status</th>
+                                <th>Problema</th>
+                                <th>Técnico</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($historicoExterno)): ?>
+                                <tr>
+                                    <td colspan="6" class="text-center">Nenhum atendimento externo registrado.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($historicoExterno as $ae): ?>
+                                    <tr>
+                                        <td>#<?php echo $ae['id']; ?></td>
+                                        <td><?php echo $ae['data_agendada'] ? date('d/m/Y H:i', strtotime($ae['data_agendada'])) : 'N/A'; ?></td>
+                                        <td><span class="badge bg-info"><?php echo ucfirst($ae['status']); ?></span></td>
+                                        <td><?php echo htmlspecialchars(substr($ae['descricao_problema'], 0, 50)) . '...'; ?></td>
+                                        <td><?php echo htmlspecialchars($ae['tecnico_nome'] ?? 'Não atribuído'); ?></td>
+                                        <td>
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?id=<?php echo $ae['id']; ?>" class="btn btn-info btn-xs">Ver/Editar</a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

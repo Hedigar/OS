@@ -160,11 +160,14 @@ body {
   padding: 1rem 1.5rem;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 500;
   transition: var(--transition);
   border-left: 3px solid transparent;
   position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar a:hover {
@@ -647,7 +650,7 @@ tbody tr:last-child td {
   border: 1px solid var(--dark-tertiary);
   border-radius: 6px;
   background-color: var(--dark-secondary);
-  color: var(--text-secondary);
+  color: var(--text-primary) !important;
   text-decoration: none;
   font-size: 0.85rem;
   transition: var(--transition);

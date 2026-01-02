@@ -65,7 +65,7 @@ class OrdemServico extends Model
         $totalServicos = 0.00;
 
         foreach ($itens as $item) {
-            $tipo = $item['tipo'] ?? $item['tipo_item'] ?? '';
+            $tipo = $item['tipo_item'] ?? $item['tipo'] ?? '';
             if ($tipo === 'produto') {
                 $totalProdutos += $item['valor_total'];
             } elseif ($tipo === 'servico') {

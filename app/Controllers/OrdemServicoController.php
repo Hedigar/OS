@@ -124,6 +124,7 @@ class OrdemServicoController extends BaseController
                 'cliente_id' => $cliente_id,
                 'equipamento_id' => $equipamento_id,
                 'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
+                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
                 'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT) ?: 1,
             ];
 
@@ -146,9 +147,13 @@ class OrdemServicoController extends BaseController
 
             $osData = [
                 'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT),
-                'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
                 'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
             ];
+
+            // Se for admin, pode editar o defeito relatado
+            if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
+                $osData['defeito_relatado'] = filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS);
+            }
 
             if ($this->osModel->update($id, $osData)) {
                 $this->log("Atualizou Ordem de Serviço", "OS #{$id}");
@@ -192,6 +197,38 @@ class OrdemServicoController extends BaseController
         ], false);
     }
 
+    public function printReceipt()
+    {
+        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        if (!$id) $this->redirect('ordens');
+
+        $ordem = $this->osModel->findWithDetails($id);
+        if (!$ordem) $this->redirect('ordens');
+
+        $itens = $this->itemModel->findByOsId($id);
+
+        $this->render('os/print_receipt', [
+            'ordem' => $ordem,
+            'itens' => $itens
+        ], false);
+    }
+
+    public function printEstimate()
+    {
+        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        if (!$id) $this->redirect('ordens');
+
+        $ordem = $this->osModel->findWithDetails($id);
+        if (!$ordem) $this->redirect('ordens');
+
+        $itens = $this->itemModel->findByOsId($id);
+
+        $this->render('os/print_orcamento', [
+            'ordem' => $ordem,
+            'itens' => $itens
+        ], false);
+    }
+
     public function searchEquipamentos()
     {
         error_reporting(0);
@@ -208,6 +245,89 @@ class OrdemServicoController extends BaseController
             $this->jsonResponse($equipamentos);
         } catch (\Throwable $e) {
             $this->jsonResponse(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function searchItems()
+    {
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $termo = filter_input(INPUT_GET, 'termo', FILTER_SANITIZE_SPECIAL_CHARS);
+        if (empty($termo)) {
+            echo json_encode([]);
+            exit;
+        }
+
+        try {
+            $produtoModel = new \App\Models\ProdutoServico();
+            $sql = "SELECT * FROM produtos_servicos WHERE nome LIKE :termo AND ativo = 1 LIMIT 10";
+            $stmt = $produtoModel->getConnection()->prepare($sql);
+            $stmt->execute(['termo' => "%{$termo}%"]);
+            $itens = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            echo json_encode($itens);
+            exit;
+        } catch (\Throwable $e) {
+            echo json_encode([]);
+            exit;
+        }
+    }
+
+    public function saveItem()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT);
+            $produtoId = filter_input(INPUT_POST, 'produto_id', FILTER_VALIDATE_INT);
+            $quantidade = filter_input(INPUT_POST, 'quantidade', FILTER_VALIDATE_FLOAT) ?: 1;
+            
+            // Dados históricos vindos do formulário (editáveis pelo admin/técnico)
+            $custo = filter_input(INPUT_POST, 'valor_custo', FILTER_VALIDATE_FLOAT) ?: 0;
+            $venda = filter_input(INPUT_POST, 'valor_unitario', FILTER_VALIDATE_FLOAT) ?: 0;
+            $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT) ?: 0;
+            $descricao = filter_input(INPUT_POST, 'descricao', FILTER_SANITIZE_SPECIAL_CHARS);
+            $tipo = filter_input(INPUT_POST, 'tipo', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'produto';
+            
+            $comprarPeca = filter_input(INPUT_POST, 'comprar_peca', FILTER_VALIDATE_INT) ?: 0;
+            $linkFornecedor = filter_input(INPUT_POST, 'link_fornecedor', FILTER_SANITIZE_URL);
+
+            $itemData = [
+                'ordem_servico_id' => $osId,
+                'tipo_item' => $tipo, // Corrigido para o nome da coluna no banco
+                'descricao' => $descricao,
+                'quantidade' => $quantidade,
+                'custo' => $custo, // Corrigido para o nome da coluna no banco
+                'valor_unitario' => $venda,
+                'valor_mao_de_obra' => $maoDeObra,
+                'valor_total' => ($venda + $maoDeObra) * $quantidade,
+                'comprar_peca' => $comprarPeca,
+                'link_fornecedor' => $linkFornecedor,
+                'ativo' => 1
+            ];
+
+            if ($this->itemModel->create($itemData)) {
+                $itens = $this->itemModel->findByOsId($osId);
+                $this->osModel->updateTotals($osId, $itens);
+                $this->redirect('ordens/view?id=' . $osId);
+            } else {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao adicionar item');
+            }
+        }
+    }
+
+    public function removeItem()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
+            $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT);
+
+            if ($this->itemModel->delete($itemId)) {
+                $itens = $this->itemModel->findByOsId($osId);
+                $this->osModel->updateTotals($osId, $itens);
+                $this->redirect('ordens/view?id=' . $osId);
+            } else {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao remover item');
+            }
         }
     }
     public function destroy()

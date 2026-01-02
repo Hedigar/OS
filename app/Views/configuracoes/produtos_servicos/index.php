@@ -15,7 +15,7 @@
     }
     .action-buttons .btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 8px rgba(238, 18, 18, 0.94);
     }
     .table-card {
         border: none;
@@ -30,7 +30,7 @@
     }
     /* Reforçar tabela totalmente escura apenas dentro de .dark-table */
     .dark-table {
-        background-color: #050506 !important;
+        background-color: ##1A1F2E !important;
         border: 1px solid #0e0e10 !important;
         border-radius: 15px;
     }
@@ -50,10 +50,10 @@
         border-color: rgba(255,255,255,0.04) !important;
     }
     .dark-table .table-hover tbody tr:hover {
-        background-color: #0f0f10 !important;
+        background-color: #c90505ff !important;
     }
     .dark-table .table tbody tr {
-        background-color: transparent !important;
+        background-color: #000000ff !important;
     }
     .dark-table .table .text-muted {
         color: rgba(255,255,255,0.75) !important;
@@ -62,7 +62,7 @@
     .dark-table .btn,
     .dark-table .action-buttons .btn {
         color: #ffffff !important;
-        border-color: rgba(255,255,255,0.06) !important;
+        border-color: rgba(233, 58, 58, 0.06) !important;
         background: transparent !important;
     }
     .dark-table .badge-type {

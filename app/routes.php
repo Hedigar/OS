@@ -19,8 +19,9 @@ $router->get('configuracoes/produtos-servicos/form', 'ProdutoServicoController@f
 $router->post('configuracoes/produtos-servicos/salvar', 'ProdutoServicoController@store');
 $router->post('configuracoes/produtos-servicos/atualizar', 'ProdutoServicoController@update');
 $router->post('configuracoes/produtos-servicos/deletar', 'ProdutoServicoController@destroy');
-$router->post('configuracoes/salvar-porcentagem', 'ProdutoServicoController@salvarConfiguracao');
-$router->post('configuracoes/atualizar-precos-massa', 'ProdutoServicoController@atualizarPrecosGlobais');
+	$router->post('configuracoes/salvar-porcentagem', 'ProdutoServicoController@salvarConfiguracao');
+	$router->get('configuracoes/get-porcentagem-ajax', 'ProdutoServicoController@getPorcentagemAjax');
+	$router->post('configuracoes/atualizar-precos-massa', 'ProdutoServicoController@atualizarPrecosGlobais');
 // Despesas
 $router->get('despesas', 'DespesasController@index');
 
@@ -34,6 +35,13 @@ $router->get('usuarios/trocar-senha', 'UsuarioController@showTrocarSenha');
 $router->post('usuarios/salvar-nova-senha', 'UsuarioController@salvarNovaSenha');
 $router->post('usuarios/resetar-senha', 'UsuarioController@resetarSenha');
 
+// Rotas de Atendimento Externo
+$router->get('atendimentos-externos', 'AtendimentoExternoController@index');
+$router->get('atendimentos-externos/form', 'AtendimentoExternoController@form');
+$router->post('atendimentos-externos/salvar', 'AtendimentoExternoController@store');
+$router->post('atendimentos-externos/atualizar', 'AtendimentoExternoController@update');
+$router->post('atendimentos-externos/deletar', 'AtendimentoExternoController@destroy');
+
 // Rotas CRUD de Ordens de Serviço
 $router->get('ordens', 'OrdemServicoController@index');
 $router->get('ordens/form', 'OrdemServicoController@form'); // Usando 'form' para criar/editar
@@ -41,9 +49,14 @@ $router->post('ordens/salvar', 'OrdemServicoController@store');
 $router->post('ordens/atualizar', 'OrdemServicoController@update');
 $router->get('ordens/view', 'OrdemServicoController@showView'); // Visualizar OS
 $router->get('ordens/print', 'OrdemServicoController@printOS'); // Imprimir OS
+$router->get('ordens/print-receipt', 'OrdemServicoController@printReceipt'); // Impressão: Recepção (2 cópias por A4)
+$router->get('ordens/print-estimate', 'OrdemServicoController@printEstimate'); // Impressão: Orçamento
 $router->post('ordens/deletar', 'OrdemServicoController@destroy');
 $router->get('ordens/search-client', 'OrdemServicoController@searchClient'); // Busca de cliente para Autocomplete na OS
 $router->get('ordens/search-equipamentos', 'OrdemServicoController@searchEquipamentos');
+$router->get('ordens/search-items', 'OrdemServicoController@searchItems');
+$router->post('ordens/salvar-item', 'OrdemServicoController@saveItem');
+$router->post('ordens/remover-item', 'OrdemServicoController@removeItem');
 $router->get('clientes', 'ClienteController@index');
 $router->get('clientes/criar', 'ClienteController@create');
 $router->post('clientes/salvar', 'ClienteController@store');

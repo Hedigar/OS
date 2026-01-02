@@ -7,7 +7,11 @@ define('DB_NAME', 'os');
 
 // Configurações do Sistema
 define('APP_NAME', 'Sistema OS - Assistência Técnica');
-define('BASE_URL', 'http://192.168.0.233:8080/'); // Altere conforme o ambiente
+
+// Define BASE_URL dinamicamente com base no host da requisição
+$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'];
+define('BASE_URL', $protocol . '://' . $host . '/');
 
 // Configurações de Sessão
 ini_set('session.use_strict_mode', 1);

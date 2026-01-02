@@ -138,15 +138,16 @@ $statuses = $statuses ?? [];
 
                 <div class="form-group">
                     <label for="defeito">Defeito Relatado *</label>
-                    <textarea id="defeito" name="defeito" placeholder="Descreva o problema relatado pelo cliente..." style="min-height: 100px;" required><?php echo $is_edit ? htmlspecialchars($ordem['defeito_relatado']) : ''; ?></textarea>
+                    <textarea id="defeito" name="defeito" placeholder="Descreva o problema relatado pelo cliente..." style="min-height: 100px; <?php echo $is_edit ? 'background-color: var(--dark-tertiary); cursor: not-allowed;' : ''; ?>" required <?php echo $is_edit ? 'readonly' : ''; ?>><?php echo $is_edit ? htmlspecialchars($ordem['defeito_relatado']) : ''; ?></textarea>
+                    <?php if ($is_edit): ?>
+                        <small style="color: #888;">* Edição bloqueada para padronização.</small>
+                    <?php endif; ?>
                 </div>
 
-                <?php if ($is_edit): ?>
                 <div class="form-group">
                     <label for="laudo_tecnico">Laudo Técnico / Observações Internas</label>
-                    <textarea id="laudo_tecnico" name="laudo_tecnico" style="min-height: 100px;"><?php echo htmlspecialchars($ordem['laudo_tecnico'] ?? ''); ?></textarea>
+                    <textarea id="laudo_tecnico" name="laudo_tecnico" placeholder="Descreva o diagnóstico técnico, estado do equipamento, etc..." style="min-height: 100px;"><?php echo $is_edit ? htmlspecialchars($ordem['laudo_tecnico'] ?? '') : ''; ?></textarea>
                 </div>
-                <?php endif; ?>
 
                 <div class="form-group">
                     <label for="status_id">Status da OS</label>

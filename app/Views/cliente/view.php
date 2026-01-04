@@ -12,24 +12,22 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
 ?>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div class="d-flex justify-between align-center mb-4">
         <h1>👤 Cliente: <?php echo htmlspecialchars($cliente['nome_completo'] ?? 'Cliente Não Encontrado'); ?></h1>
-        <div>
-            <a href="<?php echo BASE_URL; ?>clientes" class="btn btn-secondary btn-sm" style="margin-right: 10px;">← Voltar</a>
-            <a href="<?php echo BASE_URL; ?>clientes/editar?id=<?php echo $cliente_id; ?>" class="btn btn-primary btn-sm" style="margin-right: 10px;">✏️ Editar Cliente</a>
-            <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>&cliente_telefone=<?php echo urlencode($cliente['telefone_principal'] ?? ''); ?>&cliente_logradouro=<?php echo urlencode($cliente['endereco_logradouro'] ?? ''); ?>&cliente_numero=<?php echo urlencode($cliente['endereco_numero'] ?? ''); ?>&cliente_bairro=<?php echo urlencode($cliente['endereco_bairro'] ?? ''); ?>&cliente_cidade=<?php echo urlencode($cliente['endereco_cidade'] ?? ''); ?>" class="btn btn-warning btn-sm" style="margin-right: 10px;">🏠 Novo Atendimento Externo</a>
+        <div class="d-flex gap-2">
+            <a href="<?php echo BASE_URL; ?>clientes" class="btn btn-secondary btn-sm">← Voltar</a>
+            <a href="<?php echo BASE_URL; ?>clientes/editar?id=<?php echo $cliente_id; ?>" class="btn btn-primary btn-sm">✏️ Editar Cliente</a>
+            <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>&cliente_telefone=<?php echo urlencode($cliente['telefone_principal'] ?? ''); ?>&cliente_logradouro=<?php echo urlencode($cliente['endereco_logradouro'] ?? ''); ?>&cliente_numero=<?php echo urlencode($cliente['endereco_numero'] ?? ''); ?>&cliente_bairro=<?php echo urlencode($cliente['endereco_bairro'] ?? ''); ?>&cliente_cidade=<?php echo urlencode($cliente['endereco_cidade'] ?? ''); ?>" class="btn btn-warning btn-sm">🏠 Novo Atendimento Externo</a>
             <a href="<?php echo BASE_URL; ?>ordens/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>" class="btn btn-success btn-sm">➕ Nova OS</a>
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <div class="client-detail-grid">
         <!-- COLUNA ESQUERDA: DADOS DO CLIENTE -->
         <div>
-            <div class="card" style="margin-bottom: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
-                    Informações Pessoais
-                </h3>
-                <div style="line-height: 1.8;">
+            <div class="card mb-4">
+                <h3 class="card-title">Informações Pessoais</h3>
+                <div class="card-content">
                     <p><strong>Documento:</strong> <?php echo htmlspecialchars($cliente['documento'] ?? 'N/A'); ?></p>
                     <p><strong>E-mail:</strong> <?php echo htmlspecialchars($cliente['email'] ?? 'N/A'); ?></p>
                     <p><strong>Telefone:</strong> <?php echo htmlspecialchars($cliente['telefone_principal'] ?? 'N/A'); ?></p>
@@ -38,11 +36,9 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
             </div>
 
             <div class="card">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
-                    💻 Equipamentos
-                </h3>
+                <h3 class="card-title">💻 Equipamentos</h3>
                 <?php if (!empty($equipamentos)): ?>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="equipment-list">
                         <button class="btn btn-outline-primary btn-block filter-equip" data-id="all">Todos os Equipamentos</button>
                         <?php foreach ($equipamentos as $e): ?>
                             <button class="btn btn-outline-secondary btn-block filter-equip" data-id="<?php echo $e['id']; ?>">
@@ -60,7 +56,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
         <!-- COLUNA DIREITA: HISTÓRICO DE OS -->
         <div>
             <div class="card">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
+                <h3 class="card-title">📜 Histórico de Ordens de Serviço</h3>
                     📜 Histórico de Ordens de Serviço
                 </h3>
                 <div class="table-responsive">
@@ -79,7 +75,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                                 <tr class="os-row" data-equip-id="<?php echo $os['equipamento_id']; ?>">
                                     <td>#<?php echo $os['id']; ?></td>
                                     <td><?php echo date('d/m/Y', strtotime($os['created_at'])); ?></td>
-                                    <td><span class="badge" style="background-color: <?php echo $os['status_cor']; ?>;"><?php echo $os['status_nome']; ?></span></td>
+                                    <td><span class="badge" style="background-color: <?php echo $os['status_cor']; ?>; color: var(--on-primary);"><?php echo $os['status_nome']; ?></span></td>
                                     <td><?php echo htmlspecialchars(substr($os['defeito_relatado'], 0, 50)) . '...'; ?></td>
                                     <td>
                                         <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo $os['id']; ?>" class="btn btn-info btn-xs">Ver</a>
@@ -93,8 +89,8 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
             </div>
 
             <!-- HISTÓRICO DE ATENDIMENTOS EXTERNOS -->
-            <div class="card" style="margin-top: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
+            <div class="card mt-4">
+                <h3 class="card-title">🏠 Histórico de Atendimentos Externos</h3>
                     🏠 Histórico de Atendimentos Externos
                 </h3>
                 <div class="table-responsive">

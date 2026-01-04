@@ -58,11 +58,45 @@ class ClienteController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = $this->getPostData();
-            if ($id = $this->clienteModel->create($data)) {
-                $this->log("Criou novo cliente", "Cliente #{$id} - {$data['nome_completo']}");
-                $this->redirect('clientes');
-            } else {
-                $this->render('cliente/form', ['error' => 'Erro ao salvar cliente.', 'cliente' => $data]);
+            
+            // Verificar se o documento já existe antes de tentar criar
+            if (!empty($data['documento'])) {
+                $docLimpo = preg_replace('/\D/', '', $data['documento']);
+                $sql = "SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 LIMIT 1";
+                $stmt = $this->clienteModel->getConnection()->prepare($sql);
+                $stmt->execute(['documento' => $docLimpo]);
+                $existente = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+                if ($existente) {
+                    $this->redirect('clientes/view?id=' . $existente['id']);
+                    return;
+                }
+            }
+
+            try {
+                if ($id = $this->clienteModel->create($data)) {
+                    $this->log("Criou novo cliente", "Cliente #{$id} - {$data['nome_completo']}");
+                    $this->redirect('clientes');
+                } else {
+                    $this->render('cliente/form', ['error' => 'Erro ao salvar cliente.', 'cliente' => $data]);
+                }
+            } catch (\PDOException $e) {
+                if ($e->getCode() == 23000) { // Duplicate entry
+                    // Tentar buscar o ID novamente caso tenha ocorrido uma race condition
+                    $docLimpo = preg_replace('/\D/', '', $data['documento']);
+                    $sql = "SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 LIMIT 1";
+                    $stmt = $this->clienteModel->getConnection()->prepare($sql);
+                    $stmt->execute(['documento' => $docLimpo]);
+                    $existente = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    
+                    if ($existente) {
+                        $this->redirect('clientes/view?id=' . $existente['id']);
+                    } else {
+                        $this->render('cliente/form', ['error' => 'Este documento já está cadastrado no sistema.', 'cliente' => $data]);
+                    }
+                } else {
+                    $this->render('cliente/form', ['error' => 'Erro no banco de dados: ' . $e->getMessage(), 'cliente' => $data]);
+                }
             }
         }
     }
@@ -113,11 +147,37 @@ class ClienteController extends BaseController
             if (!$id) $this->redirect('clientes');
 
             $data = $this->getPostData();
-            if ($this->clienteModel->update($id, $data)) {
-                $this->log("Atualizou dados do cliente", "Cliente #{$id} - {$data['nome_completo']}");
-                $this->redirect('clientes/view?id=' . $id);
-            } else {
-                $this->render('cliente/form', ['error' => 'Erro ao atualizar cliente.', 'cliente' => array_merge($data, ['id' => $id])]);
+            
+            // Verificar se o documento já existe em OUTRO cliente
+            if (!empty($data['documento'])) {
+                $docLimpo = preg_replace('/\D/', '', $data['documento']);
+                $sql = "SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 AND id != :id LIMIT 1";
+                $stmt = $this->clienteModel->getConnection()->prepare($sql);
+                $stmt->execute(['documento' => $docLimpo, 'id' => $id]);
+                $existente = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+                if ($existente) {
+                    $this->render('cliente/form', [
+                        'error' => 'Este documento já está cadastrado para outro cliente.', 
+                        'cliente' => array_merge($data, ['id' => $id])
+                    ]);
+                    return;
+                }
+            }
+
+            try {
+                if ($this->clienteModel->update($id, $data)) {
+                    $this->log("Atualizou dados do cliente", "Cliente #{$id} - {$data['nome_completo']}");
+                    $this->redirect('clientes/view?id=' . $id);
+                } else {
+                    $this->render('cliente/form', ['error' => 'Erro ao atualizar cliente.', 'cliente' => array_merge($data, ['id' => $id])]);
+                }
+            } catch (\PDOException $e) {
+                if ($e->getCode() == 23000) {
+                    $this->render('cliente/form', ['error' => 'Este documento já está cadastrado para outro cliente.', 'cliente' => array_merge($data, ['id' => $id])]);
+                } else {
+                    $this->render('cliente/form', ['error' => 'Erro no banco de dados: ' . $e->getMessage(), 'cliente' => array_merge($data, ['id' => $id])]);
+                }
             }
         }
     }
@@ -153,5 +213,33 @@ class ClienteController extends BaseController
             }
         }
         $this->redirect('clientes');
+    }
+
+    public function verificarDocumento()
+    {
+        $documento = filter_input(INPUT_GET, 'documento', FILTER_SANITIZE_SPECIAL_CHARS);
+        $documento = preg_replace('/\D/', '', $documento); // Remove máscara
+
+        if (empty($documento)) {
+            header('Content-Type: application/json');
+            echo json_encode(['exists' => false]);
+            return;
+        }
+
+        $sql = "SELECT id, nome_completo FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 LIMIT 1";
+        $stmt = $this->clienteModel->getConnection()->prepare($sql);
+        $stmt->execute(['documento' => $documento]);
+        $cliente = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        header('Content-Type: application/json');
+        if ($cliente) {
+            echo json_encode([
+                'exists' => true,
+                'id' => $cliente['id'],
+                'nome' => $cliente['nome_completo']
+            ]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
     }
 }

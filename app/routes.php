@@ -66,5 +66,6 @@ $router->post('clientes/atualizar', 'ClienteController@update');
 $router->post('clientes/deletar', 'ClienteController@destroy'); // Ex: clientes/deletar?id=1
 $router->get('clientes/search-ajax', 'ClienteController@searchAjax'); // Busca de cliente para Autocomplete
 $router->get('clientes/details', 'ClienteController@getClientDetails'); // Detalhes do cliente por ID (AJAX)
+$router->get('clientes/verificar-documento', 'ClienteController@verificarDocumento'); // Verificar se CPF/CNPJ já existe
 
 return $router;

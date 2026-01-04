@@ -9,7 +9,7 @@ require_once __DIR__ . '/../layout/main.php';
 ?>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div class="d-flex justify-between align-center mb-4">
         <h1><?php echo htmlspecialchars($title_text); ?></h1>
         <a href="<?php echo BASE_URL; ?>clientes" class="btn btn-secondary btn-sm">← Voltar</a>
     </div>
@@ -28,18 +28,17 @@ require_once __DIR__ . '/../layout/main.php';
             <?php endif; ?>
 
             <!-- SEÇÃO: INFORMAÇÕES PESSOAIS -->
-            <div style="margin-bottom: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
-                    📋 Informações Pessoais
-                </h3>
+            <div class="mb-4">
+                <h3 class="card-title">📋 Informações Pessoais</h3>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="nome_completo">Nome Completo *</label>
                         <input
                             type="text"
                             id="nome_completo"
                             name="nome_completo"
+                            class="form-control"
                             placeholder="Digite o nome completo"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['nome_completo'] ?? '') : ''; ?>"
                             required
@@ -48,7 +47,7 @@ require_once __DIR__ . '/../layout/main.php';
 
                     <div class="form-group">
                         <label for="tipo_pessoa">Tipo de Pessoa</label>
-                        <select id="tipo_pessoa" name="tipo_pessoa">
+                        <select id="tipo_pessoa" name="tipo_pessoa" class="form-select">
                             <option value="fisica" <?php echo ($is_edit && $cliente['tipo_pessoa'] === 'fisica') ? 'selected' : ''; ?>>
                                 Pessoa Física
                             </option>
@@ -64,9 +63,14 @@ require_once __DIR__ . '/../layout/main.php';
                             type="text"
                             id="documento"
                             name="documento"
+                            class="form-control"
                             placeholder="000.000.000-00"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['documento'] ?? '') : ''; ?>"
+                            autocomplete="off"
                         >
+                        <div id="documento-feedback" class="invalid-feedback" style="display: none;">
+                            Este documento já está cadastrado. Redirecionando...
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -75,6 +79,7 @@ require_once __DIR__ . '/../layout/main.php';
                             type="date"
                             id="data_nascimento"
                             name="data_nascimento"
+                            class="form-control"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['data_nascimento'] ?? '') : ''; ?>"
                         >
                     </div>
@@ -82,18 +87,17 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
 
             <!-- SEÇÃO: CONTATO -->
-            <div style="margin-bottom: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
-                    📞 Contato
-                </h3>
+            <div class="mb-4">
+                <h3 class="card-title">📞 Contato</h3>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="email">E-mail</label>
                         <input
                             type="email"
                             id="email"
                             name="email"
+                            class="form-control"
                             placeholder="exemplo@email.com"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['email'] ?? '') : ''; ?>"
                         >
@@ -105,6 +109,7 @@ require_once __DIR__ . '/../layout/main.php';
                             type="tel"
                             id="telefone_principal"
                             name="telefone_principal"
+                            class="form-control"
                             placeholder="(11) 98765-4321"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['telefone_principal'] ?? '') : ''; ?>"
                         >
@@ -116,6 +121,7 @@ require_once __DIR__ . '/../layout/main.php';
                             type="tel"
                             id="telefone_secundario"
                             name="telefone_secundario"
+                            class="form-control"
                             placeholder="(11) 98765-4321"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['telefone_secundario'] ?? '') : ''; ?>"
                         >
@@ -124,18 +130,17 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
 
             <!-- SEÇÃO: ENDEREÇO -->
-            <div style="margin-bottom: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
-                    🏠 Endereço
-                </h3>
+            <div class="mb-4">
+                <h3 class="card-title">🏠 Endereço</h3>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                    <div class="form-group" style="grid-column: 1 / -1;">
+                <div class="form-grid">
+                    <div class="form-group full-width">
                         <label for="endereco_logradouro">Logradouro</label>
                         <input
                             type="text"
                             id="endereco_logradouro"
                             name="endereco_logradouro"
+                            class="form-control"
                             placeholder="Rua, Avenida, etc."
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['endereco_logradouro'] ?? '') : ''; ?>"
                         >
@@ -147,6 +152,7 @@ require_once __DIR__ . '/../layout/main.php';
                             type="text"
                             id="endereco_numero"
                             name="endereco_numero"
+                            class="form-control"
                             placeholder="123"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['endereco_numero'] ?? '') : ''; ?>"
                         >
@@ -158,6 +164,7 @@ require_once __DIR__ . '/../layout/main.php';
                             type="text"
                             id="endereco_bairro"
                             name="endereco_bairro"
+                            class="form-control"
                             placeholder="Bairro"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['endereco_bairro'] ?? '') : ''; ?>"
                         >
@@ -169,6 +176,7 @@ require_once __DIR__ . '/../layout/main.php';
                             type="text"
                             id="endereco_cidade"
                             name="endereco_cidade"
+                            class="form-control"
                             placeholder="Cidade"
                             value="<?php echo $is_edit ? htmlspecialchars($cliente['endereco_cidade'] ?? '') : ''; ?>"
                         >
@@ -177,24 +185,23 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
 
             <!-- SEÇÃO: OBSERVAÇÕES -->
-            <div style="margin-bottom: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
-                    📝 Observações
-                </h3>
+            <div class="mb-4">
+                <h3 class="card-title">📝 Observações</h3>
 
-                <div class="form-group">
+                    <div class="form-group">
                     <label for="observacoes">Notas Adicionais</label>
                     <textarea
                         id="observacoes"
                         name="observacoes"
+                        class="form-control"
                         placeholder="Digite aqui qualquer informação adicional sobre o cliente..."
-                        style="min-height: 120px;"
+                        class="textarea-large"
                     ><?php echo $is_edit ? htmlspecialchars($cliente['observacoes'] ?? '') : ''; ?></textarea>
                 </div>
             </div>
 
             <!-- AÇÕES -->
-            <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--dark-tertiary);">
+            <div class="d-flex gap-2 mt-4 pt-4 border-top">
                 <button type="submit" class="btn btn-primary">
                     <?php echo $is_edit ? '✓ Atualizar Cliente' : '✓ Cadastrar Cliente'; ?>
                 </button>
@@ -205,5 +212,67 @@ require_once __DIR__ . '/../layout/main.php';
         </form>
     </div>
 </div>
+
+<!-- Scripts para Máscara e Verificação -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    const isEdit = <?php echo $is_edit ? 'true' : 'false'; ?>;
+    const clienteId = <?php echo $is_edit ? $cliente['id'] : 'null'; ?>;
+
+    // Função para aplicar máscara baseada no tamanho
+    function aplicarMascara() {
+        let val = $('#documento').val().replace(/\D/g, '');
+        if (val.length <= 11) {
+            $('#documento').mask('000.000.000-009', {reverse: true});
+        } else {
+            $('#documento').mask('00.000.000/0000-00', {reverse: true});
+        }
+    }
+
+    $('#documento').on('input', function() {
+        aplicarMascara();
+    });
+
+    // Aplicar máscara inicial
+    aplicarMascara();
+
+    // Verificação de duplicidade (apenas no cadastro)
+    if (!isEdit) {
+        $('#documento').on('blur', function() {
+            const documento = $(this).val().replace(/\D/g, '');
+            if (documento.length >= 11) {
+                $.get('<?php echo BASE_URL; ?>clientes/verificar-documento', { documento: documento }, function(data) {
+                    if (data.exists) {
+                        $('#documento').addClass('is-invalid');
+                        $('#documento-feedback').show();
+                        
+                        // Pequeno delay para o usuário ver a mensagem antes de redirecionar
+                        setTimeout(function() {
+                            window.location.href = '<?php echo BASE_URL; ?>clientes/view?id=' + data.id;
+                        }, 1500);
+                    } else {
+                        $('#documento').removeClass('is-invalid');
+                        $('#documento-feedback').hide();
+                    }
+                });
+            }
+        });
+    }
+
+    // Máscaras para telefones
+    const maskBehavior = function (val) {
+        return val.replace(/\D/g, '').length === 11 ? '(00) 00000-0000' : '(00) 0000-00009';
+    };
+    const options = {
+        onKeyPress: function(val, e, field, options) {
+            field.mask(maskBehavior.apply({}, arguments), options);
+        }
+    };
+    $('#telefone_principal, #telefone_secundario').mask(maskBehavior, options);
+});
+</script>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

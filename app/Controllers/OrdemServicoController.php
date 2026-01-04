@@ -31,7 +31,6 @@ class OrdemServicoController extends BaseController
         if (ob_get_length()) ob_clean();
         header('Content-Type: application/json; charset=utf-8');
 
-        // Usando a mesma lógica de captura do ClienteController
         $termo = filter_input(INPUT_GET, 'termo', FILTER_SANITIZE_SPECIAL_CHARS);
 
         if (empty($termo)) {
@@ -40,14 +39,12 @@ class OrdemServicoController extends BaseController
         }
 
         try {
-            // Em vez de usar o método buscarPorTermo, vamos usar a lógica direta que funciona
             $whereClause = "nome_completo LIKE :term_nome OR documento LIKE :term_documento";
             $params = [
                 'term_nome' => "%{$termo}%",
                 'term_documento' => "%{$termo}%"
             ];
 
-            // Usando o método getPaginated que você já confirmou que funciona na listagem
             $clientes = $this->clienteModel->getPaginated(10, 0, $whereClause, $params);
             
             echo json_encode($clientes);
@@ -57,7 +54,6 @@ class OrdemServicoController extends BaseController
             exit;
         }
     }
-
 
     public function index()
     {
@@ -150,7 +146,6 @@ class OrdemServicoController extends BaseController
                 'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
             ];
 
-            // Se for admin, pode editar o defeito relatado
             if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
                 $osData['defeito_relatado'] = filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS);
             }
@@ -173,11 +168,15 @@ class OrdemServicoController extends BaseController
         if (!$ordem) $this->redirect('ordens');
 
         $itens = $this->itemModel->findByOsId($id);
+        
+        $configModel = new \App\Models\ConfiguracaoGeral();
+        $margemLucro = $configModel->getValor('porcentagem_venda') ?: 0;
 
         $this->render('os/view', [
             'title' => 'Ordem de Serviço #' . $id,
             'ordem' => $ordem,
-            'itens' => $itens
+            'itens' => $itens,
+            'margem_lucro' => $margemLucro
         ]);
     }
 
@@ -191,10 +190,10 @@ class OrdemServicoController extends BaseController
 
         $itens = $this->itemModel->findByOsId($id);
 
-        $this->render('os/print', [
+        $this->renderPDF('os/print', [
             'ordem' => $ordem,
             'itens' => $itens
-        ], false);
+        ], "OS_{$id}.pdf");
     }
 
     public function printReceipt()
@@ -207,10 +206,10 @@ class OrdemServicoController extends BaseController
 
         $itens = $this->itemModel->findByOsId($id);
 
-        $this->render('os/print_receipt', [
+        $this->renderPDF('os/print_receipt', [
             'ordem' => $ordem,
             'itens' => $itens
-        ], false);
+        ], "Recibo_OS_{$id}.pdf");
     }
 
     public function printEstimate()
@@ -223,10 +222,10 @@ class OrdemServicoController extends BaseController
 
         $itens = $this->itemModel->findByOsId($id);
 
-        $this->render('os/print_orcamento', [
+        $this->renderPDF('os/print_orcamento', [
             'ordem' => $ordem,
             'itens' => $itens
-        ], false);
+        ], "Orcamento_OS_{$id}.pdf");
     }
 
     public function searchEquipamentos()
@@ -281,7 +280,6 @@ class OrdemServicoController extends BaseController
             $produtoId = filter_input(INPUT_POST, 'produto_id', FILTER_VALIDATE_INT);
             $quantidade = filter_input(INPUT_POST, 'quantidade', FILTER_VALIDATE_FLOAT) ?: 1;
             
-            // Dados históricos vindos do formulário (editáveis pelo admin/técnico)
             $custo = filter_input(INPUT_POST, 'valor_custo', FILTER_VALIDATE_FLOAT) ?: 0;
             $venda = filter_input(INPUT_POST, 'valor_unitario', FILTER_VALIDATE_FLOAT) ?: 0;
             $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT) ?: 0;
@@ -293,10 +291,10 @@ class OrdemServicoController extends BaseController
 
             $itemData = [
                 'ordem_servico_id' => $osId,
-                'tipo_item' => $tipo, // Corrigido para o nome da coluna no banco
+                'tipo_item' => $tipo,
                 'descricao' => $descricao,
                 'quantidade' => $quantidade,
-                'custo' => $custo, // Corrigido para o nome da coluna no banco
+                'custo' => $custo,
                 'valor_unitario' => $venda,
                 'valor_mao_de_obra' => $maoDeObra,
                 'valor_total' => ($venda + $maoDeObra) * $quantidade,
@@ -330,6 +328,7 @@ class OrdemServicoController extends BaseController
             }
         }
     }
+
     public function destroy()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

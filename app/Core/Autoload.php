@@ -25,5 +25,10 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// Carrega o autoload do Composer
+if (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
+    require_once __DIR__ . '/../../vendor/autoload.php';
+}
+
 // Carrega as configurações
 require_once __DIR__ . '/../../config/config.php';

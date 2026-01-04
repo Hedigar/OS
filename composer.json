@@ -1,0 +1,6 @@
+{
+    "name": "ubuntu/project",
+    "require": {
+        "dompdf/dompdf": "^3.1"
+    }
+}

@@ -117,6 +117,43 @@ abstract class BaseController extends Controller
     }
 
     /**
+     * Renderiza uma view e gera um PDF usando Dompdf
+     */
+    protected function renderPDF(string $view, array $data = [], string $filename = 'documento.pdf', string $paper = 'a4', string $orientation = 'portrait')
+    {
+        // Extrai os dados para a view
+        extract($data);
+
+        // Captura o HTML da view
+        ob_start();
+        $path = __DIR__ . "/../Views/{$view}.php";
+        if (file_exists($path)) {
+            require $path;
+        } else {
+            die("View '{$view}' não encontrada.");
+        }
+        $html = ob_get_clean();
+
+        // Configura o Dompdf
+        $options = new \Dompdf\Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true); // Permite carregar imagens via URL
+        $options->set('defaultFont', 'Arial');
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper($paper, $orientation);
+        $dompdf->render();
+
+        // Limpa qualquer saída anterior para evitar corrupção do PDF
+        if (ob_get_length()) ob_clean();
+
+        // Envia o PDF para o navegador
+        $dompdf->stream($filename, ["Attachment" => false]);
+        exit;
+    }
+
+    /**
      * Registra uma ação no log do sistema.
      */
     protected function log(string $acao, string $referencia = null)

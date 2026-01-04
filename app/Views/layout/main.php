@@ -9,6 +9,13 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
+    <script>
+        // Aplicar tema salvo antes de renderizar
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
 </head>
 <body>
     <!-- HEADER -->
@@ -71,6 +78,11 @@
         </main>
     </div>
 
+    <!-- Botão de Troca de Tema -->
+    <button class="theme-switch" onclick="toggleTheme()" title="Trocar Tema">
+        <i class="fas fa-moon" id="theme-icon"></i>
+    </button>
+
     <!-- FOOTER -->
     <?php require_once __DIR__ . '/footer.php'; ?>
 
@@ -86,6 +98,28 @@
             submenu.style.display = 'none';
         }
     }
+
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+            icon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+    }
+
+    // Inicializar ícone no carregamento
+    document.addEventListener('DOMContentLoaded', () => {
+        updateThemeIcon(document.documentElement.getAttribute('data-theme'));
+    });
     </script>
 </body>
 </html>

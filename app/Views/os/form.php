@@ -10,7 +10,7 @@ $statuses = $statuses ?? [];
 ?>
 
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div class="d-flex justify-between align-center mb-4">
         <h1>📝 <?php echo htmlspecialchars($title_text); ?></h1>
         <a href="<?php echo BASE_URL; ?>ordens" class="btn btn-secondary btn-sm">← Voltar</a>
     </div>
@@ -32,31 +32,31 @@ $statuses = $statuses ?? [];
             <input type="hidden" id="equipamento_id" name="equipamento_id" value="<?php echo $is_edit ? $ordem['equipamento_id'] : ''; ?>">
 
             <!-- SEÇÃO: DADOS DO CLIENTE -->
-            <div style="margin-bottom: 2rem;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
+            <div class="mb-4">
+                <h3 class="card-title">
                     👥 1. Seleção do Cliente (Obrigatório)
                 </h3>
 
                 <div class="form-group">
                     <label for="cliente_search">Buscar Cliente (Nome, CPF/CNPJ)</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="d-flex gap-2">
                         <input
                             type="text"
                             id="cliente_search"
+                            class="form-control flex-1"
                             placeholder="Digite o nome, CPF ou CNPJ e aperte Enter ou clique em Buscar..."
                             value="<?php echo $is_edit ? htmlspecialchars($ordem['cliente_nome']) : ''; ?>"
                             <?php echo $is_edit ? 'readonly' : ''; ?>
                             autocomplete="off"
-                            style="flex: 1;"
                         >
                         <button type="button" id="btn_buscar_cliente" class="btn btn-primary" <?php echo $is_edit ? 'disabled' : ''; ?>>🔍 Buscar</button>
                     </div>
                     <div id="search_results" class="autocomplete-results"></div>
                 </div>
 
-                <div id="cliente_info" style="margin-top: 1rem; padding: 1rem; border: 1px solid var(--dark-tertiary); border-radius: 8px; display: <?php echo $is_edit ? 'block' : 'none'; ?>;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <p style="margin: 0;"><strong>Cliente Selecionado:</strong></p>
+                <div id="cliente_info" class="card mt-3" style="display: <?php echo $is_edit ? 'block' : 'none'; ?>;">
+                    <div class="d-flex justify-between align-center mb-2">
+                        <p class="m-0"><strong>Cliente Selecionado:</strong></p>
                         <button type="button" id="remove_client_btn" class="btn btn-danger btn-sm" onclick="removeClient()">✕ Alterar Cliente</button>
                     </div>
                     <p><strong>Nome:</strong> <span id="info_nome"><?php echo $is_edit ? htmlspecialchars($ordem['cliente_nome']) : ''; ?></span></p>
@@ -67,7 +67,7 @@ $statuses = $statuses ?? [];
 
             <!-- SEÇÃO: DADOS DO EQUIPAMENTO -->
             <div id="equipamento_section" style="margin-bottom: 2rem; opacity: <?php echo $is_edit ? '1' : '0.5'; ?>; pointer-events: <?php echo $is_edit ? 'auto' : 'none'; ?>;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
+                <h3 class="card-title">
                     💻 2. Dados do Equipamento
                 </h3>
 
@@ -79,10 +79,10 @@ $statuses = $statuses ?? [];
                 </div>
 
                 <div id="equipamento_fields_container">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <div class="form-grid">
                         <div class="form-group">
                             <label for="tipo_equipamento">Tipo *</label>
-                            <select id="tipo_equipamento" name="tipo_equipamento" required>
+                            <select id="tipo_equipamento" name="tipo_equipamento" class="form-select" required>
                                 <option value="">Selecione</option>
                                 <?php
                                 $tipos = ['Notebook', 'Desktop', 'Monitor', 'Impressora', 'All in One', 'Smartphone', 'Tablet', 'Outro'];
@@ -94,29 +94,29 @@ $statuses = $statuses ?? [];
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label for="marca_equipamento">Marca</label>
-                            <input type="text" id="marca_equipamento" name="marca_equipamento" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_marca']) : ''; ?>">
-                        </div>
+<div class="form-group">
+	                            <label for="marca_equipamento">Marca</label>
+	                            <input type="text" id="marca_equipamento" name="marca_equipamento" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_marca']) : ''; ?>">
+	                        </div>
 
                         <div class="form-group">
                             <label for="modelo_equipamento">Modelo</label>
-                            <input type="text" id="modelo_equipamento" name="modelo_equipamento" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_modelo']) : ''; ?>">
+                            <input type="text" id="modelo_equipamento" name="modelo_equipamento" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_modelo']) : ''; ?>">
                         </div>
 
                         <div class="form-group">
                             <label for="serial_equipamento">Serial / IMEI</label>
-                            <input type="text" id="serial_equipamento" name="serial_equipamento" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_serial']) : ''; ?>">
+                            <input type="text" id="serial_equipamento" name="serial_equipamento" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_serial']) : ''; ?>">
                         </div>
 
                         <div class="form-group">
                             <label for="senha_equipamento">Senha de Acesso</label>
-                            <input type="text" id="senha_equipamento" name="senha_equipamento" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_senha']) : ''; ?>">
+                            <input type="text" id="senha_equipamento" name="senha_equipamento" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_senha']) : ''; ?>">
                         </div>
 
                         <div class="form-group">
                             <label for="fonte_equipamento">Fonte de Alimentação</label>
-                            <select id="fonte_equipamento" name="fonte_equipamento">
+                            <select id="fonte_equipamento" name="fonte_equipamento" class="form-select">
                                 <option value="nao" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 0) ? 'selected' : ''; ?>>Não Deixou</option>
                                 <option value="sim" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 1) ? 'selected' : ''; ?>>Deixou</option>
                             </select>
@@ -124,7 +124,7 @@ $statuses = $statuses ?? [];
 
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label for="acessorios_equipamento">Acessórios Deixados</label>
-                            <textarea id="acessorios_equipamento" name="acessorios_equipamento" style="min-height: 60px;"><?php echo $is_edit ? htmlspecialchars($ordem['equipamento_acessorios']) : ''; ?></textarea>
+                            <textarea id="acessorios_equipamento" name="acessorios_equipamento" class="form-control" style="min-height: 60px;"><?php echo $is_edit ? htmlspecialchars($ordem['equipamento_acessorios']) : ''; ?></textarea>
                         </div>
                     </div>
                 </div>
@@ -132,26 +132,26 @@ $statuses = $statuses ?? [];
 
             <!-- SEÇÃO: DADOS DA OS -->
             <div id="os_section" style="margin-bottom: 2rem; opacity: <?php echo $is_edit ? '1' : '0.5'; ?>; pointer-events: <?php echo $is_edit ? 'auto' : 'none'; ?>;">
-                <h3 style="color: var(--primary-red); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-red);">
+                <h3 class="card-title">
                     📝 3. Informações da Ordem de Serviço
                 </h3>
 
-                <div class="form-group">
-                    <label for="defeito">Defeito Relatado *</label>
-                    <textarea id="defeito" name="defeito" placeholder="Descreva o problema relatado pelo cliente..." style="min-height: 100px; <?php echo $is_edit ? 'background-color: var(--dark-tertiary); cursor: not-allowed;' : ''; ?>" required <?php echo $is_edit ? 'readonly' : ''; ?>><?php echo $is_edit ? htmlspecialchars($ordem['defeito_relatado']) : ''; ?></textarea>
-                    <?php if ($is_edit): ?>
-                        <small style="color: #888;">* Edição bloqueada para padronização.</small>
+<div class="form-group">
+	                    <label for="defeito">Defeito Relatado *</label>
+	                    <textarea id="defeito" name="defeito" class="form-control" placeholder="Descreva o problema relatado pelo cliente..." style="min-height: 100px;" required <?php echo $is_edit ? 'readonly' : ''; ?>><?php echo $is_edit ? htmlspecialchars($ordem['defeito_relatado']) : ''; ?></textarea>
+	                    <?php if ($is_edit): ?>
+                        <small class="text-muted">* Edição bloqueada para padronização.</small>
                     <?php endif; ?>
                 </div>
 
                 <div class="form-group">
                     <label for="laudo_tecnico">Laudo Técnico / Observações Internas</label>
-                    <textarea id="laudo_tecnico" name="laudo_tecnico" placeholder="Descreva o diagnóstico técnico, estado do equipamento, etc..." style="min-height: 100px;"><?php echo $is_edit ? htmlspecialchars($ordem['laudo_tecnico'] ?? '') : ''; ?></textarea>
+                    <textarea id="laudo_tecnico" name="laudo_tecnico" class="form-control" placeholder="Descreva o diagnóstico técnico, estado do equipamento, etc..." style="min-height: 100px;"><?php echo $is_edit ? htmlspecialchars($ordem['laudo_tecnico'] ?? '') : ''; ?></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="status_id">Status da OS</label>
-                    <select id="status_id" name="status_id">
+                    <select id="status_id" name="status_id" class="form-select">
                         <?php foreach ($statuses as $status): ?>
                             <option value="<?php echo $status['id']; ?>" <?php echo ($is_edit && $ordem['status_atual_id'] == $status['id']) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($status['nome']); ?>
@@ -161,7 +161,7 @@ $statuses = $statuses ?? [];
                 </div>
             </div>
 
-            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <div class="d-flex gap-3 mt-4">
                 <button type="submit" class="btn btn-primary btn-lg">💾 Salvar Ordem de Serviço</button>
                 <a href="<?php echo BASE_URL; ?>ordens" class="btn btn-secondary btn-lg">Cancelar</a>
             </div>

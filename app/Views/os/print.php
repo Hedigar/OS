@@ -1,404 +1,299 @@
 <?php
 /**
- * MODELO DE IMPRESSÃO DE ORÇAMENTO PROFISSIONAL
+ * MODELO DE IMPRESSÃO DE ORDEM DE SERVIÇO PROFISSIONAL (PDF)
  */
 $ordem = $ordem ?? [];
 $itens = $itens ?? [];
 
-// Função auxiliar para formatar moeda
-function formatCurrency($value) {
-    return 'R$ ' . number_format($value, 2, ',', '.');
+if (!function_exists('formatCurrency')) {
+    function formatCurrency($value) {
+        return 'R$ ' . number_format((float)$value, 2, ',', '.');
+    }
 }
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Orçamento OS #<?php echo $ordem['id'] ?? ''; ?></title>
     <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #e74c3c;
-            --accent-color: #3498db;
-            --text-dark: #333;
-            --text-light: #7f8c8d;
-            --bg-light: #f9f9f9;
-            --border-color: #ecf0f1;
+        @page {
+            margin: 10mm;
         }
-
-        html, body {
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            color: #333;
+            line-height: 1.4;
             margin: 0;
             padding: 0;
-            background: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--text-dark);
-            font-size: 12px;
         }
-
-        @page {
-            size: A4;
-            margin: 15mm;
-        }
-
-        * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
         .container {
             width: 100%;
-            max-width: 210mm;
-            margin: 0 auto;
-            padding: 0;
         }
-
-        /* CABEÇALHO */
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px solid var(--primary-color);
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
-
-        .logo-area img {
-            max-width: 250px;
-            height: auto;
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-
-        .company-info {
+        .logo-cell {
+            width: 40%;
+        }
+        .company-cell {
+            width: 60%;
             text-align: right;
         }
-
-        .company-info h1 {
-            margin: 0;
-            color: var(--primary-color);
-            font-size: 24px;
-            text-transform: uppercase;
-        }
-
-        .company-info p {
-            margin: 2px 0;
-            color: var(--text-light);
-            font-size: 11px;
-        }
-
-        /* TÍTULO DO DOCUMENTO */
-        .document-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--primary-color);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            margin-bottom: 25px;
-        }
-
-        .document-title h2 {
-            margin: 0;
+        .company-name {
             font-size: 18px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .os-number {
-            font-size: 16px;
             font-weight: bold;
-        }
-
-        /* GRIDS DE INFORMAÇÕES */
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .info-box {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            background-color: var(--bg-light);
-        }
-
-        .info-box h3 {
-            margin: 0 0 10px 0;
-            font-size: 13px;
-            color: var(--primary-color);
-            border-bottom: 1px solid var(--primary-color);
-            padding-bottom: 5px;
+            color: #2c3e50;
+            margin: 0;
             text-transform: uppercase;
         }
-
-        .info-item {
-            margin-bottom: 5px;
-            display: flex;
+        .company-info {
+            font-size: 10px;
+            color: #7f8c8d;
+            margin: 2px 0;
         }
-
-        .info-label {
+        .doc-title-box {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 8px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .doc-title-table {
+            width: 100%;
+        }
+        .doc-title {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .os-number {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: right;
+        }
+        .section-title {
+            background-color: #f2f2f2;
+            padding: 5px 10px;
+            font-weight: bold;
+            border-left: 4px solid #2c3e50;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .info-table td {
+            padding: 4px 8px;
+            border: 1px solid #eee;
+            vertical-align: top;
+        }
+        .label {
             font-weight: bold;
             width: 100px;
-            color: var(--text-dark);
+            background-color: #fafafa;
         }
-
-        .info-value {
-            flex: 1;
-            color: var(--text-dark);
-        }
-
-        /* TABELA DE ITENS */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
         }
-
         .items-table th {
-            background-color: var(--primary-color);
-            color: #fff;
+            background-color: #2c3e50;
+            color: #ffffff;
             text-align: left;
-            padding: 10px;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-
-        .items-table td {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .items-table tr:nth-child(even) {
-            background-color: #fcfcfc;
-        }
-
-        .text-right { text-align: right !important; }
-        .text-center { text-align: center !important; }
-
-        /* TOTAIS */
-        .totals-area {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 30px;
-        }
-
-        .totals-box {
-            width: 250px;
-        }
-
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .total-row.grand-total {
-            background-color: var(--secondary-color);
-            color: #fff;
-            font-weight: bold;
-            font-size: 16px;
-            border-radius: 5px;
-            margin-top: 5px;
-        }
-
-        /* LAUDO E OBSERVAÇÕES */
-        .notes-area {
-            margin-bottom: 30px;
-        }
-
-        .notes-box {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            min-height: 80px;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-
-        /* RODAPÉ E ASSINATURAS */
-        .footer {
-            margin-top: 50px;
-        }
-
-        .terms {
+            padding: 8px;
             font-size: 10px;
-            color: var(--text-light);
-            text-align: justify;
-            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+        .items-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .totals-table {
+            width: 250px;
+            margin-left: auto;
+            border-collapse: collapse;
+        }
+        .totals-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .grand-total {
+            background-color: #e74c3c;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .notes-box {
+            border: 1px solid #eee;
             padding: 10px;
-            border-left: 3px solid var(--secondary-color);
-            background-color: #fff5f5;
+            min-height: 60px;
+            background-color: #fcfcfc;
+            margin-bottom: 20px;
         }
-
-        .signatures {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 60px;
+        .footer {
+            margin-top: 30px;
+            font-size: 9px;
+            color: #7f8c8d;
         }
-
+        .terms {
+            border-left: 3px solid #e74c3c;
+            padding-left: 10px;
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        .signature-table {
+            width: 100%;
+            margin-top: 40px;
+        }
         .signature-box {
-            width: 200px;
+            width: 45%;
             text-align: center;
-            border-top: 1px solid var(--text-dark);
+            border-top: 1px solid #333;
             padding-top: 5px;
         }
-
-        @media print {
-            body { background: none; }
-            .container { width: 100%; }
-        }
+        .spacer { width: 10%; }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <!-- CABEÇALHO -->
-    <div class="header">
-        <div class="logo-area">
-            <img src="<?php echo BASE_URL; ?>assets/img/logo.png" alt="Logo Empresa">
-        </div>
-        <div class="company-info">
-            <h1>Myranda Informática</h1>
-            <p>CNPJ: 13.558.678/0001-36</p>
-            <p>Av. Getúlio Vargas, 1144 - Centro - Osório/RS</p>
-            <p>Fone: (51) 3663-6445 | WhatsApp: (51) 98359-1567</p>
-            <p>E-mail: contato@myrandainformatica.com.br</p>
-        </div>
-    </div>
-
-    <!-- TÍTULO DO DOCUMENTO -->
-    <div class="document-title">
-        <h2>Orçamento de Serviço</h2>
-        <div class="os-number">Nº OS: <?php echo str_pad($ordem['id'] ?? '', 6, '0', STR_PAD_LEFT); ?></div>
-    </div>
-
-    <!-- INFORMAÇÕES DO CLIENTE E EQUIPAMENTO -->
-    <div class="info-grid">
-        <div class="info-box">
-            <h3>Informações do Cliente</h3>
-            <div class="info-item">
-                <span class="info-label">Cliente:</span>
-                <span class="info-value"><?php echo $ordem['cliente_nome'] ?? 'N/A'; ?></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">CPF/CNPJ:</span>
-                <span class="info-value"><?php echo $ordem['cliente_documento'] ?? 'N/A'; ?></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Telefone:</span>
-                <span class="info-value"><?php echo $ordem['cliente_telefone'] ?? 'N/A'; ?></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Data:</span>
-                <span class="info-value"><?php echo isset($ordem['created_at']) ? date('d/m/Y H:i', strtotime($ordem['created_at'])) : date('d/m/Y H:i'); ?></span>
-            </div>
-        </div>
-        <div class="info-box">
-            <h3>Detalhes do Equipamento</h3>
-            <div class="info-item">
-                <span class="info-label">Equipamento:</span>
-                <span class="info-value"><?php echo $ordem['equipamento_tipo'] ?? 'N/A'; ?></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Marca/Mod.:</span>
-                <span class="info-value"><?php echo ($ordem['equipamento_marca'] ?? '') . ' ' . ($ordem['equipamento_modelo'] ?? ''); ?></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Serial:</span>
-                <span class="info-value"><?php echo $ordem['equipamento_serial'] ?? 'N/A'; ?></span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Acessórios:</span>
-                <span class="info-value"><?php echo $ordem['equipamento_acessorios'] ?? 'Nenhum'; ?></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- TABELA DE ITENS -->
-    <table class="items-table">
-        <thead>
-            <tr>
-                <th style="width: 10%;">Tipo</th>
-                <th style="width: 50%;">Descrição do Produto / Serviço</th>
-                <th style="width: 10%;" class="text-center">Qtd</th>
-                <th style="width: 15%;" class="text-right">Vlr. Unit.</th>
-                <th style="width: 15%;" class="text-right">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($itens)): ?>
+    <div class="container">
+        <div class="header">
+            <table class="header-table">
                 <tr>
-                    <td colspan="5" class="text-center">Nenhum item adicionado a este orçamento.</td>
+                    <td class="logo-cell">
+                        <!-- Se houver logo, Dompdf precisa do caminho absoluto ou base64 -->
+                        <h1 style="margin:0; color:#2c3e50;">ASSISTÊNCIA TÉCNICA</h1>
+                    </td>
+                    <td class="company-cell">
+                        <p class="company-name">Myranda Informática</p>
+                        <p class="company-info">CNPJ: 13.558.678/0001-36</p>
+                        <p class="company-info">Av. Getúlio Vargas, 1144 - Centro - Osório/RS</p>
+                        <p class="company-info">Fone: (51) 3663-6445 | WhatsApp: (51) 98359-1567</p>
+                    </td>
                 </tr>
-            <?php else: ?>
-                <?php foreach ($itens as $item): ?>
+            </table>
+        </div>
+
+        <div class="doc-title-box">
+            <table class="doc-title-table">
+                <tr>
+                    <td class="doc-title">Ordem de Serviço</td>
+                    <td class="os-number">Nº <?php echo str_pad($ordem['id'] ?? '', 6, '0', STR_PAD_LEFT); ?></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section-title">Informações do Cliente</div>
+        <table class="info-table">
+            <tr>
+                <td class="label">Cliente:</td>
+                <td><?php echo $ordem['cliente_nome'] ?? 'N/A'; ?></td>
+                <td class="label">CPF/CNPJ:</td>
+                <td><?php echo $ordem['cliente_documento'] ?? 'N/A'; ?></td>
+            </tr>
+            <tr>
+                <td class="label">Telefone:</td>
+                <td><?php echo $ordem['cliente_telefone'] ?? 'N/A'; ?></td>
+                <td class="label">Data/Hora:</td>
+                <td><?php echo isset($ordem['created_at']) ? date('d/m/Y H:i', strtotime($ordem['created_at'])) : date('d/m/Y H:i'); ?></td>
+            </tr>
+            <tr>
+                <td class="label">Endereço:</td>
+                <td colspan="3"><?php echo $ordem['cliente_endereco'] ?? 'Não informado'; ?></td>
+            </tr>
+        </table>
+
+        <div class="section-title">Detalhes do Equipamento</div>
+        <table class="info-table">
+            <tr>
+                <td class="label">Equipamento:</td>
+                <td><?php echo $ordem['equipamento_tipo'] ?? 'N/A'; ?></td>
+                <td class="label">Marca/Modelo:</td>
+                <td><?php echo ($ordem['equipamento_marca'] ?? '') . ' ' . ($ordem['equipamento_modelo'] ?? ''); ?></td>
+            </tr>
+            <tr>
+                <td class="label">Nº Serial:</td>
+                <td><?php echo $ordem['equipamento_serial'] ?? 'N/A'; ?></td>
+                <td class="label">Acessórios:</td>
+                <td><?php echo $ordem['equipamento_acessorios'] ?? 'Nenhum'; ?></td>
+            </tr>
+        </table>
+
+        <div class="section-title">Defeito Relatado</div>
+        <div class="notes-box"><?php echo $ordem['defeito_relatado'] ?? 'Não informado.'; ?></div>
+
+        <div class="section-title">Serviços e Peças</div>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th class="text-center" style="width: 60px;">Qtd</th>
+                    <th class="text-right" style="width: 100px;">Unitário</th>
+                    <th class="text-right" style="width: 100px;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($itens)): ?>
                     <tr>
-                        <td class="text-center"><?php echo ucfirst($item['tipo_item'] ?? 'Item'); ?></td>
-                        <td><?php echo $item['descricao'] ?? ''; ?></td>
-                        <td class="text-center"><?php echo number_format($item['quantidade'] ?? 1, 2, ',', '.'); ?></td>
-                        <td class="text-right"><?php echo formatCurrency(($item['valor_unitario'] ?? 0) + ($item['valor_mao_de_obra'] ?? 0)); ?></td>
-                        <td class="text-right"><?php echo formatCurrency($item['valor_total'] ?? 0); ?></td>
+                        <td colspan="4" class="text-center">Nenhum item registrado.</td>
                     </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
+                <?php else: ?>
+                    <?php foreach ($itens as $item): ?>
+                        <tr>
+                            <td><?php echo $item['descricao'] ?? ''; ?></td>
+                            <td class="text-center"><?php echo number_format($item['quantidade'] ?? 1, 0, ',', '.'); ?></td>
+                            <td class="text-right"><?php echo formatCurrency(($item['valor_unitario'] ?? 0) + ($item['valor_mao_de_obra'] ?? 0)); ?></td>
+                            <td class="text-right"><?php echo formatCurrency($item['valor_total'] ?? 0); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
 
-    <!-- TOTAIS -->
-    <div class="totals-area">
-        <div class="totals-box">
-            <div class="total-row">
-                <span>Total Produtos:</span>
-                <span><?php echo formatCurrency($ordem['valor_total_produtos'] ?? 0); ?></span>
+        <table class="totals-table">
+            <tr>
+                <td>Total Produtos:</td>
+                <td class="text-right"><?php echo formatCurrency($ordem['valor_total_produtos'] ?? 0); ?></td>
+            </tr>
+            <tr>
+                <td>Total Serviços:</td>
+                <td class="text-right"><?php echo formatCurrency($ordem['valor_total_servicos'] ?? 0); ?></td>
+            </tr>
+            <tr class="grand-total">
+                <td>TOTAL GERAL:</td>
+                <td class="text-right"><?php echo formatCurrency($ordem['valor_total_os'] ?? 0); ?></td>
+            </tr>
+        </table>
+
+        <div class="section-title">Laudo Técnico / Diagnóstico</div>
+        <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? $ordem['laudo_tecnico'] : 'Aguardando diagnóstico.'; ?></div>
+
+        <div class="footer">
+            <div class="terms">
+                <strong>Termos:</strong> A garantia de serviços é de 90 dias. Peças novas conforme fabricante. Equipamentos não retirados em 90 dias serão considerados abandonados.
             </div>
-            <div class="total-row">
-                <span>Total Serviços:</span>
-                <span><?php echo formatCurrency($ordem['valor_total_servicos'] ?? 0); ?></span>
-            </div>
-            <div class="total-row grand-total">
-                <span>TOTAL GERAL:</span>
-                <span><?php echo formatCurrency($ordem['valor_total_os'] ?? 0); ?></span>
-            </div>
+
+            <table class="signature-table">
+                <tr>
+                    <td class="signature-box">Assinatura do Técnico</td>
+                    <td class="spacer"></td>
+                    <td class="signature-box">Assinatura do Cliente</td>
+                </tr>
+            </table>
+            <p style="text-align: center; margin-top: 20px;">Gerado em <?php echo date('d/m/Y H:i'); ?> - Sistema de Gestão</p>
         </div>
     </div>
-
-    <!-- LAUDO TÉCNICO -->
-    <div class="notes-area">
-        <div class="info-box" style="background-color: #fff;">
-            <h3>Laudo Técnico / Diagnóstico</h3>
-            <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? $ordem['laudo_tecnico'] : 'Aguardando diagnóstico detalhado.'; ?></div>
-        </div>
-    </div>
-
-    <!-- TERMOS E CONDIÇÕES -->
-    <div class="footer">
-        <div class="terms">
-            <strong>Termos e Condições:</strong><br>
-            1. Este orçamento é válido por 5 (cinco) dias a partir da data de emissão.<br>
-            2. A garantia de serviços é de 90 dias, conforme o Código de Defesa do Consumidor.<br>
-            3. Peças novas possuem garantia conforme o fabricante (mínimo 90 dias).<br>
-            4. Equipamentos não retirados em até 90 dias após a conclusão do serviço serão considerados abandonados.<br>
-            5. A aprovação deste orçamento autoriza a execução imediata dos serviços descritos.
-        </div>
-
-        <div class="signatures">
-            <div class="signature-box">
-                Myranda Informática
-            </div>
-            <div class="signature-box">
-                Assinatura do Cliente
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    window.onload = function() {
-        window.print();
-    }
-</script>
 </body>
 </html>

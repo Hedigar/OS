@@ -5,17 +5,24 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Models\Usuario;
+use App\Models\Log;
 
+/**
+ * Controlador responsável pela autenticação.
+ */
 class AuthController extends Controller
 {
-    private $usuarioModel;
+    private Usuario $usuarioModel;
 
     public function __construct()
     {
         $this->usuarioModel = new Usuario();
     }
 
-    public function showLogin()
+    /**
+     * Exibe a página de login.
+     */
+    public function showLogin(): void
     {
         if (Auth::check()) {
             $this->redirect('dashboard');
@@ -23,22 +30,23 @@ class AuthController extends Controller
         $this->view('auth/login');
     }
 
-    public function login()
+    /**
+     * Processa a tentativa de login.
+     */
+    public function login(): void
     {
         if (Auth::check()) {
             $this->redirect('dashboard');
         }
-        $logModel = new \App\Models\Log();
+
+        $logModel = new Log();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // 1. Pegamos os valores brutos e removemos espaços extras nas pontas
             $emailRaw = trim($_POST['email'] ?? '');
-            $senhaRaw = $_POST['senha'] ?? ''; // Senha não precisa de trim se aceitar espaços
+            $senhaRaw = $_POST['senha'] ?? '';
 
-            // 2. Validamos o formato do e-mail separadamente
             $email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL);
 
-            // 3. Verificamos se estão vazios ou se o e-mail é inválido
             if (!$email || empty($senhaRaw)) {
                 $this->view('auth/login', [
                     'error' => 'Preencha todos os campos corretamente (e-mail válido é obrigatório).'
@@ -48,13 +56,9 @@ class AuthController extends Controller
 
             $user = $this->usuarioModel->findByEmail($email);
 
-            // Use a senha bruta ($senhaRaw) para o password_verify
             if ($user && password_verify($senhaRaw, $user['senha'])) {
                 Auth::login($user);
                 $logModel->registrar($user['id'], "Realizou login no sistema");
-                
-                // Redireciona para o dashboard; se precisar trocar senha, 
-                // o BaseController interceptará e redirecionará corretamente.
                 $this->redirect('dashboard');
             } else {
                 $logModel->registrar(null, "Tentativa de login falhou", "E-mail: {$emailRaw}");
@@ -65,9 +69,12 @@ class AuthController extends Controller
         }
     }
 
-    public function logout()
+    /**
+     * Realiza o logout do usuário.
+     */
+    public function logout(): void
     {
-        $logModel = new \App\Models\Log();
+        $logModel = new Log();
         $logModel->registrar(Auth::id(), "Realizou logout do sistema");
         Auth::logout();
         $this->redirect('login');

@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class EquipamentoOS extends Model
 {
-    protected $table = 'equipamentos_os';
+    protected string $table = 'equipamentos_os';
 
     /**
      * Busca todos os equipamentos de OSs anteriores de um cliente específico.
@@ -43,7 +43,7 @@ class EquipamentoOS extends Model
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['cliente_id' => $clienteId]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
@@ -57,6 +57,6 @@ class EquipamentoOS extends Model
         $sql = "SELECT * FROM {$this->table} WHERE os_id = :os_id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['os_id' => $osId]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 }

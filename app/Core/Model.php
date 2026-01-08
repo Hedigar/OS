@@ -2,22 +2,15 @@
 
 namespace App\Core;
 
-use App\Core\Database;
+use PDO;
 
-    abstract class Model
+/**
+ * Classe base para todos os modelos do sistema.
+ */
+abstract class Model
 {
-    protected $db;
-    protected $table;
-
-    public function getConnection()
-    {
-        return $this->db;
-    }
-
-    public function getTable()
-    {
-        return $this->table;
-    }
+    protected PDO $db;
+    protected string $table;
 
     public function __construct()
     {
@@ -25,9 +18,27 @@ use App\Core\Database;
     }
 
     /**
-     * Busca todos os registros da tabela.
+     * Retorna a conexão PDO.
      */
-    public function all()
+    public function getConnection(): PDO
+    {
+        return $this->db;
+    }
+
+    /**
+     * Retorna o nome da tabela associada ao modelo.
+     */
+    public function getTable(): string
+    {
+        return $this->table;
+    }
+
+    /**
+     * Busca todos os registros ativos da tabela.
+     * 
+     * @return array
+     */
+    public function all(): array
     {
         $stmt = $this->db->query("SELECT * FROM {$this->table} WHERE ativo = 1");
         return $stmt->fetchAll();
@@ -35,9 +46,11 @@ use App\Core\Database;
 
     /**
      * Busca um registro pelo ID.
+     * 
      * @param int $id O ID do registro.
+     * @return mixed
      */
-    public function find(int $id)
+    public function find(int $id): mixed
     {
         $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id AND ativo = 1");
         $stmt->execute(['id' => $id]);
@@ -46,9 +59,11 @@ use App\Core\Database;
 
     /**
      * Insere um novo registro.
+     * 
      * @param array $data Os dados a serem inseridos (coluna => valor).
+     * @return int|bool O ID inserido ou false em caso de falha.
      */
-    public function create(array $data)
+    public function create(array $data): int|bool
     {
         $fields = implode(', ', array_keys($data));
         $placeholders = ':' . implode(', :', array_keys($data));
@@ -63,10 +78,12 @@ use App\Core\Database;
 
     /**
      * Atualiza um registro existente.
+     * 
      * @param int $id O ID do registro a ser atualizado.
      * @param array $data Os dados a serem atualizados (coluna => valor).
+     * @return bool
      */
-    public function update(int $id, array $data)
+    public function update(int $id, array $data): bool
     {
         $setClauses = [];
         foreach (array_keys($data) as $field) {
@@ -81,19 +98,22 @@ use App\Core\Database;
     }
 
     /**
-     * Deleta um registro.
-     * @param int $id O ID do registro a ser deletado.
+     * Realiza a exclusão lógica de um registro.
+     * 
+     * @param int $id O ID do registro.
+     * @return bool
      */
-    public function delete(int $id)
+    public function delete(int $id): bool
     {
         $stmt = $this->db->prepare("UPDATE {$this->table} SET ativo = 0 WHERE id = :id");
         return $stmt->execute(['id' => $id]);
     }
 
     /**
-     * Conta o total de registros na tabela, opcionalmente com uma condição WHERE.
-     * @param string $whereClause A cláusula WHERE (ex: "nome LIKE :termo").
-     * @param array $params Parâmetros para a cláusula WHERE.
+     * Conta o total de registros ativos, opcionalmente com uma condição.
+     * 
+     * @param string $whereClause Cláusula WHERE adicional.
+     * @param array $params Parâmetros para a cláusula.
      * @return int
      */
     public function countAll(string $whereClause = '', array $params = []): int
@@ -108,11 +128,12 @@ use App\Core\Database;
     }
 
     /**
-     * Busca registros com paginação, opcionalmente com uma condição WHERE.
-     * @param int $limit Limite de registros por página.
-     * @param int $offset Deslocamento (offset).
-     * @param string $whereClause A cláusula WHERE (ex: "nome LIKE :termo").
-     * @param array $params Parâmetros para a cláusula WHERE.
+     * Busca registros com paginação.
+     * 
+     * @param int $limit
+     * @param int $offset
+     * @param string $whereClause
+     * @param array $params
      * @return array
      */
     public function getPaginated(int $limit, int $offset, string $whereClause = '', array $params = []): array
@@ -125,16 +146,13 @@ use App\Core\Database;
 
         $stmt = $this->db->prepare($sql);
         
-        // Vincula os parâmetros de busca
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
 
-        // Vincula os parâmetros de paginação
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         
-        // Executa a consulta sem passar o array de parâmetros novamente
         $stmt->execute();
         return $stmt->fetchAll();
     }

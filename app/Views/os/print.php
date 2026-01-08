@@ -15,13 +15,25 @@ if (!function_exists('formatCurrency')) {
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <?php
+        $configModel = new \App\Models\ConfiguracaoGeral();
+        $fontSize = $configModel->getValor('impressao_fonte_tamanho') ?: '13';
+        $showObs = $configModel->getValor('impressao_exibir_observacoes') !== '0';
+        
+        $textoPadrao = "Será cobrado um valor R$ 100,00 mão de obra (HORA TÉCNICA), caso o cliente não autorize a realização do serviço (ORÇAMENTO).\n" .
+                       "*Não nos responsabilizamos pela origem e software dos equipamentos depositados para orçamentos.\n" .
+                       "*O equipamento somente será entregue com a apresentação da ordem de serviço ou documento com foto somente para o proprietário.\n" .
+                       "*Equipamentos não retirados no prazo de 30 dias após a da data de conclusão do serviço, serão considerado abandonados e será cobrado uma taxa diária de R$ 2,00(dois reais) para fins de armazenamento, contar a partir da data de conclusão do serviço até a data de retirada do equipamento. Caso esse prazo de armazenamentoseja superior a 90 dias, autorizo desde já a doação do equipamento à Myranda Informatica para que essa possa cobrir todos os custos de armazenagem, bem comodoar, vender, reciclar ou mesmo descartar de forma correta o equipamento.";
+        
+        $textoObs = $configModel->getValor('impressao_texto_observacoes') ?: $textoPadrao;
+    ?>
     <style>
         @page {
             margin: 10mm;
         }
         body {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 11px;
+            font-size: <?php echo $fontSize; ?>px;
             color: #333;
             line-height: 1.4;
             margin: 0;
@@ -54,7 +66,7 @@ if (!function_exists('formatCurrency')) {
             text-transform: uppercase;
         }
         .company-info {
-            font-size: 10px;
+            font-size: 11px;
             color: #7f8c8d;
             margin: 2px 0;
         }
@@ -85,7 +97,7 @@ if (!function_exists('formatCurrency')) {
             border-left: 4px solid #2c3e50;
             margin-bottom: 10px;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 11px;
         }
         .info-table {
             width: 100%;
@@ -112,7 +124,7 @@ if (!function_exists('formatCurrency')) {
             color: #ffffff;
             text-align: left;
             padding: 8px;
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
         }
         .items-table td {
@@ -145,7 +157,7 @@ if (!function_exists('formatCurrency')) {
         }
         .footer {
             margin-top: 30px;
-            font-size: 9px;
+            font-size: 10px;
             color: #7f8c8d;
         }
         .terms {
@@ -231,8 +243,10 @@ if (!function_exists('formatCurrency')) {
             </tr>
         </table>
 
+        <?php if ($showObs): ?>
         <div class="section-title">Defeito Relatado</div>
         <div class="notes-box"><?php echo $ordem['defeito_relatado'] ?? 'Não informado.'; ?></div>
+        <?php endif; ?>
 
         <div class="section-title">Serviços e Peças</div>
         <table class="items-table">
@@ -277,12 +291,14 @@ if (!function_exists('formatCurrency')) {
             </tr>
         </table>
 
+        <?php if ($showObs): ?>
         <div class="section-title">Laudo Técnico / Diagnóstico</div>
         <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? $ordem['laudo_tecnico'] : 'Aguardando diagnóstico.'; ?></div>
+        <?php endif; ?>
 
         <div class="footer">
             <div class="terms">
-                <strong>Termos:</strong> A garantia de serviços é de 90 dias. Peças novas conforme fabricante. Equipamentos não retirados em 90 dias serão considerados abandonados.
+                <strong>Termos:</strong> <?php echo nl2br($textoObs); ?>
             </div>
 
             <table class="signature-table">

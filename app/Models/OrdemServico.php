@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class OrdemServico extends Model
 {
-    protected $table = 'ordens_servico';
+    protected string $table = 'ordens_servico';
     
     /**
      * Retorna uma OS com dados do cliente, status e equipamento.
@@ -27,11 +27,12 @@ class OrdemServico extends Model
                        e.serial as equipamento_serial,
                        e.senha as equipamento_senha,
                        e.acessorios as equipamento_acessorios,
-                       e.possui_fonte as equipamento_fonte
-                FROM {$this->table} os
-                JOIN clientes c ON os.cliente_id = c.id
-                JOIN status_os s ON os.status_atual_id = s.id
-                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
+                       e.possui_fonte as equipamento_fonte,
+                       e.sn_fonte as equipamento_sn_fonte
+	                FROM {$this->table} os
+	                JOIN clientes c ON os.cliente_id = c.id
+	                JOIN status_os s ON os.status_atual_id = s.id
+	                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
                 WHERE os.id = :id AND os.ativo = 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
@@ -43,16 +44,31 @@ class OrdemServico extends Model
      * Retorna todas as OS com dados do cliente e status.
      * @return array
      */
-    public function getAllWithDetails(): array
-    {
-        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor
-                FROM {$this->table} os
-                JOIN clientes c ON os.cliente_id = c.id
-                JOIN status_os s ON os.status_atual_id = s.id
-                WHERE os.ativo = 1
-                ORDER BY os.id DESC";
+	    public function getAllWithDetails(string $search = ''): array
+	    {
+	        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor,
+	                       e.modelo as equipamento_modelo
+	                FROM {$this->table} os
+	                JOIN clientes c ON os.cliente_id = c.id
+	                JOIN status_os s ON os.status_atual_id = s.id
+	                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
+	                WHERE os.ativo = 1";
+        
+        $params = [];
+        if (!empty($search)) {
+            if (is_numeric($search)) {
+                $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
+                $params['search_id'] = $search;
+                $params['search_nome'] = "%{$search}%";
+            } else {
+                $sql .= " AND c.nome_completo LIKE :search_nome";
+                $params['search_nome'] = "%{$search}%";
+            }
+        }
+
+        $sql .= " ORDER BY os.id DESC";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 

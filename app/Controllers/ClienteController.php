@@ -76,7 +76,7 @@ class ClienteController extends BaseController
             try {
                 if ($id = $this->clienteModel->create($data)) {
                     $this->log("Criou novo cliente", "Cliente #{$id} - {$data['nome_completo']}");
-                    $this->redirect('clientes');
+                    $this->redirect('clientes/view?id=' . $id);
                 } else {
                     $this->render('cliente/form', ['error' => 'Erro ao salvar cliente.', 'cliente' => $data]);
                 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo htmlspecialchars(APP_NAME); ?></title>
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>css/style.css">
     <script>
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -17,7 +17,7 @@
         <div class="login-card">
             <!-- CABEÇALHO -->
             <div class="login-header">
-                <h1><?php echo htmlspecialchars(APP_NAME); ?></h1>
+                <h1><span>OS</span> Manager</h1>
                 <p class="text-muted">Sistema de Gerenciamento de Ordens de Serviço</p>
             </div>
 
@@ -30,7 +30,7 @@
             <?php endif; ?>
 
             <!-- FORMULÁRIO DE LOGIN -->
-            <form action="<?php echo BASE_URL; ?>login" method="POST" class="d-flex flex-direction-column gap-3">
+            <form action="<?php echo BASE_URL; ?>login" method="POST">
                 <div class="form-group">
                     <label for="email">📧 E-mail</label>
                     <input

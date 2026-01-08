@@ -15,11 +15,23 @@ if (!function_exists('formatCurrency')) {
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <?php
+        $configModel = new \App\Models\ConfiguracaoGeral();
+        $fontSize = $configModel->getValor('impressao_fonte_tamanho') ?: '13';
+        $showObs = $configModel->getValor('impressao_exibir_observacoes') !== '0';
+        
+        $textoPadrao = "Será cobrado um valor R$ 100,00 mão de obra (HORA TÉCNICA), caso o cliente não autorize a realização do serviço (ORÇAMENTO).\n" .
+                       "*Não nos responsabilizamos pela origem e software dos equipamentos depositados para orçamentos.\n" .
+                       "*O equipamento somente será entregue com a apresentação da ordem de serviço ou documento com foto somente para o proprietário.\n" .
+                       "*Equipamentos não retirados no prazo de 30 dias após a da data de conclusão do serviço, serão considerado abandonados e será cobrado uma taxa diária de R$ 2,00(dois reais) para fins de armazenamento, contar a partir da data de conclusão do serviço até a data de retirada do equipamento. Caso esse prazo de armazenamentoseja superior a 90 dias, autorizo desde já a doação do equipamento à Myranda Informatica para que essa possa cobrir todos os custos de armazenagem, bem comodoar, vender, reciclar ou mesmo descartar de forma correta o equipamento.";
+        
+        $textoObs = $configModel->getValor('impressao_texto_observacoes') ?: $textoPadrao;
+    ?>
     <style>
         @page { margin: 10mm; }
         body {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 11px;
+            font-size: <?php echo $fontSize; ?>px;
             color: #333;
             line-height: 1.4;
             margin: 0;
@@ -33,7 +45,7 @@ if (!function_exists('formatCurrency')) {
         }
         .header-table { width: 100%; border-collapse: collapse; }
         .company-name { font-size: 18px; font-weight: bold; color: #2980b9; margin: 0; text-transform: uppercase; }
-        .company-info { font-size: 10px; color: #7f8c8d; margin: 2px 0; }
+        .company-info { font-size: 11px; color: #7f8c8d; margin: 2px 0; }
         
         .doc-title-box {
             background-color: #3498db;
@@ -53,14 +65,14 @@ if (!function_exists('formatCurrency')) {
             border-left: 4px solid #3498db;
             margin-bottom: 10px;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 11px;
         }
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
         .info-table td { padding: 4px 8px; border: 1px solid #eee; vertical-align: top; }
         .label { font-weight: bold; width: 100px; background-color: #fafafa; }
         
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .items-table th { background-color: #2980b9; color: #ffffff; text-align: left; padding: 8px; font-size: 10px; text-transform: uppercase; }
+        .items-table th { background-color: #2980b9; color: #ffffff; text-align: left; padding: 8px; font-size: 11px; text-transform: uppercase; }
         .items-table td { padding: 8px; border-bottom: 1px solid #eee; }
         
         .text-right { text-align: right; }
@@ -72,7 +84,7 @@ if (!function_exists('formatCurrency')) {
         
         .notes-box { border: 1px solid #eee; padding: 10px; min-height: 60px; background-color: #fcfcfc; margin-bottom: 20px; }
         
-        .footer { margin-top: 30px; font-size: 9px; color: #7f8c8d; }
+        .footer { margin-top: 30px; font-size: 10px; color: #7f8c8d; }
         .terms { border-left: 3px solid #3498db; padding-left: 10px; margin-bottom: 30px; text-align: justify; }
         
         .signature-table { width: 100%; margin-top: 40px; }
@@ -118,11 +130,23 @@ if (!function_exists('formatCurrency')) {
                 <td><?php echo $ordem['cliente_telefone'] ?? 'N/A'; ?></td>
                 <td class="label">Validade:</td>
                 <td>5 dias</td>
-            </tr>
-        </table>
-
-        <div class="section-title">Itens do Orçamento</div>
-        <table class="items-table">
+         134	        </table>
+135	
+136	        <div class="section-title">Dados do Equipamento</div>
+137	        <table class="info-table">
+138	            <tr>
+139	                <td class="label">Equipamento:</td>
+140	                <td><?php echo ($ordem['equipamento_tipo'] ?? '') . ' ' . ($ordem['equipamento_marca'] ?? '') . ' ' . ($ordem['equipamento_modelo'] ?? ''); ?></td>
+141	                <td class="label">Serial:</td>
+142	                <td><?php echo $ordem['equipamento_serial'] ?? 'N/A'; ?></td>
+143	            </tr>
+144	            <tr>
+145	                <td class="label">Acessórios:</td>
+146	                <td colspan="3"><?php echo $ordem['equipamento_acessorios'] ?? 'Nenhum'; ?></td>
+147	            </tr>
+148	        </table>
+149	
+150	        <div class="section-title">Itens do Orçamento</div>      <table class="items-table">
             <thead>
                 <tr>
                     <th>Descrição do Produto / Serviço</th>
@@ -164,15 +188,15 @@ if (!function_exists('formatCurrency')) {
             </tr>
         </table>
 
+        <?php if ($showObs): ?>
         <div class="section-title">Observações / Laudo</div>
         <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? $ordem['laudo_tecnico'] : 'Diagnóstico técnico conforme relatado.'; ?></div>
+        <?php endif; ?>
 
         <div class="footer">
             <div class="terms">
                 <strong>Informações Importantes:</strong><br>
-                - Pagamento facilitado em até 3x sem juros no cartão.<br>
-                - Garantia de 90 dias para serviços e peças.<br>
-                - A execução do serviço depende da aprovação deste orçamento.
+                <?php echo nl2br($textoObs); ?>
             </div>
 
             <table class="signature-table">

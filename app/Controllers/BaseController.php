@@ -4,27 +4,27 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Models\Log;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
+/**
+ * Controlador base para rotas autenticadas.
+ */
 abstract class BaseController extends Controller
 {
-    protected $logModel;
+    protected Log $logModel;
 
     public function __construct()
     {
-        $this->logModel = new \App\Models\Log();
+        $this->logModel = new Log();
         
-        // Inicia a sessão se não estiver iniciada
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        // Verifica se o usuário está logado antes de permitir acesso
+        // Verifica se o usuário está logado
         if (!Auth::check()) {
-            // Verifica se a requisição é AJAX (para não quebrar a busca de clientes)
-            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
             if ($isAjax) {
-                $this->jsonResponse(['error' => 'Sessão expirada'], 401);
+                $this->json(['error' => 'Sessão expirada'], 401);
             } else {
                 $this->redirect('login');
             }
@@ -32,12 +32,10 @@ abstract class BaseController extends Controller
 
         // Verifica se o usuário precisa trocar a senha
         $user = Auth::user();
-        if (isset($user['trocar_senha']) && $user['trocar_senha'] == 1) {
-            // Usa as constantes definidas no Router para saber onde estamos
+        if (isset($user['trocar_senha']) && (int)$user['trocar_senha'] === 1) {
             $controller = defined('CURRENT_CONTROLLER') ? CURRENT_CONTROLLER : '';
             $action = defined('CURRENT_ACTION') ? CURRENT_ACTION : '';
 
-            // Lista de ações permitidas durante a troca de senha obrigatória
             $allowed_actions = [
                 'UsuarioController@showTrocarSenha',
                 'UsuarioController@salvarNovaSenha',
@@ -46,70 +44,68 @@ abstract class BaseController extends Controller
 
             $current_route = "{$controller}@{$action}";
 
-            // Se não for uma rota permitida, redireciona para a troca de senha
-            if (!in_array($current_route, $allowed_actions)) {
+            if (!in_array($current_route, $allowed_actions, true)) {
                 $this->redirect('usuarios/trocar-senha');
             }
         }
     }
 
     /**
-     * Carrega uma view dentro do layout principal.
-     * @param string $view O nome do arquivo da view (sem a extensão .php).
-     * @param array $data Dados a serem passados para a view.
+     * Renderiza uma view dentro do layout principal.
      */
-    protected function render(string $view, array $data = [])
+    protected function render(string $view, array $data = []): void
     {
-        // Define o caminho para o conteúdo da view
         $data['content'] = __DIR__ . "/../Views/{$view}.php";
         
-        // Carrega o layout principal
+        if (!isset($data['user'])) {
+            $data['user'] = Auth::user();
+        }
+        
         $this->view('layout/main', $data);
     }
 
     /**
-     * Retorna uma resposta JSON limpa
+     * Exige que a requisição seja AJAX.
      */
-    protected function jsonResponse($data, $status = 200)
+    protected function requireAjax(): void
     {
-        if (ob_get_length()) ob_clean();
-        http_response_code($status );
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data);
-        exit;
-    }
-
-    protected function requireAjax()
-    {
-        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
-        if (!$isAjax ) {
-            $this->jsonResponse(['error' => 'Requisição inválida'], 400);
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        if (!$isAjax) {
+            $this->json(['error' => 'Requisição inválida'], 400);
         }
     }
 
-    protected function requirePost()
+    /**
+     * Exige que o método da requisição seja POST.
+     */
+    protected function requirePost(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->jsonResponse(['error' => 'Método não permitido'], 405);
+            $this->json(['error' => 'Método não permitido'], 405);
         }
         
-        // Verificação básica de CSRF (pode ser expandida com tokens reais)
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $host = $_SERVER['HTTP_HOST'] ?? '';
         if (!empty($referer) && strpos($referer, $host) === false) {
             $this->log("Tentativa de CSRF detectada", "Referer: {$referer}");
-            $this->jsonResponse(['error' => 'Origem da requisição inválida'], 403);
+            $this->json(['error' => 'Origem da requisição inválida'], 403);
         }
     }
 
-    protected function requireAdmin()
+    /**
+     * Exige privilégios de administrador.
+     */
+    protected function requireAdmin(): void
     {
         if (!Auth::isAdmin()) {
             $this->redirect('dashboard');
         }
     }
 
-    protected function requireTecnico()
+    /**
+     * Exige privilégios de técnico.
+     */
+    protected function requireTecnico(): void
     {
         if (!Auth::isTecnico()) {
             $this->redirect('dashboard');
@@ -117,46 +113,40 @@ abstract class BaseController extends Controller
     }
 
     /**
-     * Renderiza uma view e gera um PDF usando Dompdf
+     * Renderiza uma view e gera um PDF.
      */
-    protected function renderPDF(string $view, array $data = [], string $filename = 'documento.pdf', string $paper = 'a4', string $orientation = 'portrait')
+    protected function renderPDF(string $view, array $data = [], string $filename = 'documento.pdf', string $paper = 'a4', string $orientation = 'portrait'): void
     {
-        // Extrai os dados para a view
         extract($data);
 
-        // Captura o HTML da view
         ob_start();
         $path = __DIR__ . "/../Views/{$view}.php";
-        if (file_exists($path)) {
-            require $path;
-        } else {
-            die("View '{$view}' não encontrada.");
+        if (!file_exists($path)) {
+            $this->abort(404, "View '{$view}' não encontrada.");
         }
+        require $path;
         $html = ob_get_clean();
 
-        // Configura o Dompdf
-        $options = new \Dompdf\Options();
+        $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true); // Permite carregar imagens via URL
+        $options->set('isRemoteEnabled', true);
         $options->set('defaultFont', 'Arial');
 
-        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
         $dompdf->render();
 
-        // Limpa qualquer saída anterior para evitar corrupção do PDF
         if (ob_get_length()) ob_clean();
 
-        // Envia o PDF para o navegador
         $dompdf->stream($filename, ["Attachment" => false]);
         exit;
     }
 
     /**
-     * Registra uma ação no log do sistema.
+     * Registra uma ação no log.
      */
-    protected function log(string $acao, string $referencia = null)
+    protected function log(string $acao, ?string $referencia = null): void
     {
         $this->logModel->registrar(Auth::id(), $acao, $referencia);
     }

@@ -114,13 +114,18 @@ $statuses = $statuses ?? [];
                             <input type="text" id="senha_equipamento" name="senha_equipamento" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_senha']) : ''; ?>">
                         </div>
 
-                        <div class="form-group">
-                            <label for="fonte_equipamento">Fonte de Alimentação</label>
-                            <select id="fonte_equipamento" name="fonte_equipamento" class="form-select">
-                                <option value="nao" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 0) ? 'selected' : ''; ?>>Não Deixou</option>
-                                <option value="sim" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 1) ? 'selected' : ''; ?>>Deixou</option>
-                            </select>
-                        </div>
+	                        <div class="form-group">
+	                            <label for="fonte_equipamento">Fonte de Alimentação</label>
+	                            <select id="fonte_equipamento" name="fonte_equipamento" class="form-select">
+	                                <option value="nao" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 0) ? 'selected' : ''; ?>>Não Deixou</option>
+	                                <option value="sim" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 1) ? 'selected' : ''; ?>>Deixou</option>
+	                            </select>
+	                        </div>
+	
+	                        <div class="form-group">
+	                            <label for="sn_fonte">SN Fonte</label>
+	                            <input type="text" id="sn_fonte" name="sn_fonte" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_sn_fonte'] ?? '') : ''; ?>">
+	                        </div>
 
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label for="acessorios_equipamento">Acessórios Deixados</label>
@@ -157,6 +162,23 @@ $statuses = $statuses ?? [];
                                 <?php echo htmlspecialchars($status['nome']); ?>
                             </option>
                         <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="status_pagamento">Status de Pagamento</label>
+                    <select id="status_pagamento" name="status_pagamento" class="form-select">
+                        <option value="pendente" <?php echo ($is_edit && ($ordem['status_pagamento'] ?? 'pendente') === 'pendente') ? 'selected' : ''; ?>>Pendente</option>
+                        <option value="parcial" <?php echo ($is_edit && ($ordem['status_pagamento'] ?? '') === 'parcial') ? 'selected' : ''; ?>>Parcial</option>
+                        <option value="pago" <?php echo ($is_edit && ($ordem['status_pagamento'] ?? '') === 'pago') ? 'selected' : ''; ?>>Pago</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="status_entrega">Status de Entrega</label>
+                    <select id="status_entrega" name="status_entrega" class="form-select">
+                        <option value="nao_entregue" <?php echo ($is_edit && ($ordem['status_entrega'] ?? 'nao_entregue') === 'nao_entregue') ? 'selected' : ''; ?>>Não Entregue</option>
+                        <option value="entregue" <?php echo ($is_edit && ($ordem['status_entrega'] ?? '') === 'entregue') ? 'selected' : ''; ?>>Entregue</option>
                     </select>
                 </div>
             </div>

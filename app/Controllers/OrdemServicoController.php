@@ -15,6 +15,7 @@ class OrdemServicoController extends BaseController
     private $statusModel;
     private $itemModel;
     private $equipamentoModel;
+    private $historicoModel;
 
     public function __construct()
     {
@@ -24,6 +25,7 @@ class OrdemServicoController extends BaseController
         $this->statusModel = new StatusOS();
         $this->itemModel = new ItemOS();
         $this->equipamentoModel = new Equipamento();
+        $this->historicoModel = new \App\Models\StatusHistorico();
     }
 
     public function searchClient()
@@ -57,10 +59,12 @@ class OrdemServicoController extends BaseController
 
     public function index()
     {
-        $ordens = $this->osModel->getAllWithDetails();
+        $search = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_SPECIAL_CHARS) ?: '';
+        $ordens = $this->osModel->getAllWithDetails($search);
         $this->render('os/index', [
             'title' => 'Gerenciar Ordens de Serviço',
-            'ordens' => $ordens
+            'ordens' => $ordens,
+            'search' => $search
         ]);
     }
 
@@ -109,20 +113,23 @@ class OrdemServicoController extends BaseController
                         'modelo' => filter_input(INPUT_POST, 'modelo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
                         'serial' => $serial,
                         'senha' => filter_input(INPUT_POST, 'senha_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
-                    ];
+	                        'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+	                        'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
+	                        'sn_fonte' => filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS),
+	                    ];
                     $equipamento_id = $this->equipamentoModel->create($equipamentoData);
                 }
             }
 
-            $osData = [
-                'cliente_id' => $cliente_id,
-                'equipamento_id' => $equipamento_id,
-                'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
-                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
-                'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT) ?: 1,
-            ];
+	            $osData = [
+	                'cliente_id' => $cliente_id,
+	                'equipamento_id' => $equipamento_id,
+	                'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
+	                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
+	                'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT) ?: 1,
+	                'status_pagamento' => filter_input(INPUT_POST, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'pendente',
+	                'status_entrega' => filter_input(INPUT_POST, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'nao_entregue',
+	            ];
 
             $osId = $this->osModel->create($osData);
 
@@ -141,16 +148,43 @@ class OrdemServicoController extends BaseController
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if (!$id) $this->redirect('ordens');
 
-            $osData = [
-                'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT),
-                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
-            ];
+            $status_id = filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT);
+            $status_pagamento = filter_input(INPUT_POST, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS);
+            $status_entrega = filter_input(INPUT_POST, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS);
+            $observacao = filter_input(INPUT_POST, 'status_observacao', FILTER_SANITIZE_SPECIAL_CHARS);
+            
+            $osAntiga = $this->osModel->find($id);
+
+	            $osData = [
+	                'status_atual_id' => $status_id,
+	                'status_pagamento' => $status_pagamento,
+	                'status_entrega' => $status_entrega,
+	                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
+	            ];
+	
+	            $sn_fonte = filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS);
+	            if ($sn_fonte !== null) {
+	                $ordem_atual = $this->osModel->find($id);
+	                if ($ordem_atual && $ordem_atual['equipamento_id']) {
+	                    $this->equipamentoModel->update($ordem_atual['equipamento_id'], ['sn_fonte' => $sn_fonte]);
+	                }
+	            }
 
             if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
                 $osData['defeito_relatado'] = filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS);
             }
 
             if ($this->osModel->update($id, $osData)) {
+                // Se o status mudou ou se há uma observação, registra no histórico
+                if ($osAntiga['status_atual_id'] != $status_id || !empty($observacao)) {
+                    $this->historicoModel->create([
+                        'ordem_servico_id' => $id,
+                        'status_id' => $status_id,
+                        'usuario_id' => $_SESSION['usuario_id'] ?? null,
+                        'observacao' => $observacao
+                    ]);
+                }
+
                 $this->log("Atualizou Ordem de Serviço", "OS #{$id}");
                 $this->redirect('ordens/view?id=' . $id);
             } else {
@@ -168,6 +202,8 @@ class OrdemServicoController extends BaseController
         if (!$ordem) $this->redirect('ordens');
 
         $itens = $this->itemModel->findByOsId($id);
+        $historico = $this->historicoModel->findByOsId($id);
+        $statuses = $this->statusModel->getAll();
         
         $configModel = new \App\Models\ConfiguracaoGeral();
         $margemLucro = $configModel->getValor('porcentagem_venda') ?: 0;
@@ -176,6 +212,8 @@ class OrdemServicoController extends BaseController
             'title' => 'Ordem de Serviço #' . $id,
             'ordem' => $ordem,
             'itens' => $itens,
+            'historico' => $historico,
+            'statuses' => $statuses,
             'margem_lucro' => $margemLucro
         ]);
     }
@@ -309,6 +347,35 @@ class OrdemServicoController extends BaseController
                 $this->redirect('ordens/view?id=' . $osId);
             } else {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao adicionar item');
+            }
+        }
+    }
+
+    public function updateItem()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
+            $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT);
+            
+            $quantidade = filter_input(INPUT_POST, 'quantidade', FILTER_VALIDATE_FLOAT);
+            $custo = filter_input(INPUT_POST, 'custo', FILTER_VALIDATE_FLOAT);
+            $venda = filter_input(INPUT_POST, 'valor_unitario', FILTER_VALIDATE_FLOAT);
+            $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT);
+
+            $itemData = [
+                'quantidade' => $quantidade,
+                'custo' => $custo,
+                'valor_unitario' => $venda,
+                'valor_mao_de_obra' => $maoDeObra,
+                'valor_total' => ($venda + $maoDeObra) * $quantidade
+            ];
+
+            if ($this->itemModel->update($itemId, $itemData)) {
+                $itens = $this->itemModel->findByOsId($osId);
+                $this->osModel->updateTotals($osId, $itens);
+                $this->redirect('ordens/view?id=' . $osId);
+            } else {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao atualizar item');
             }
         }
     }

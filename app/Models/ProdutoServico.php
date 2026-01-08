@@ -6,14 +6,15 @@ use App\Core\Model;
 
 class ProdutoServico extends Model
 {
-    protected $table = 'produtos_servicos';
+    protected string $table = 'produtos_servicos';
 
     /**
      * Busca todos os itens ativos.
      */
-    public function getAll()
+    public function getAll(): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE ativo = 1 ORDER BY nome ASC");
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1 ORDER BY nome ASC";
+        $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll();
     }
@@ -21,11 +22,9 @@ class ProdutoServico extends Model
     /**
      * Busca um item pelo ID.
      */
-    public function findById($id)
+    public function findById(int $id): mixed
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id AND ativo = 1");
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch();
+        return $this->find($id);
     }
 
     /**

@@ -2,64 +2,74 @@
 
 namespace App\Core;
 
+/**
+ * Gerenciamento de autenticação e sessões.
+ */
 class Auth
 {
     /**
-     * Verifica se o usuário está logado.
-     * @return bool
+     * Inicia a sessão se ainda não tiver sido iniciada.
      */
-    public static function check()
+    private static function startSession(): void
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+    }
+
+    /**
+     * Verifica se o usuário está logado.
+     */
+    public static function check(): bool
+    {
+        self::startSession();
         return isset($_SESSION['user_id']);
     }
 
     /**
      * Retorna o ID do usuário logado.
-     * @return int|null
      */
-    public static function id()
+    public static function id(): ?int
     {
+        self::startSession();
         return $_SESSION['user_id'] ?? null;
     }
 
     /**
      * Retorna os dados do usuário logado.
-     * @return array|null
      */
-    public static function user()
+    public static function user(): ?array
     {
+        self::startSession();
         return $_SESSION['user'] ?? null;
     }
 
     /**
      * Verifica se o usuário tem perfil de administrador.
-     * @return bool
      */
-    public static function isAdmin()
+    public static function isAdmin(): bool
     {
+        self::startSession();
         $nivel = $_SESSION['user']['nivel_acesso'] ?? '';
-        // Aceita 'admin' (novo) ou '1' (antigo) para não quebrar o acesso durante a migração
-        return $nivel === 'admin' || $nivel === '1' || $nivel === 1;
+        return in_array($nivel, ['admin', '1', 1], true);
     }
 
     /**
      * Verifica se o usuário tem perfil de técnico ou superior.
-     * @return bool
      */
-    public static function isTecnico()
+    public static function isTecnico(): bool
     {
+        self::startSession();
         $nivel = $_SESSION['user']['nivel_acesso'] ?? 'usuario';
-        // Admin também é considerado técnico para fins de permissão
         return self::isAdmin() || $nivel === 'tecnico';
     }
 
     /**
      * Faz o login do usuário.
-     * @param array $user Dados do usuário.
      */
-    public static function login(array $user)
+    public static function login(array $user): void
     {
-        // Regenera o ID da sessão para prevenir Session Fixation
+        self::startSession();
         session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user'] = $user;
@@ -68,14 +78,20 @@ class Auth
     /**
      * Faz o logout do usuário.
      */
-    public static function logout()
+    public static function logout(): void
     {
+        self::startSession();
         $_SESSION = [];
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-                $params["path"], $params["domain"],
-                $params["secure"], $params["httponly"]
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params["path"],
+                $params["domain"],
+                $params["secure"],
+                $params["httponly"]
             );
         }
         session_destroy();

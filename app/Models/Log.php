@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class Log extends Model
 {
-    protected $table = 'logs';
+    protected string $table = 'logs';
 
     /**
      * Registra uma nova ação no sistema.
@@ -33,7 +33,7 @@ class Log extends Model
      * @param int $limit
      * @return array
      */
-    public function getRecentes(int $limit = 50)
+    public function getRecentes(int $limit = 50): array
     {
         $sql = "SELECT l.*, u.nome as usuario_nome 
                 FROM {$this->table} l 
@@ -44,6 +44,6 @@ class Log extends Model
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 }

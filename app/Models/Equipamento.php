@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class Equipamento extends Model
 {
-    protected $table = 'equipamentos';
+    protected string $table = 'equipamentos';
 
     /**
      * Busca todos os equipamentos de um cliente.

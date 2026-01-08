@@ -2,57 +2,79 @@
 
 namespace App\Core;
 
+/**
+ * Sistema de roteamento simples e moderno.
+ */
 class Router
 {
-    protected $routes = [];
+    protected array $routes = [];
 
-    public function add(string $method, string $uri, string $controller)
+    /**
+     * Adiciona uma rota ao sistema.
+     */
+    public function add(string $method, string $uri, string $controller): void
     {
         $this->routes[] = [
-            'uri' => $uri,
+            'uri' => trim($uri, '/'),
             'controller' => $controller,
             'method' => strtoupper($method),
         ];
     }
 
-    public function get(string $uri, string $controller)
+    public function get(string $uri, string $controller): void
     {
         $this->add('GET', $uri, $controller);
     }
 
-    public function post(string $uri, string $controller)
+    public function post(string $uri, string $controller): void
     {
         $this->add('POST', $uri, $controller);
     }
 
-    public function dispatch(string $uri, string $method)
+    /**
+     * Despacha a requisição para o controlador correspondente.
+     */
+    public function dispatch(string $uri, string $method): void
     {
         $uri = trim($uri, '/');
         $method = strtoupper($method);
 
         foreach ($this->routes as $route) {
             if ($route['uri'] === $uri && $route['method'] === $method) {
-                // O formato do controller é "Controller@method"
-                list($controllerName, $action) = explode('@', $route['controller']);
+                $parts = explode('@', $route['controller']);
+                $controllerName = $parts[0];
+                $action = $parts[1] ?? 'index';
+                
                 $controllerClass = "App\\Controllers\\" . $controllerName;
 
-                if (class_exists($controllerClass)) {
-                    // Define constantes globais para que o BaseController saiba exatamente onde estamos
-                    define('CURRENT_CONTROLLER', $controllerName);
-                    define('CURRENT_ACTION', $action);
-
-                    $controller = new $controllerClass();
-                    if (method_exists($controller, $action)) {
-                        // Chama o método do controller
-                        return $controller->$action();
-                    }
+                if (!class_exists($controllerClass)) {
+                    $this->error(500, "Controlador {$controllerClass} não encontrado.");
                 }
+
+                define('CURRENT_CONTROLLER', $controllerName);
+                define('CURRENT_ACTION', $action);
+
+                $controller = new $controllerClass();
+                
+                if (!method_exists($controller, $action)) {
+                    $this->error(500, "Método {$action} não encontrado no controlador {$controllerName}.");
+                }
+
+                $controller->$action();
+                return;
             }
         }
 
-        // Se a rota não for encontrada, exibe um erro 404
-        header("HTTP/1.0 404 Not Found");
-        echo "<h1>404 - Página Não Encontrada</h1>";
+        $this->error(404, "Página Não Encontrada");
+    }
+
+    /**
+     * Exibe uma página de erro.
+     */
+    protected function error(int $code, string $message): void
+    {
+        http_response_code($code);
+        echo "<h1>{$code} - {$message}</h1>";
         exit();
     }
 }

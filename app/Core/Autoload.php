@@ -1,34 +1,44 @@
 <?php
 
-spl_autoload_register(function ($class) {
-    // Converte o namespace para caminho de arquivo
-    $prefix = 'App\\';
-    $base_dir = __DIR__ . '/../'; // app/
+/**
+ * Autoloader e Inicializador do Ambiente
+ */
 
-    // Verifica se a classe usa o prefixo do namespace
+// 1. Autoloader manual para classes do projeto (PSR-4)
+spl_autoload_register(function ($class) {
+    $prefix = 'App\\';
+    $base_dir = __DIR__ . '/../';
+
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) {
-        // Não, move para o próximo autoloader registrado
         return;
     }
 
-    // Obtém o nome da classe relativa
     $relative_class = substr($class, $len);
-
-    // Substitui separadores de namespace por separadores de diretório,
-    // anexa .php
     $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
 
-    // Se o arquivo existir, requer ele
     if (file_exists($file)) {
         require $file;
     }
 });
 
-// Carrega o autoload do Composer
+// 2. Carrega o autoload do Composer se existir (para Dompdf, etc)
 if (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
     require_once __DIR__ . '/../../vendor/autoload.php';
 }
 
-// Carrega as configurações
+// 3. Carrega variáveis de ambiente
+// Tenta usar o Dotenv do Composer, se falhar usa o EnvLoader nativo
+if (class_exists('Dotenv\Dotenv')) {
+    try {
+        $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
+        $dotenv->safeLoad();
+    } catch (\Exception $e) {
+        \App\Core\EnvLoader::load(__DIR__ . '/../../');
+    }
+} else {
+    \App\Core\EnvLoader::load(__DIR__ . '/../../');
+}
+
+// 4. Carrega as configurações globais
 require_once __DIR__ . '/../../config/config.php';

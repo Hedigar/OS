@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const newOsId = urlParams.get('new_os_id');
     if (newOsId) {
-        window.open(`<?php echo BASE_URL; ?>ordens/print?id=${newOsId}`, '_blank');
+        window.open(`<?php echo BASE_URL; ?>ordens/print-receipt?id=${newOsId}`, '_blank');
         // Limpa a URL
         urlParams.delete('new_os_id');
         const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');

@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class ItemOS extends Model
 {
-    protected $table = 'itens_ordem_servico';
+    protected string $table = 'itens_ordem_servico';
 
     public function findByOsId(int $ordemServicoId): array
     {

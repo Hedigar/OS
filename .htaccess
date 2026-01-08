@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Impede o acesso direto a pastas sensíveis
+    RewriteRule ^(\.env|app|config|vendor) - [F,L]
+
+    # Se o arquivo ou diretório não existir na raiz, manda para a pasta public
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+# Desabilita a listagem de diretórios por segurança
+Options -Indexes

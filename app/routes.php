@@ -14,6 +14,8 @@ $router->get('logout', 'AuthController@logout');
 $router->get('dashboard', 'DashboardController@index');
 // Configurações
 $router->get('configuracoes', 'ConfiguracoesController@index');
+$router->get('configuracoes/os', 'ConfiguracoesController@os');
+$router->post('configuracoes/salvar-impressao', 'ConfiguracoesController@salvarImpressao');
 $router->get('configuracoes/produtos-servicos', 'ProdutoServicoController@index');
 $router->get('configuracoes/produtos-servicos/form', 'ProdutoServicoController@form');
 $router->post('configuracoes/produtos-servicos/salvar', 'ProdutoServicoController@store');
@@ -56,6 +58,7 @@ $router->get('ordens/search-client', 'OrdemServicoController@searchClient'); // 
 $router->get('ordens/search-equipamentos', 'OrdemServicoController@searchEquipamentos');
 $router->get('ordens/search-items', 'OrdemServicoController@searchItems');
 $router->post('ordens/salvar-item', 'OrdemServicoController@saveItem');
+$router->post('ordens/atualizar-item', 'OrdemServicoController@updateItem');
 $router->post('ordens/remover-item', 'OrdemServicoController@removeItem');
 $router->get('clientes', 'ClienteController@index');
 $router->get('clientes/criar', 'ClienteController@create');

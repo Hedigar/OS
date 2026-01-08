@@ -7,8 +7,9 @@
     <!-- Bootstrap CSS (carregado primeiro para permitir sobrescrever com style.css) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>css/style.css">
     <script>
         // Aplicar tema salvo antes de renderizar
         (function() {
@@ -21,8 +22,16 @@
     <!-- HEADER -->
     <header class="header">
         <div class="container">
-            <span><?php echo htmlspecialchars(APP_NAME); ?></span>
-            <a href="<?php echo BASE_URL; ?>logout" class="btn btn-primary">Sair</a>
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-tools text-white fs-4"></i>
+                <span class="fw-bold"><?php echo htmlspecialchars(APP_NAME); ?></span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white d-none d-md-inline opacity-75" style="font-size: 0.8rem; font-weight: 300; letter-spacing: 0.3px;">olá, <?php echo isset($user['nome']) ? strtolower(explode(' ', $user['nome'])[0]) : 'usuário'; ?></span>
+                <a href="<?php echo BASE_URL; ?>logout" class="btn btn-light btn-sm fw-bold px-3" style="border-radius: 8px; color: var(--primary-red);">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </a>
+            </div>
         </div>
     </header>
 
@@ -32,34 +41,37 @@
         <nav class="sidebar">
             <ul>
                 <li class="<?php echo (isset($current_page) && $current_page === 'dashboard') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>dashboard">📊 Dashboard</a>
+                    <a href="<?php echo BASE_URL; ?>dashboard"><i class="fas fa-chart-pie me-2"></i> Dashboard</a>
                 </li>
                 <li class="<?php echo (isset($current_page) && $current_page === 'clientes') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>clientes">👥 Clientes</a>
+                    <a href="<?php echo BASE_URL; ?>clientes"><i class="fas fa-users me-2"></i> Clientes</a>
                 </li>
                 <li class="<?php echo (isset($current_page) && $current_page === 'ordens') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>ordens">📋 Ordens de Serviço</a>
+                    <a href="<?php echo BASE_URL; ?>ordens"><i class="fas fa-file-invoice me-2"></i> Ordens de Serviço</a>
                 </li>
                 <li class="<?php echo (isset($current_page) && $current_page === 'atendimentos_externos') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>atendimentos-externos">🏠 Atendimento Externo</a>
+                    <a href="<?php echo BASE_URL; ?>atendimentos-externos"><i class="fas fa-truck me-2"></i> Atendimento Externo</a>
                 </li>
 
 
                 <?php if (\App\Core\Auth::isTecnico()): ?>
                 <li class="<?php echo (isset($current_page) && $current_page === 'despesas') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>despesas">💰 Despesas</a>
+                    <a href="<?php echo BASE_URL; ?>despesas"><i class="fas fa-wallet me-2"></i> Despesas</a>
                 </li>
                 <?php endif; ?>
 
                 <?php if (\App\Core\Auth::isAdmin()): ?>
                 <li class="nav-item-dropdown <?php echo (isset($current_page) && strpos($current_page, 'configuracoes') !== false) ? 'active' : ''; ?>">
-                    <a href="javascript:void(0);" class="dropdown-toggle" onclick="toggleSubmenu('config-submenu')">⚙️ Configurações</a>
+                    <a href="javascript:void(0);" class="dropdown-toggle" onclick="toggleSubmenu('config-submenu')"><i class="fas fa-cog me-2"></i> Configurações</a>
                     <ul id="config-submenu" class="submenu" style="<?php echo (isset($current_page) && strpos($current_page, 'configuracoes') !== false) ? 'display: block;' : 'display: none;'; ?>">
                         <li class="<?php echo (isset($current_page) && $current_page === 'configuracoes_produtos') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>configuracoes/produtos-servicos">📦 Produtos e Serviços</a>
+                            <a href="<?php echo BASE_URL; ?>configuracoes/produtos-servicos"><i class="fas fa-box me-2"></i> Produtos e Serviços</a>
+                        </li>
+                        <li class="<?php echo (isset($current_page) && $current_page === 'configuracoes_os') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>configuracoes/os"><i class="fas fa-file-invoice me-2"></i> Configurações de OS</a>
                         </li>
                         <li class="<?php echo (isset($current_page) && $current_page === 'usuarios') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>usuarios">👤 Usuários</a>
+                            <a href="<?php echo BASE_URL; ?>usuarios"><i class="fas fa-user-shield me-2"></i> Usuários</a>
                         </li>
                     </ul>
                 </li>

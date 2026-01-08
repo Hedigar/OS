@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class AtendimentoExterno extends Model
 {
-    protected $table = 'atendimentos_externos';
+    protected string $table = 'atendimentos_externos';
 
     /**
      * Busca atendimentos externos por cliente.
@@ -29,7 +29,7 @@ class AtendimentoExterno extends Model
     /**
      * Sobrescreve o find para incluir dados relacionados.
      */
-    public function findWithDetails(int $id)
+    public function findWithDetails(int $id): ?array
     {
         $sql = "SELECT ae.*, c.nome_completo as cliente_nome, u.nome as tecnico_nome 
                 FROM {$this->table} ae 
@@ -39,13 +39,14 @@ class AtendimentoExterno extends Model
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
-        return $stmt->fetch(\PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $result ?: null;
     }
 
     /**
      * Sobrescreve o delete pois esta tabela não tem coluna 'ativo'.
      */
-    public function delete(int $id)
+    public function delete(int $id): bool
     {
         $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE id = :id");
         return $stmt->execute(['id' => $id]);

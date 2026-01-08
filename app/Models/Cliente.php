@@ -6,7 +6,7 @@ use App\Core\Model;
 
 class Cliente extends Model
 {
-    protected $table = 'clientes';
+    protected string $table = 'clientes';
 
     /**
      * Busca clientes por nome ou documento.

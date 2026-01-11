@@ -43,6 +43,16 @@ $router->get('atendimentos-externos/form', 'AtendimentoExternoController@form');
 $router->post('atendimentos-externos/salvar', 'AtendimentoExternoController@store');
 $router->post('atendimentos-externos/atualizar', 'AtendimentoExternoController@update');
 $router->post('atendimentos-externos/deletar', 'AtendimentoExternoController@destroy');
+$router->get('atendimentos-externos/print', 'AtendimentoExternoController@print');
+$router->get('atendimentos-externos/view', 'AtendimentoExternoController@visualizar');
+$router->get('atendimentos/search-items', 'AtendimentoExternoController@searchItems');
+$router->post('atendimentos/saveItem', 'AtendimentoExternoController@saveItem');
+$router->post('atendimentos/atualizar-item', 'AtendimentoExternoController@updateItem');
+$router->post('atendimentos/remover-item', 'AtendimentoExternoController@removeItem');
+
+
+
+
 
 // Rotas CRUD de Ordens de Serviço
 $router->get('ordens', 'OrdemServicoController@index');

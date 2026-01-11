@@ -6,7 +6,12 @@ require_once __DIR__ . '/../layout/main.php';
 <div class="container">
     <div class="d-flex justify-between align-center mb-4">
         <h1><?php echo $title; ?></h1>
-        <a href="<?php echo BASE_URL; ?>atendimentos-externos" class="btn btn-secondary">Voltar</a>
+        <div class="d-flex gap-2">
+            <?php if (isset($atendimento['id'])): ?>
+                <a href="<?php echo BASE_URL; ?>atendimentos-externos/print?id=<?php echo $atendimento['id']; ?>" class="btn btn-info" target="_blank">🖨️ Imprimir Folha</a>
+            <?php endif; ?>
+            <a href="<?php echo BASE_URL; ?>atendimentos-externos" class="btn btn-secondary">Voltar</a>
+        </div>
     </div>
 
     <div class="card mb-4">
@@ -37,7 +42,9 @@ require_once __DIR__ . '/../layout/main.php';
                     <div id="cliente_info" class="mt-3 p-3 border rounded" style="display: <?php echo isset($atendimento['cliente_id']) || isset($cliente) ? 'block' : 'none'; ?>;">
                         <div class="d-flex justify-between align-center mb-2">
                             <strong>Cliente Selecionado:</strong>
-                            <button type="button" id="remove_client_btn" class="btn btn-danger btn-sm" onclick="removeClient()">✕ Alterar</button>
+                            <?php if (!isset($atendimento['id'])): ?>
+                                <button type="button" id="remove_client_btn" class="btn btn-danger btn-sm" onclick="removeClient()">✕ Alterar</button>
+                            <?php endif; ?>
                         </div>
                         <p class="m-0"><strong>Nome:</strong> <span id="info_nome"><?php echo isset($atendimento['cliente_nome']) ? htmlspecialchars($atendimento['cliente_nome']) : (isset($cliente) ? htmlspecialchars($cliente['nome_completo']) : ''); ?></span></p>
                         <p class="m-0"><strong>Documento:</strong> <span id="info_documento"><?php echo isset($atendimento['cliente_documento']) ? htmlspecialchars($atendimento['cliente_documento']) : (isset($cliente) ? htmlspecialchars($cliente['documento']) : ''); ?></span></p>
@@ -56,6 +63,11 @@ require_once __DIR__ . '/../layout/main.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="equipamentos">Equipamento(s) <small>(Opcional na abertura)</small></label>
+                <input type="text" name="equipamentos" id="equipamentos" class="form-control" placeholder="Ex: Notebook Dell, Impressora HP..." value="<?php echo htmlspecialchars($atendimento['equipamentos'] ?? ''); ?>">
             </div>
 
             <div class="form-group mb-4">
@@ -86,8 +98,8 @@ require_once __DIR__ . '/../layout/main.php';
 
             <div class="form-grid mb-4">
                 <div class="form-group">
-                    <label for="data_agendada">Data/Hora Agendada</label>
-                    <input type="datetime-local" name="data_agendada" id="data_agendada" class="form-control" value="<?php echo isset($atendimento['data_agendada']) ? date('Y-m-d\TH:i', strtotime($atendimento['data_agendada'])) : ''; ?>">
+                    <label for="data_agendada">Data Agendada</label>
+                    <input type="date" name="data_agendada" id="data_agendada" class="form-control" value="<?php echo isset($atendimento['data_agendada']) ? date('Y-m-d', strtotime($atendimento['data_agendada'])) : ''; ?>">
                 </div>
                 <div class="form-group">
                     <label for="status">Status</label>
@@ -102,8 +114,36 @@ require_once __DIR__ . '/../layout/main.php';
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="pagamento">Pagamento</label>
+                    <select name="pagamento" id="pagamento" class="form-select">
+                        <?php 
+                        $pagamento_opcoes = ['não', 'parcial', 'pago'];
+                        $pagamento_atual = $atendimento['pagamento'] ?? 'não';
+                        foreach ($pagamento_opcoes as $opt): ?>
+                            <option value="<?php echo $opt; ?>" <?php echo ($opt === $pagamento_atual) ? 'selected' : ''; ?>>
+                                <?php echo ucfirst($opt); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="valor_deslocamento">Valor Deslocamento (R$)</label>
                     <input type="number" step="0.01" name="valor_deslocamento" id="valor_deslocamento" class="form-control" value="<?php echo $atendimento['valor_deslocamento'] ?? '0.00'; ?>">
+                </div>
+            </div>
+
+            <div class="form-grid mb-4">
+                <div class="form-group">
+                    <label for="hora_entrada">Hora de Entrada</label>
+                    <input type="time" name="hora_entrada" id="hora_entrada" class="form-control" value="<?php echo $atendimento['hora_entrada'] ?? ''; ?>">
+                </div>
+                <div class="form-group">
+                    <label for="hora_saida">Hora de Saída</label>
+                    <input type="time" name="hora_saida" id="hora_saida" class="form-control" value="<?php echo $atendimento['hora_saida'] ?? ''; ?>">
+                </div>
+                <div class="form-group">
+                    <label for="tempo_total">Tempo Total</label>
+                    <input type="text" name="tempo_total" id="tempo_total" class="form-control" placeholder="Ex: 1h 30min" value="<?php echo htmlspecialchars($atendimento['tempo_total'] ?? ''); ?>">
                 </div>
             </div>
 
@@ -113,7 +153,12 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
 
             <div class="form-group mb-4">
-                <label for="observacoes_tecnicas">Observações Técnicas (Pós-Visita)</label>
+                <label for="detalhes_servico">Detalhes do que foi feito</label>
+                <textarea name="detalhes_servico" id="detalhes_servico" class="form-control" rows="3" placeholder="Preencher após o atendimento..."><?php echo htmlspecialchars($atendimento['detalhes_servico'] ?? ''); ?></textarea>
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="observacoes_tecnicas">Observações Internas</label>
                 <textarea name="observacoes_tecnicas" id="observacoes_tecnicas" class="form-control" rows="3"><?php echo htmlspecialchars($atendimento['observacoes_tecnicas'] ?? ''); ?></textarea>
             </div>
 
@@ -268,6 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
     background: var(--bg-tertiary);
 }
 .justify-end { justify-content: flex-end !important; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.btn-info { background-color: #17a2b8; color: white; }
 </style>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

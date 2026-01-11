@@ -57,7 +57,14 @@ if (!function_exists('safe_val')) {
             <!-- Cliente -->
             <div>
                 <h3 class="mb-2">👥 Cliente</h3>
+        
                 <p class="m-0"><?php echo safe_text($ordem, 'cliente_nome', 'N/A'); ?></p>
+            </div>
+
+            <!-- Celular -->
+            <div>
+                <h3 class="mb-2">📞 Celular</h3>
+                <p class="m-0"><?php echo safe_text($ordem, 'cliente_telefone', 'N/A'); ?></p>
             </div>
 
             <!-- Status -->

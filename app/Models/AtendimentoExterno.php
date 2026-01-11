@@ -31,7 +31,8 @@ class AtendimentoExterno extends Model
      */
     public function findWithDetails(int $id): ?array
     {
-        $sql = "SELECT ae.*, c.nome_completo as cliente_nome, u.nome as tecnico_nome 
+        $sql = "SELECT ae.*, c.nome_completo as cliente_nome, c.documento as cliente_documento, 
+                       c.telefone_principal as cliente_telefone, u.nome as tecnico_nome 
                 FROM {$this->table} ae 
                 JOIN clientes c ON ae.cliente_id = c.id 
                 LEFT JOIN usuarios u ON ae.usuario_id = u.id 
@@ -42,6 +43,19 @@ class AtendimentoExterno extends Model
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $result ?: null;
     }
+
+
+
+    public function listarItens($atendimentoId)
+{
+    // Buscamos na tabela de itens, mas filtrando pelo atendimento externo
+    $sql = "SELECT * FROM itens_ordem_servico 
+            WHERE atendimento_externo_id = :id 
+            AND ativo = 1";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute(['id' => $atendimentoId]);
+    return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+}
 
     /**
      * Sobrescreve o delete pois esta tabela não tem coluna 'ativo'.
@@ -57,7 +71,7 @@ class AtendimentoExterno extends Model
      */
     public function countAll(string $whereClause = '', array $params = []): int
     {
-        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        $sql = "SELECT COUNT(*) FROM {$this->table} ae JOIN clientes c ON ae.cliente_id = c.id";
         if (!empty($whereClause)) {
             $sql .= " WHERE " . $whereClause;
         }

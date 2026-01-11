@@ -22,9 +22,10 @@
                             <th>ID</th>
                             <th>Cliente</th>
                             <th>Data Agendada</th>
-                            <th>Status</th>
-                            <th>Valor</th>
-                            <th>Ações</th>
+	                            <th>Status</th>
+	                            <th>Pagamento</th>
+	                            <th>Valor</th>
+	                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -37,32 +38,52 @@
                                 <tr>
                                     <td>#<?php echo $atendimento['id']; ?></td>
                                     <td><?php echo htmlspecialchars($atendimento['cliente_nome']); ?></td>
-                                    <td><?php echo $atendimento['data_agendada'] ? date('d/m/Y H:i', strtotime($atendimento['data_agendada'])) : 'Não agendado'; ?></td>
+                                    <td><?php echo $atendimento['data_agendada'] ? date('d/m/Y', strtotime($atendimento['data_agendada'])) : 'Não agendado'; ?></td>
+	                                    <td>
+	                                        <span class="badge bg-<?php 
+	                                            echo match($atendimento['status']) {
+	                                                'pendente' => 'warning',
+	                                                'agendado' => 'info',
+	                                                'em_deslocamento' => 'primary',
+	                                                'concluido' => 'success',
+	                                                'cancelado' => 'danger',
+	                                                default => 'secondary'
+	                                            };
+	                                        ?>">
+	                                            <?php echo ucfirst($atendimento['status']); ?>
+	                                        </span>
+	                                    </td>
+	                                    <td>
+	                                        <span class="badge bg-<?php 
+	                                            echo match($atendimento['pagamento'] ?? 'não') {
+	                                                'pago' => 'success',
+	                                                'parcial' => 'warning',
+	                                                'não' => 'danger',
+	                                                default => 'secondary'
+	                                            };
+	                                        ?>">
+	                                            <?php echo ucfirst($atendimento['pagamento'] ?? 'não'); ?>
+	                                        </span>
+	                                    </td>
+	                                    <td>R$ <?php echo number_format($atendimento['valor_deslocamento'], 2, ',', '.'); ?></td>
                                     <td>
-                                        <span class="badge bg-<?php 
-                                            echo match($atendimento['status']) {
-                                                'pendente' => 'warning',
-                                                'agendado' => 'info',
-                                                'em_deslocamento' => 'primary',
-                                                'concluido' => 'success',
-                                                'cancelado' => 'danger',
-                                                default => 'secondary'
-                                            };
-                                        ?>">
-                                            <?php echo ucfirst($atendimento['status']); ?>
-                                        </span>
-                                    </td>
-                                    <td>R$ <?php echo number_format($atendimento['valor_deslocamento'], 2, ',', '.'); ?></td>
-                                    <td>
-                                        <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-info">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="<?php echo BASE_URL; ?>atendimentos-externos/deletar" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este atendimento?')">
-                                            <input type="hidden" name="id" value="<?php echo $atendimento['id']; ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
+                                        <div class="d-flex gap-1">
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/print?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-secondary" target="_blank" title="Imprimir Folha">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/view?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-info" title="Visualizar">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-info" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form action="<?php echo BASE_URL; ?>atendimentos-externos/deletar" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este atendimento?')">
+                                                <input type="hidden" name="id" value="<?php echo $atendimento['id']; ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

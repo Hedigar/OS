@@ -79,7 +79,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                                     <td><?php echo htmlspecialchars(substr($os['defeito_relatado'], 0, 50)) . '...'; ?></td>
                                     <td>
                                         <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo $os['id']; ?>" class="btn btn-info btn-xs">Ver</a>
-                                        <a href="<?php echo BASE_URL; ?>ordens/print?id=<?php echo $os['id']; ?>" target="_blank" class="btn btn-secondary btn-xs">🖨️</a>
+                                        <a href="<?php echo BASE_URL; ?>ordens/print-receipt?id=<?php echo $os['id']; ?>" target="_blank" class="btn btn-secondary btn-xs">🖨️</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -119,7 +119,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                                         <td><?php echo htmlspecialchars(substr($ae['descricao_problema'], 0, 50)) . '...'; ?></td>
                                         <td><?php echo htmlspecialchars($ae['tecnico_nome'] ?? 'Não atribuído'); ?></td>
                                         <td>
-                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?id=<?php echo $ae['id']; ?>" class="btn btn-info btn-xs">Ver/Editar</a>
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/view?id=<?php echo $ae['id']; ?>" class="btn btn-info btn-xs">Ver/Editar</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

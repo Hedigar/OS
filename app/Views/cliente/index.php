@@ -94,27 +94,57 @@ require_once __DIR__ . '/../layout/main.php';
             </table>
         </div>
 
-        <!-- PAGINAÇÃO -->
         <?php if (($totalPaginas ?? 0) > 1): ?>
             <div class="mt-4">
                 <div class="pagination">
-                    <?php for ($i = 1; $i <= $totalPaginas; $i++): ?>
-                        <?php
-                            $url = BASE_URL . 'clientes?pagina=' . $i;
-                            if (!empty($busca)) {
-                                $url .= '&busca=' . urlencode($busca);
-                            }
-                            $is_active = $i == ($paginaAtual ?? 1);
-                        ?>
-                        <a href="<?php echo htmlspecialchars($url); ?>" class="<?php echo $is_active ? 'active' : ''; ?>">
+                    <?php 
+                        $p_atual = $paginaAtual ?? 1;
+                        $raio = 2; // Quantos números mostrar antes e depois da atual
+                    ?>
+
+                    <?php if ($p_atual > 1): ?>
+                        <a href="<?php echo BASE_URL . 'clientes?pagina=' . ($p_atual - 1) . (!empty($busca) ? '&busca=' . urlencode($busca) : ''); ?>">«</a>
+                    <?php endif; ?>
+
+                    <?php if ($p_atual > ($raio + 1)): ?>
+                        <a href="<?php echo BASE_URL . 'clientes?pagina=1' . (!empty($busca) ? '&busca=' . urlencode($busca) : ''); ?>">1</a>
+                        <?php if ($p_atual > ($raio + 2)): ?>
+                            <span class="gap" style="padding: 8px 14px;">...</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php 
+                    $inicio = max(1, $p_atual - $raio);
+                    $fim = min($totalPaginas, $p_atual + $raio);
+
+                    for ($i = $inicio; $i <= $fim; $i++): 
+                        $url_num = BASE_URL . 'clientes?pagina=' . $i . (!empty($busca) ? '&busca=' . urlencode($busca) : '');
+                    ?>
+                        <a href="<?php echo $url_num; ?>" class="<?php echo ($i == $p_atual) ? 'active' : ''; ?>">
                             <?php echo $i; ?>
                         </a>
                     <?php endfor; ?>
+
+                    <?php if ($p_atual < ($totalPaginas - $raio)): ?>
+                        <?php if ($p_atual < ($totalPaginas - $raio - 1)): ?>
+                            <span class="gap" style="padding: 8px 14px;">...</span>
+                        <?php endif; ?>
+                        <a href="<?php echo BASE_URL . 'clientes?pagina=' . $totalPaginas . (!empty($busca) ? '&busca=' . urlencode($busca) : ''); ?>"><?php echo $totalPaginas; ?></a>
+                    <?php endif; ?>
+
+                    <?php if ($p_atual < $totalPaginas): ?>
+                        <a href="<?php echo BASE_URL . 'clientes?pagina=' . ($p_atual + 1) . (!empty($busca) ? '&busca=' . urlencode($busca) : ''); ?>">»</a>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>
 
-    <?php endif; ?>
-</div>
+    <?php endif; // Fecha o if do empty($clientes) ?>
+</div> <style>
+.pagination { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; }
+.pagination a { padding: 8px 14px; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #007bff; }
+.pagination a.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
+.pagination a:hover:not(.active) { background-color: #f8f9fa; }
+</style>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

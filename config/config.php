@@ -1,5 +1,10 @@
 <?php
 
+
+// 0. Configuração de Fuso Horário (Adicione isso aqui!)
+// Tenta pegar do .env, se não existir, usa America/Sao_Paulo
+$timezone = $_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo';
+date_default_timezone_set($timezone);
 /**
  * Configurações globais do sistema.
  * Este arquivo detecta automaticamente a URL base para funcionar em qualquer IP ou domínio.

@@ -22,17 +22,18 @@ class Database
         $charset = 'utf8mb4';
 
         $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+        
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+            // Linha ajustada: Define charset e fuso horário na conexão
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4; SET time_zone = '-03:00'"
         ];
 
         try {
             $this->conn = new PDO($dsn, $user, $pass, $options);
         } catch (PDOException $e) {
-            // Log do erro e mensagem amigável
             error_log("Erro de Conexão com o Banco de Dados: " . $e->getMessage());
             
             if (($_ENV['APP_DEBUG'] ?? 'false') === 'true') {
@@ -64,10 +65,6 @@ class Database
 
     /**
      * Executa uma consulta preparada.
-     * 
-     * @param string $sql A consulta SQL com placeholders.
-     * @param array $params Os parâmetros para a consulta.
-     * @return \PDOStatement O objeto PDOStatement.
      */
     public function query(string $sql, array $params = []): \PDOStatement
     {
@@ -86,14 +83,8 @@ class Database
         }
     }
 
-    /**
-     * Previne a clonagem da instância.
-     */
     private function __clone() {}
 
-    /**
-     * Previne a desserialização da instância.
-     */
     public function __wakeup()
     {
         throw new \Exception("Não é possível desserializar um singleton.");

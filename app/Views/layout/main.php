@@ -52,15 +52,20 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'atendimentos_externos') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>atendimentos-externos"><i class="fas fa-truck me-2"></i> Atendimento Externo</a>
                 </li>
+                
 
 
                 <?php if (\App\Core\Auth::isTecnico()): ?>
-                <li class="<?php echo (isset($current_page) && $current_page === 'despesas') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>despesas"><i class="fas fa-wallet me-2"></i> Despesas</a>
-                </li>
+                
                 <?php endif; ?>
 
                 <?php if (\App\Core\Auth::isAdmin()): ?>
+                <li class="<?php echo (isset($current_page) && $current_page === 'relatorios') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>relatorios"><i class="fas fa-chart-bar me-2"></i> Relatórios</a>
+                </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'despesas') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>despesas"><i class="fas fa-wallet me-2"></i> Despesas</a>
+                </li>
                 <li class="nav-item-dropdown <?php echo (isset($current_page) && strpos($current_page, 'configuracoes') !== false) ? 'active' : ''; ?>">
                     <a href="javascript:void(0);" class="dropdown-toggle" onclick="toggleSubmenu('config-submenu')"><i class="fas fa-cog me-2"></i> Configurações</a>
                     <ul id="config-submenu" class="submenu" style="<?php echo (isset($current_page) && strpos($current_page, 'configuracoes') !== false) ? 'display: block;' : 'display: none;'; ?>">

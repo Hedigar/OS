@@ -91,6 +91,20 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                         <p class="fs-sm text-muted m-0">Requerem atenção</p>
                     </div>
                 </div>
+
+                <!-- LUCRO DO MÊS (Apenas Admin) -->
+                <?php if (Auth::isAdmin()): ?>
+                    <div class="card stat-card">
+                        <div>
+                            <div class="stat-icon"><i class="fas fa-piggy-bank text-warning"></i></div>
+                            <h2>Lucro Estimado (Mês)</h2>
+                        </div>
+                        <div>
+                            <p class="card-value warning-text">R$ <?php echo number_format($stats['lucro_mes'], 2, ',', '.'); ?></p>
+                            <p class="fs-sm text-muted m-0">Bruto - Custo de Peças</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- ÁREA DE FLUXO DE ATIVIDADES -->

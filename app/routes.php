@@ -27,6 +27,9 @@ $router->post('configuracoes/produtos-servicos/deletar', 'ProdutoServicoControll
 // Despesas
 $router->get('despesas', 'DespesasController@index');
 
+// Relatórios
+$router->get('relatorios', 'RelatorioController@index');
+
 // Rotas CRUD de Clientes (Exemplo)
 $router->get('usuarios', 'UsuarioController@index');
 $router->get('usuarios/form', 'UsuarioController@form'); // Usando 'form' para criar/editar

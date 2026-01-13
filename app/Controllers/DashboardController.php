@@ -34,6 +34,23 @@ class DashboardController extends BaseController
         $logModel = new \App\Models\Log();
         $atividades = $logModel->getRecentes(10);
 
+        // Lucro do mês atual
+        $sqlLucro = "SELECT 
+                        SUM(os.valor_total_os) as total_bruto,
+                        (SELECT SUM(i.quantidade * i.custo) 
+                         FROM itens_ordem_servico i 
+                         JOIN ordens_servico o ON i.ordem_servico_id = o.id 
+                         WHERE o.status_atual_id = 5 AND o.ativo = 1 
+                         AND MONTH(o.created_at) = MONTH(CURRENT_DATE()) 
+                         AND YEAR(o.created_at) = YEAR(CURRENT_DATE())) as total_custo
+                      FROM ordens_servico os
+                      WHERE os.status_atual_id = 5 AND os.ativo = 1 
+                      AND MONTH(os.created_at) = MONTH(CURRENT_DATE()) 
+                      AND YEAR(os.created_at) = YEAR(CURRENT_DATE())";
+        $stmtLucro = $db->query($sqlLucro);
+        $dadosLucro = $stmtLucro->fetch(\PDO::FETCH_ASSOC);
+        $lucroMes = ($dadosLucro['total_bruto'] ?? 0) - ($dadosLucro['total_custo'] ?? 0);
+
         $this->render('dashboard/index', [
             'title' => 'Dashboard',
             'user' => $user,
@@ -41,7 +58,8 @@ class DashboardController extends BaseController
                 'total_abertas' => $totalAbertas,
                 'total_finalizadas' => $totalFinalizadas,
                 'valor_finalizadas' => $valorFinalizadas,
-                'total_atrasadas' => $totalAtrasadas
+                'total_atrasadas' => $totalAtrasadas,
+                'lucro_mes' => $lucroMes
             ],
             'atividades' => $atividades
         ]);

@@ -81,6 +81,8 @@ if (!function_exists('formatCurrency')) {
         .totals-table { width: 250px; margin-left: auto; border-collapse: collapse; }
         .totals-table td { padding: 5px 10px; border-bottom: 1px solid #eee; }
         .grand-total { background-color: #27ae60; color: #ffffff; font-weight: bold; font-size: 13px; }
+        .discount-row { background-color: #fff3cd; color: #856404; font-weight: bold; }
+        .discount-badge { background-color: #e74c3c; color: #ffffff; padding: 2px 5px; border-radius: 3px; font-size: 10px; margin-left: 5px; }
         
         .notes-box { border: 1px solid #eee; padding: 10px; min-height: 60px; background-color: #fcfcfc; margin-bottom: 20px; }
         
@@ -161,9 +163,19 @@ if (!function_exists('formatCurrency')) {
                         <td colspan="4" class="text-center">Nenhum item adicionado.</td>
                     </tr>
                 <?php else: ?>
-                    <?php foreach ($itens as $item): ?>
+                    <?php 
+                    $totalDescontoGeral = 0;
+                    foreach ($itens as $item): 
+                        $descontoItem = (float)($item['desconto'] ?? 0);
+                        $totalDescontoGeral += $descontoItem;
+                    ?>
                         <tr>
-                            <td><?php echo $item['descricao'] ?? ''; ?></td>
+                            <td>
+                                <?php echo $item['descricao'] ?? ''; ?>
+                                <?php if ($descontoItem > 0): ?>
+                                    <span class="discount-badge">DESC. -<?php echo formatCurrency($descontoItem); ?></span>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-center"><?php echo number_format($item['quantidade'] ?? 1, 0, ',', '.'); ?></td>
                             <td class="text-right"><?php echo formatCurrency(($item['valor_unitario'] ?? 0) + ($item['valor_mao_de_obra'] ?? 0)); ?></td>
                             <td class="text-right"><?php echo formatCurrency($item['valor_total'] ?? 0); ?></td>
@@ -182,6 +194,12 @@ if (!function_exists('formatCurrency')) {
                 <td>Total Serviços:</td>
                 <td class="text-right"><?php echo formatCurrency($ordem['valor_total_servicos'] ?? 0); ?></td>
             </tr>
+            <?php if ($totalDescontoGeral > 0): ?>
+            <tr class="discount-row">
+                <td>DESCONTO TOTAL:</td>
+                <td class="text-right">- <?php echo formatCurrency($totalDescontoGeral); ?></td>
+            </tr>
+            <?php endif; ?>
             <tr class="grand-total">
                 <td>TOTAL ORÇAMENTO:</td>
                 <td class="text-right"><?php echo formatCurrency($ordem['valor_total_os'] ?? 0); ?></td>

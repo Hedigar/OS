@@ -89,12 +89,18 @@ class OrdemServico extends Model
             }
         }
 
+        $totalDesconto = 0.00;
+        foreach ($itens as $item) {
+            $totalDesconto += (float)($item['desconto'] ?? 0);
+        }
+
         $totalOS = $totalProdutos + $totalServicos;
 
         $sql = "UPDATE {$this->table} SET
                 valor_total_produtos = :vtp,
                 valor_total_servicos = :vts,
-                valor_total_os = :vto
+                valor_total_os = :vto,
+                valor_desconto = :vd
                 WHERE id = :id";
 
         $stmt = $this->db->prepare($sql);
@@ -102,7 +108,8 @@ class OrdemServico extends Model
             'vtp' => $totalProdutos,
             'vts' => $totalServicos,
             'vto' => $totalOS,
-            'id' => $osId
+            'vd'  => $totalDesconto,
+            'id'  => $osId
         ]);
     }
 

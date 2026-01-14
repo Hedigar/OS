@@ -321,6 +321,7 @@ class OrdemServicoController extends BaseController
             $custo = filter_input(INPUT_POST, 'valor_custo', FILTER_VALIDATE_FLOAT) ?: 0;
             $venda = filter_input(INPUT_POST, 'valor_unitario', FILTER_VALIDATE_FLOAT) ?: 0;
             $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT) ?: 0;
+            $desconto = filter_input(INPUT_POST, 'desconto', FILTER_VALIDATE_FLOAT) ?: 0;
             $descricao = filter_input(INPUT_POST, 'descricao', FILTER_SANITIZE_SPECIAL_CHARS);
             $tipo = filter_input(INPUT_POST, 'tipo', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'produto';
             
@@ -335,7 +336,8 @@ class OrdemServicoController extends BaseController
                 'custo' => $custo,
                 'valor_unitario' => $venda,
                 'valor_mao_de_obra' => $maoDeObra,
-                'valor_total' => ($venda + $maoDeObra) * $quantidade,
+                'desconto' => $desconto,
+                'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto,
                 'comprar_peca' => $comprarPeca,
                 'link_fornecedor' => $linkFornecedor,
                 'ativo' => 1
@@ -361,13 +363,15 @@ class OrdemServicoController extends BaseController
             $custo = filter_input(INPUT_POST, 'custo', FILTER_VALIDATE_FLOAT);
             $venda = filter_input(INPUT_POST, 'valor_unitario', FILTER_VALIDATE_FLOAT);
             $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT);
+            $desconto = filter_input(INPUT_POST, 'desconto', FILTER_VALIDATE_FLOAT) ?: 0;
 
             $itemData = [
                 'quantidade' => $quantidade,
                 'custo' => $custo,
                 'valor_unitario' => $venda,
                 'valor_mao_de_obra' => $maoDeObra,
-                'valor_total' => ($venda + $maoDeObra) * $quantidade
+                'desconto' => $desconto,
+                'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto
             ];
 
             if ($this->itemModel->update($itemId, $itemData)) {

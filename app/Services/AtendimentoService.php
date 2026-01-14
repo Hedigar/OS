@@ -29,8 +29,10 @@ class AtendimentoService
         $somaItens = 0;
         if (!empty($itens)) {
             foreach ($itens as $item) {
-                // Soma valor unitário + mão de obra vezes a quantidade
-                $somaItens += ($item['quantidade'] * ($item['valor_unitario'] + ($item['valor_mao_de_obra'] ?? 0)));
+                // Soma valor unitário + mão de obra vezes a quantidade, subtraindo o desconto
+                $valorItem = ($item['quantidade'] * ($item['valor_unitario'] + ($item['valor_mao_de_obra'] ?? 0)));
+                $descontoItem = (float)($item['desconto'] ?? 0);
+                $somaItens += ($valorItem - $descontoItem);
             }
         }
 
@@ -67,12 +69,14 @@ class AtendimentoService
         $venda = (float)($postData['valor_unitario'] ?? 0);
         $maoDeObra = (float)($postData['valor_mao_de_obra'] ?? 0);
         $quantidade = (float)($postData['quantidade'] ?? 1);
+        $desconto = (float)($postData['desconto'] ?? 0);
 
         $itemData = [
             'quantidade' => $quantidade,
             'valor_unitario' => $venda,
             'valor_mao_de_obra' => $maoDeObra,
-            'valor_total' => ($venda + $maoDeObra) * $quantidade
+            'desconto' => $desconto,
+            'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto
         ];
 
         return $this->itemModel->update($itemId, $itemData);
@@ -87,6 +91,7 @@ class AtendimentoService
         $venda = (float)($postData['valor_unitario'] ?? 0);
         $maoDeObra = (float)($postData['valor_mao_de_obra'] ?? 0);
         $quantidade = (float)($postData['quantidade'] ?? 1);
+        $desconto = (float)($postData['desconto'] ?? 0);
 
         $itemData = [
             'ordem_servico_id'      => null,
@@ -97,7 +102,8 @@ class AtendimentoService
             'custo'                 => (float)($postData['valor_custo'] ?? 0),
             'valor_unitario'        => $venda,
             'valor_mao_de_obra'     => $maoDeObra,
-            'valor_total'           => ($venda + $maoDeObra) * $quantidade,
+            'desconto'              => $desconto,
+            'valor_total'           => (($venda + $maoDeObra) * $quantidade) - $desconto,
             'ativo'                 => 1
         ];
 

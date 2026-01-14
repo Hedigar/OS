@@ -280,6 +280,10 @@ if (!function_exists('safe_val')) {
                     <label>Mão de Obra</label>
                     <input type="number" name="valor_mao_de_obra" id="item_mao_de_obra" class="form-control" step="0.01" value="0.00">
                 </div>
+                <div class="form-group">
+                    <label>Desconto</label>
+                    <input type="number" name="desconto" id="item_desconto" class="form-control" step="0.01" value="0.00">
+                </div>
                 <button type="submit" class="btn btn-primary mb-1">Adicionar</button>
             </div>
             
@@ -313,6 +317,7 @@ if (!function_exists('safe_val')) {
                                 <th style="width: 10%; text-align: right;">Custo</th>
                                 <th style="width: 10%; text-align: right;">Vlr Unit.</th>
                                 <th style="width: 10%; text-align: right;">M. Obra</th>
+                                <th style="width: 10%; text-align: right;">Desconto</th>
                                 <th style="width: 10%; text-align: right;">Vlr Total</th>
                                 <th style="width: 10%; text-align: center;">Compra</th>
                                 <th style="width: 9%; text-align: center;">Ações</th>
@@ -342,6 +347,9 @@ if (!function_exists('safe_val')) {
                                     </td>
                                     <td class="text-end">
                                         <input type="number" name="valor_mao_de_obra" value="<?php echo (float)safe_val($item, 'valor_mao_de_obra', 0); ?>" step="0.01" class="form-control form-control-sm text-end" style="width: 90px; display: inline-block;">
+                                    </td>
+                                    <td class="text-end">
+                                        <input type="number" name="desconto" value="<?php echo (float)safe_val($item, 'desconto', 0); ?>" step="0.01" class="form-control form-control-sm text-end" style="width: 90px; display: inline-block;">
                                     </td>
                                     <td class="text-end fw-bold"><?php echo formatCurrency((float)(safe_val($item, 'valor_total', 0))); ?></td>
                                     <td class="text-center">

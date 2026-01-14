@@ -10,6 +10,17 @@ if (!function_exists('formatCurrency')) {
         return 'R$ ' . number_format((float)$value, 2, ',', '.');
     }
 }
+
+// --- CÁLCULO DOS TOTAIS ---
+$totalDescontoGeral = 0;
+foreach ($itens as $item) {
+    $totalDescontoGeral += (float)($item['desconto'] ?? 0);
+}
+
+$valorProdutos = (float)($ordem['valor_total_produtos'] ?? 0);
+$valorServicosLiquido = (float)($ordem['valor_total_servicos'] ?? 0);
+$valorServicosBruto = $valorServicosLiquido + $totalDescontoGeral;
+$subtotalGeralBruto = $valorProdutos + $valorServicosBruto;
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -78,10 +89,11 @@ if (!function_exists('formatCurrency')) {
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
-        .totals-table { width: 250px; margin-left: auto; border-collapse: collapse; }
+        .totals-table { width: 320px; margin-left: auto; border-collapse: collapse; }
         .totals-table td { padding: 5px 10px; border-bottom: 1px solid #eee; }
-        .grand-total { background-color: #27ae60; color: #ffffff; font-weight: bold; font-size: 13px; }
-        .discount-row { background-color: #fff3cd; color: #856404; font-weight: bold; }
+        .subtotal-row { background-color: #f9f9f9; font-weight: bold; }
+        .discount-row { color: #e74c3c; font-weight: bold; }
+        .grand-total { background-color: #27ae60; color: #ffffff; font-weight: bold; font-size: 14px; }
         .discount-badge { background-color: #e74c3c; color: #ffffff; padding: 2px 5px; border-radius: 3px; font-size: 10px; margin-left: 5px; }
         
         .notes-box { border: 1px solid #eee; padding: 10px; min-height: 60px; background-color: #fcfcfc; margin-bottom: 20px; }
@@ -132,23 +144,25 @@ if (!function_exists('formatCurrency')) {
                 <td><?php echo $ordem['cliente_telefone'] ?? 'N/A'; ?></td>
                 <td class="label">Validade:</td>
                 <td>5 dias</td>
-         134	        </table>
-135	
-136	        <div class="section-title">Dados do Equipamento</div>
-137	        <table class="info-table">
-138	            <tr>
-139	                <td class="label">Equipamento:</td>
-140	                <td><?php echo ($ordem['equipamento_tipo'] ?? '') . ' ' . ($ordem['equipamento_marca'] ?? '') . ' ' . ($ordem['equipamento_modelo'] ?? ''); ?></td>
-141	                <td class="label">Serial:</td>
-142	                <td><?php echo $ordem['equipamento_serial'] ?? 'N/A'; ?></td>
-143	            </tr>
-144	            <tr>
-145	                <td class="label">Acessórios:</td>
-146	                <td colspan="3"><?php echo $ordem['equipamento_acessorios'] ?? 'Nenhum'; ?></td>
-147	            </tr>
-148	        </table>
-149	
-150	        <div class="section-title">Itens do Orçamento</div>      <table class="items-table">
+            </tr>
+        </table>
+
+        <div class="section-title">Dados do Equipamento</div>
+        <table class="info-table">
+            <tr>
+                <td class="label">Equipamento:</td>
+                <td><?php echo ($ordem['equipamento_tipo'] ?? '') . ' ' . ($ordem['equipamento_marca'] ?? '') . ' ' . ($ordem['equipamento_modelo'] ?? ''); ?></td>
+                <td class="label">Serial:</td>
+                <td><?php echo $ordem['equipamento_serial'] ?? 'N/A'; ?></td>
+            </tr>
+            <tr>
+                <td class="label">Acessórios:</td>
+                <td colspan="3"><?php echo $ordem['equipamento_acessorios'] ?? 'Nenhum'; ?></td>
+            </tr>
+        </table>
+
+        <div class="section-title">Itens do Orçamento</div>
+        <table class="items-table">
             <thead>
                 <tr>
                     <th>Descrição do Produto / Serviço</th>
@@ -159,15 +173,10 @@ if (!function_exists('formatCurrency')) {
             </thead>
             <tbody>
                 <?php if (empty($itens)): ?>
-                    <tr>
-                        <td colspan="4" class="text-center">Nenhum item adicionado.</td>
-                    </tr>
+                    <tr><td colspan="4" class="text-center">Nenhum item adicionado.</td></tr>
                 <?php else: ?>
-                    <?php 
-                    $totalDescontoGeral = 0;
-                    foreach ($itens as $item): 
+                    <?php foreach ($itens as $item): 
                         $descontoItem = (float)($item['desconto'] ?? 0);
-                        $totalDescontoGeral += $descontoItem;
                     ?>
                         <tr>
                             <td>
@@ -187,28 +196,32 @@ if (!function_exists('formatCurrency')) {
 
         <table class="totals-table">
             <tr>
-                <td>Total Produtos:</td>
-                <td class="text-right"><?php echo formatCurrency($ordem['valor_total_produtos'] ?? 0); ?></td>
+                <td>Total em Produtos:</td>
+                <td class="text-right"><?php echo formatCurrency($valorProdutos); ?></td>
             </tr>
             <tr>
-                <td>Total Serviços:</td>
-                <td class="text-right"><?php echo formatCurrency($ordem['valor_total_servicos'] ?? 0); ?></td>
+                <td>Total em Serviços (Bruto):</td>
+                <td class="text-right"><?php echo formatCurrency($valorServicosBruto); ?></td>
+            </tr>
+            <tr class="subtotal-row">
+                <td>SUBTOTAL BRUTO:</td>
+                <td class="text-right"><?php echo formatCurrency($subtotalGeralBruto); ?></td>
             </tr>
             <?php if ($totalDescontoGeral > 0): ?>
             <tr class="discount-row">
-                <td>DESCONTO TOTAL:</td>
-                <td class="text-right">- <?php echo formatCurrency($totalDescontoGeral); ?></td>
+                <td>(-) DESCONTOS:</td>
+                <td class="text-right"><?php echo formatCurrency($totalDescontoGeral); ?></td>
             </tr>
             <?php endif; ?>
             <tr class="grand-total">
-                <td>TOTAL ORÇAMENTO:</td>
+                <td>TOTAL FINAL:</td>
                 <td class="text-right"><?php echo formatCurrency($ordem['valor_total_os'] ?? 0); ?></td>
             </tr>
         </table>
 
         <?php if ($showObs): ?>
         <div class="section-title">Observações / Laudo</div>
-        <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? $ordem['laudo_tecnico'] : 'Diagnóstico técnico conforme relatado.'; ?></div>
+        <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? nl2br($ordem['laudo_tecnico']) : 'Diagnóstico técnico conforme relatado.'; ?></div>
         <?php endif; ?>
 
         <div class="footer">
@@ -227,5 +240,4 @@ if (!function_exists('formatCurrency')) {
         </div>
     </div>
 </body>
-</html>
 </html>

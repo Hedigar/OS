@@ -328,13 +328,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function fillEquipFields(data) {
-        document.getElementById('tipo_equipamento').value = data.tipo;
-        document.getElementById('marca_equipamento').value = data.marca;
-        document.getElementById('modelo_equipamento').value = data.modelo;
-        document.getElementById('serial_equipamento').value = data.serial;
-        document.getElementById('senha_equipamento').value = data.senha;
-        document.getElementById('fonte_equipamento').value = data.possui_fonte == 1 ? 'sim' : 'nao';
-        document.getElementById('acessorios_equipamento').value = data.acessorios;
+        document.getElementById('tipo_equipamento').value = data.tipo || '';
+        document.getElementById('marca_equipamento').value = data.marca || '';
+        document.getElementById('modelo_equipamento').value = data.modelo || '';
+        document.getElementById('serial_equipamento').value = data.serial || '';
+        document.getElementById('senha_equipamento').value = data.senha || '';
+        document.getElementById('fonte_equipamento').value = (data.possui_fonte == 1 || data.equipamento_fonte == 1) ? 'sim' : 'nao';
+        document.getElementById('sn_fonte').value = data.sn_fonte || '';
+        document.getElementById('acessorios_equipamento').value = data.acessorios || '';
     }
 
     function resetEquipFields() {
@@ -345,11 +346,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('serial_equipamento').value = '';
         document.getElementById('senha_equipamento').value = '';
         document.getElementById('fonte_equipamento').value = 'nao';
+        document.getElementById('sn_fonte').value = '';
         document.getElementById('acessorios_equipamento').value = '';
     }
 
     function lockEquipFields(lock) {
-        const fields = ['tipo_equipamento', 'marca_equipamento', 'modelo_equipamento', 'serial_equipamento', 'senha_equipamento', 'fonte_equipamento', 'acessorios_equipamento'];
+        const fields = ['tipo_equipamento', 'marca_equipamento', 'modelo_equipamento', 'serial_equipamento', 'senha_equipamento', 'fonte_equipamento', 'sn_fonte', 'acessorios_equipamento'];
         fields.forEach(id => {
             const el = document.getElementById(id);
             if (lock) {
@@ -371,6 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
             telefone_principal: ''
         });
     }
+
+    <?php if ($is_edit && !empty($ordem['equipamento_id'])): ?>
+    // Se for edição e tiver equipamento, carregar a lista e travar os campos
+    loadEquipamentos(<?php echo $ordem['cliente_id']; ?>);
+    setTimeout(() => {
+        equipSelect.value = "<?php echo $ordem['equipamento_id']; ?>";
+        lockEquipFields(true);
+    }, 500);
+    <?php endif; ?>
 });
 </script>
 

@@ -976,3 +976,80 @@ tr:hover td {
 .activity-icon {
     box-shadow: var(--shadow-sm);
 }
+
+/* --- LIMPEZA E RESPONSIVIDADE FINAL --- */
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000; /* Acima de tudo */
+    backdrop-filter: blur(3px);
+}
+
+/* Ajuste do Submenu (Bug de Configurações) */
+.submenu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.15); 
+    border-radius: 4px;
+}
+.submenu li a {
+    padding: 10px 15px 10px 50px !important;
+    font-size: 0.85rem !important;
+    border-left: none !important;
+}
+
+/* Seta do Dropdown */
+.dropdown-toggle { position: relative; }
+.dropdown-toggle::after {
+    content: '\f107';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 15px;
+    transition: transform 0.3s;
+}
+.submenu-open .dropdown-toggle::after { transform: rotate(180deg); }
+
+@media (max-width: 992px) {
+    /* Impede que o layout antigo quebre a sidebar mobile */
+    .main-wrapper { flex-direction: row !important; } 
+    
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important; /* Escondido */
+        top: 0 !important;
+        height: 100vh !important;
+        width: 260px !important;
+        z-index: 3000 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: block !important; /* Força aparecer no DOM */
+        box-shadow: 10px 0 20px rgba(0,0,0,0.2);
+    }
+
+    .sidebar.active {
+        left: 0 !important;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 1rem !important;
+    }
+}
+
+/* Ajuste extra para telas bem pequenas */
+@media (max-width: 576px) {
+    .header span { font-size: 1rem; }
+    .card { padding: 1rem; }
+}

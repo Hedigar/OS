@@ -87,61 +87,7 @@ require_once __DIR__ . '/../layout/main.php';
                 </tbody>
             </table>
         </div>
-
-        <?php if (($totalPaginas ?? 0) > 1): ?>
-            <div class="mt-4">
-                <div class="pagination">
-                    <?php 
-                        $p_atual = $paginaAtual ?? 1;
-                        $raio = 2; 
-                        $query_search = !empty($search) ? '&search=' . urlencode($search) : '';
-                    ?>
-
-                    <?php if ($p_atual > 1): ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . ($p_atual - 1) . $query_search ?>">«</a>
-                    <?php endif; ?>
-
-                    <?php if ($p_atual > ($raio + 1)): ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=1' . $query_search ?>">1</a>
-                        <?php if ($p_atual > ($raio + 2)): ?>
-                            <span class="gap" style="padding: 8px 14px;">...</span>
-                        <?php endif; ?>
-                    <?php endif; ?>
-
-                    <?php 
-                    $inicio = max(1, $p_atual - $raio);
-                    $fim = min($totalPaginas, $p_atual + $raio);
-
-                    for ($i = $inicio; $i <= $fim; $i++): 
-                    ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . $i . $query_search ?>" class="<?= ($i == $p_atual) ? 'active' : '' ?>">
-                            <?= $i ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <?php if ($p_atual < ($totalPaginas - $raio)): ?>
-                        <?php if ($p_atual < ($totalPaginas - $raio - 1)): ?>
-                            <span class="gap" style="padding: 8px 14px;">...</span>
-                        <?php endif; ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . $totalPaginas . $query_search ?>"><?= $totalPaginas ?></a>
-                    <?php endif; ?>
-
-                    <?php if ($p_atual < $totalPaginas): ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . ($p_atual + 1) . $query_search ?>">»</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
-
     <?php endif; ?>
 </div>
-
-<style>
-.pagination { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; }
-.pagination a { padding: 8px 14px; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #007bff; }
-.pagination a.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
-.pagination a:hover:not
-(.active) { background-color: #f8f9fa; }
-</style>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

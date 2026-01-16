@@ -10,8 +10,6 @@ class OrdemServico extends Model
     
     /**
      * Retorna uma OS com dados do cliente, status e equipamento.
-     * @param int $id ID da Ordem de Serviço
-     * @return array|null
      */
     public function findWithDetails(int $id): ?array
     {
@@ -29,10 +27,10 @@ class OrdemServico extends Model
                        e.acessorios as equipamento_acessorios,
                        e.possui_fonte as equipamento_fonte,
                        e.sn_fonte as equipamento_sn_fonte
-	                FROM {$this->table} os
-	                JOIN clientes c ON os.cliente_id = c.id
-	                JOIN status_os s ON os.status_atual_id = s.id
-	                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
+                    FROM {$this->table} os
+                    JOIN clientes c ON os.cliente_id = c.id
+                    JOIN status_os s ON os.status_atual_id = s.id
+                    LEFT JOIN equipamentos e ON os.equipamento_id = e.id
                 WHERE os.id = :id AND os.ativo = 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
@@ -41,18 +39,51 @@ class OrdemServico extends Model
     }
 
     /**
-     * Retorna todas as OS com dados do cliente e status.
-     * @return array
+     * Ajustado para ser compatível com App\Core\Model
      */
-	    public function getAllWithDetails(string $search = ''): array
-	    {
-	        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor,
-	                       e.modelo as equipamento_modelo
-	                FROM {$this->table} os
-	                JOIN clientes c ON os.cliente_id = c.id
-	                JOIN status_os s ON os.status_atual_id = s.id
-	                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
-	                WHERE os.ativo = 1";
+    public function countAll(string $whereClause = '', array $params = []): int
+    {
+        // Se a chamada vier do nosso controller com a string de busca personalizada
+        if (empty($whereClause) && isset($params['custom_search'])) {
+            $search = $params['custom_search'];
+            $sql = "SELECT COUNT(*) as total 
+                    FROM {$this->table} os
+                    JOIN clientes c ON os.cliente_id = c.id
+                    WHERE os.ativo = 1";
+            
+            $execParams = [];
+            if (!empty($search)) {
+                if (is_numeric($search)) {
+                    $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
+                    $execParams['search_id'] = $search;
+                    $execParams['search_nome'] = "%{$search}%";
+                } else {
+                    $sql .= " AND c.nome_completo LIKE :search_nome";
+                    $execParams['search_nome'] = "%{$search}%";
+                }
+            }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($execParams);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return (int)($result['total'] ?? 0);
+        }
+
+        // Caso contrário, usa o comportamento padrão da classe pai
+        return parent::countAll($whereClause, $params);
+    }
+
+    /**
+     * BUSCA PAGINADA COM DETALHES
+     */
+    public function getAllWithDetailsPaginado(string $search = '', int $limit = 10, int $offset = 0): array
+    {
+        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor,
+                       e.modelo as equipamento_modelo
+                FROM {$this->table} os
+                JOIN clientes c ON os.cliente_id = c.id
+                JOIN status_os s ON os.status_atual_id = s.id
+                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
+                WHERE os.ativo = 1";
         
         $params = [];
         if (!empty($search)) {
@@ -66,19 +97,31 @@ class OrdemServico extends Model
             }
         }
 
-        $sql .= " ORDER BY os.id DESC";
+        $sql .= " ORDER BY os.id DESC LIMIT :limit OFFSET :offset";
+        
         $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
+        
+        foreach ($params as $key => $val) {
+            $stmt->bindValue(":{$key}", $val);
+        }
+        
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        
+        $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Calcula e atualiza os totais da OS.
-     */
+    public function getAllWithDetails(string $search = ''): array
+    {
+        return $this->getAllWithDetailsPaginado($search, 999999, 0);
+    }
+
     public function updateTotals(int $osId, array $itens): bool
     {
         $totalProdutos = 0.00;
         $totalServicos = 0.00;
+        $totalDesconto = 0.00;
 
         foreach ($itens as $item) {
             $tipo = $item['tipo_item'] ?? $item['tipo'] ?? '';
@@ -87,10 +130,6 @@ class OrdemServico extends Model
             } elseif ($tipo === 'servico') {
                 $totalServicos += $item['valor_total'];
             }
-        }
-
-        $totalDesconto = 0.00;
-        foreach ($itens as $item) {
             $totalDesconto += (float)($item['desconto'] ?? 0);
         }
 
@@ -113,9 +152,6 @@ class OrdemServico extends Model
         ]);
     }
 
-    /**
-     * Retorna todas as OS de um cliente.
-     */
     public function findByClienteId(int $clienteId): array
     {
         $sql = "SELECT os.*, s.nome as status_nome, s.cor as status_cor
@@ -128,9 +164,6 @@ class OrdemServico extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Retorna todas as OS de um equipamento.
-     */
     public function findByEquipamentoId(int $equipamentoId): array
     {
         $sql = "SELECT os.*, s.nome as status_nome, s.cor as status_cor

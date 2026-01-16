@@ -41,14 +41,7 @@ class OrdemServicoController extends BaseController
         }
 
         try {
-            $whereClause = "nome_completo LIKE :term_nome OR documento LIKE :term_documento";
-            $params = [
-                'term_nome' => "%{$termo}%",
-                'term_documento' => "%{$termo}%"
-            ];
-
-            $clientes = $this->clienteModel->getPaginated(10, 0, $whereClause, $params);
-            
+            $clientes = $this->clienteModel->buscarPorTermo($termo);
             echo json_encode($clientes);
             exit;
         } catch (\Throwable $e) {
@@ -59,12 +52,28 @@ class OrdemServicoController extends BaseController
 
     public function index()
     {
+        // 1. Configurações de Paginação
+        $itensPorPagina = 10;
+        $paginaAtual = filter_input(INPUT_GET, 'pagina', FILTER_VALIDATE_INT) ?: 1;
+        $offset = ($paginaAtual - 1) * $itensPorPagina;
+
+        // 2. Filtro de Busca
         $search = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_SPECIAL_CHARS) ?: '';
-        $ordens = $this->osModel->getAllWithDetails($search);
+        
+        // 3. Obter Total para Cálculo de Páginas
+        // Nota: O método contarTotal deve existir no seu OrdemServico Model
+        $totalRegistros = $this->osModel->countAll($search); 
+        $totalPaginas = ceil($totalRegistros / $itensPorPagina);
+
+        // 4. Buscar apenas os dados da página atual
+        $ordens = $this->osModel->getAllWithDetailsPaginado($search, $itensPorPagina, $offset);
+
         $this->render('os/index', [
             'title' => 'Gerenciar Ordens de Serviço',
             'ordens' => $ordens,
-            'search' => $search
+            'search' => $search,
+            'totalPaginas' => $totalPaginas,
+            'paginaAtual' => $paginaAtual
         ]);
     }
 
@@ -113,23 +122,23 @@ class OrdemServicoController extends BaseController
                         'modelo' => filter_input(INPUT_POST, 'modelo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
                         'serial' => $serial,
                         'senha' => filter_input(INPUT_POST, 'senha_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-	                        'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-	                        'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
-	                        'sn_fonte' => filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS),
-	                    ];
+                        'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                        'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
+                        'sn_fonte' => filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS),
+                    ];
                     $equipamento_id = $this->equipamentoModel->create($equipamentoData);
                 }
             }
 
-	            $osData = [
-	                'cliente_id' => $cliente_id,
-	                'equipamento_id' => $equipamento_id,
-	                'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
-	                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
-	                'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT) ?: 1,
-	                'status_pagamento' => filter_input(INPUT_POST, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'pendente',
-	                'status_entrega' => filter_input(INPUT_POST, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'nao_entregue',
-	            ];
+            $osData = [
+                'cliente_id' => $cliente_id,
+                'equipamento_id' => $equipamento_id,
+                'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
+                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
+                'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT) ?: 1,
+                'status_pagamento' => filter_input(INPUT_POST, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'pendente',
+                'status_entrega' => filter_input(INPUT_POST, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'nao_entregue',
+            ];
 
             $osId = $this->osModel->create($osData);
 
@@ -155,27 +164,26 @@ class OrdemServicoController extends BaseController
             
             $osAntiga = $this->osModel->find($id);
 
-	            $osData = [
-	                'status_atual_id' => $status_id,
-	                'status_pagamento' => $status_pagamento,
-	                'status_entrega' => $status_entrega,
-	                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
-	            ];
-	
-	            $sn_fonte = filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS);
-	            if ($sn_fonte !== null) {
-	                $ordem_atual = $this->osModel->find($id);
-	                if ($ordem_atual && $ordem_atual['equipamento_id']) {
-	                    $this->equipamentoModel->update($ordem_atual['equipamento_id'], ['sn_fonte' => $sn_fonte]);
-	                }
-	            }
+            $osData = [
+                'status_atual_id' => $status_id,
+                'status_pagamento' => $status_pagamento,
+                'status_entrega' => $status_entrega,
+                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
+            ];
+
+            $sn_fonte = filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS);
+            if ($sn_fonte !== null) {
+                $ordem_atual = $this->osModel->find($id);
+                if ($ordem_atual && $ordem_atual['equipamento_id']) {
+                    $this->equipamentoModel->update($ordem_atual['equipamento_id'], ['sn_fonte' => $sn_fonte]);
+                }
+            }
 
             if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
                 $osData['defeito_relatado'] = filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS);
             }
 
             if ($this->osModel->update($id, $osData)) {
-                // Se o status mudou ou se há uma observação, registra no histórico
                 if ($osAntiga['status_atual_id'] != $status_id || !empty($observacao)) {
                     $this->historicoModel->create([
                         'ordem_servico_id' => $id,
@@ -268,20 +276,23 @@ class OrdemServicoController extends BaseController
 
     public function searchEquipamentos()
     {
-        error_reporting(0);
         if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
         $clienteId = filter_input(INPUT_GET, 'cliente_id', FILTER_VALIDATE_INT);
 
         if (!$clienteId) {
-            $this->jsonResponse([]);
-            return;
+            echo json_encode([]);
+            exit;
         }
 
         try {
             $equipamentos = $this->equipamentoModel->findByClienteId($clienteId);
-            $this->jsonResponse($equipamentos);
+            echo json_encode($equipamentos);
+            exit;
         } catch (\Throwable $e) {
-            $this->jsonResponse(['error' => $e->getMessage()], 500);
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
         }
     }
 

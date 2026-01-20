@@ -176,9 +176,29 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
             <div class="tasks-section">
                 <h3><i class="fas fa-bell text-warning"></i> Alertas</h3>
                 <div id="alerts-container">
-                    <div class="text-muted fs-sm p-3 text-center border rounded-3 border-dashed">
-                        Nenhum alerta crítico no momento.
-                    </div>
+                    <?php if (empty($alertas)): ?>
+                        <div class="text-muted fs-sm p-3 text-center border rounded-3 border-dashed">
+                            Nenhum alerta crítico no momento.
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($alertas as $alerta): ?>
+                            <div class="alert-item mb-2 p-2 rounded-3 border">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>🔔 Alerta:</strong>
+                                        <?php echo htmlspecialchars($alerta['mensagem'] ?? ''); ?>
+                                    </div>
+                                    <div class="ms-2">
+                                        <?php if (!empty($alerta['os_id'])): ?>
+                                            <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo (int)$alerta['os_id']; ?>" class="btn btn-sm btn-outline-primary">
+                                                Ver OS
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -198,6 +218,9 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
     </div>
 </div>
 
+<script>
+    window.dashboardAlerts = <?php echo json_encode($alertas ?? []); ?>;
+</script>
 <script src="<?php echo BASE_URL; ?>assets/js/dashboard.js"></script>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

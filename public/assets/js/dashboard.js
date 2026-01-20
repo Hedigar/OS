@@ -66,26 +66,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Inicializar
     loadTasks();
-
-    // Simulação de Alertas (UX/DX)
-    const alertsContainer = document.getElementById('alerts-container');
-    if (alertsContainer) {
-        const demoAlerts = [
-            { id: 2351, type: 'success', message: 'OS 2351 pronta - Avisar cliente' },
-            { id: 2348, type: 'warning', message: 'OS 2348 aguardando peças há 2 dias' }
-        ];
-
-        function renderAlerts() {
-            alertsContainer.innerHTML = '';
-            demoAlerts.forEach(alert => {
-                const div = document.createElement('div');
-                div.className = 'alert-item';
-                div.innerHTML = `<strong>🔔 Alerta:</strong> ${alert.message}`;
-                alertsContainer.appendChild(div);
-            });
-        }
-        renderAlerts();
-    }
 });

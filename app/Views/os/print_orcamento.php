@@ -1,9 +1,7 @@
 <?php
-/**
- * MODELO DE IMPRESSÃO DE ORÇAMENTO PROFISSIONAL (PDF)
- */
-$ordem = $ordem ?? [];
-$itens = $itens ?? [];
+$cliente = $cliente ?? [];
+$debitosOS = $debitosOS ?? [];
+$debitosAE = $debitosAE ?? [];
 
 if (!function_exists('formatCurrency')) {
     function formatCurrency($value) {
@@ -11,233 +9,166 @@ if (!function_exists('formatCurrency')) {
     }
 }
 
-// --- CÁLCULO DOS TOTAIS ---
+$totalBrutoGeral = 0;
 $totalDescontoGeral = 0;
-foreach ($itens as $item) {
-    $totalDescontoGeral += (float)($item['desconto'] ?? 0);
-}
 
-$valorProdutos = (float)($ordem['valor_total_produtos'] ?? 0);
-$valorServicosLiquido = (float)($ordem['valor_total_servicos'] ?? 0);
-$valorServicosBruto = $valorServicosLiquido + $totalDescontoGeral;
-$subtotalGeralBruto = $valorProdutos + $valorServicosBruto;
+foreach ($debitosOS as $os) {
+    $desc = (float)($os['valor_desconto'] ?? 0);
+    $totalDescontoGeral += $desc;
+    $totalBrutoGeral += (float)($os['valor_total_os'] ?? 0) + $desc;
+}
+foreach ($debitosAE as $ae) {
+    $descAE = (float)($ae['valor_desconto'] ?? 0);
+    $totalDescontoGeral += $descAE;
+    $totalBrutoGeral += (float)($ae['valor_total'] ?? 0) + $descAE;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <?php
-        $configModel = new \App\Models\ConfiguracaoGeral();
-        $fontSize = $configModel->getValor('impressao_fonte_tamanho') ?: '13';
-        $showObs = $configModel->getValor('impressao_exibir_observacoes') !== '0';
-        
-        $textoPadrao = "Será cobrado um valor R$ 100,00 mão de obra (HORA TÉCNICA), caso o cliente não autorize a realização do serviço (ORÇAMENTO).\n" .
-                       "*Não nos responsabilizamos pela origem e software dos equipamentos depositados para orçamentos.\n" .
-                       "*O equipamento somente será entregue com a apresentação da ordem de serviço ou documento com foto somente para o proprietário.\n" .
-                       "*Equipamentos não retirados no prazo de 30 dias após a da data de conclusão do serviço, serão considerado abandonados e será cobrado uma taxa diária de R$ 2,00(dois reais) para fins de armazenamento, contar a partir da data de conclusão do serviço até a data de retirada do equipamento. Caso esse prazo de armazenamentoseja superior a 90 dias, autorizo desde já a doação do equipamento à Myranda Informatica para que essa possa cobrir todos os custos de armazenagem, bem comodoar, vender, reciclar ou mesmo descartar de forma correta o equipamento.";
-        
-        $textoObs = $configModel->getValor('impressao_texto_observacoes') ?: $textoPadrao;
-    ?>
     <style>
         @page { margin: 10mm; }
-        body {
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: <?php echo $fontSize; ?>px;
-            color: #333;
-            line-height: 1.4;
-            margin: 0;
-            padding: 0;
-        }
-        .container { width: 100%; }
-        .header {
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        .header-table { width: 100%; border-collapse: collapse; }
-        .company-name { font-size: 18px; font-weight: bold; color: #2980b9; margin: 0; text-transform: uppercase; }
-        .company-info { font-size: 11px; color: #7f8c8d; margin: 2px 0; }
-        
-        .doc-title-box {
-            background-color: #3498db;
-            color: #ffffff;
-            padding: 8px 15px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-        .doc-title-table { width: 100%; }
-        .doc-title { font-size: 14px; font-weight: bold; text-transform: uppercase; }
-        .os-number { font-size: 14px; font-weight: bold; text-align: right; }
-        
-        .section-title {
-            background-color: #f2f2f2;
-            padding: 5px 10px;
-            font-weight: bold;
-            border-left: 4px solid #3498db;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .info-table td { padding: 4px 8px; border: 1px solid #eee; vertical-align: top; }
-        .label { font-weight: bold; width: 100px; background-color: #fafafa; }
-        
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .items-table th { background-color: #2980b9; color: #ffffff; text-align: left; padding: 8px; font-size: 11px; text-transform: uppercase; }
-        .items-table td { padding: 8px; border-bottom: 1px solid #eee; }
-        
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4; }
+        .header { border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 15px; }
+        .company-name { font-size: 18px; font-weight: bold; color: #2980b9; text-transform: uppercase; margin: 0; }
+        .doc-title-box { background-color: #3498db; color: #ffffff; padding: 8px 15px; border-radius: 4px; margin-bottom: 15px; }
+        .section-title { background-color: #f2f2f2; padding: 5px 10px; font-weight: bold; border-left: 4px solid #3498db; margin: 15px 0 8px 0; text-transform: uppercase; font-size: 11px; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .info-table td { padding: 5px 8px; border: 1px solid #eee; font-size: 11px; }
+        .label { font-weight: bold; background-color: #fafafa; width: 15%; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { background-color: #2980b9; color: #ffffff; padding: 8px; font-size: 10px; text-transform: uppercase; text-align: left; }
+        .items-table td { padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
         .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        
-        .totals-table { width: 320px; margin-left: auto; border-collapse: collapse; }
-        .totals-table td { padding: 5px 10px; border-bottom: 1px solid #eee; }
-        .subtotal-row { background-color: #f9f9f9; font-weight: bold; }
-        .discount-row { color: #e74c3c; font-weight: bold; }
+        .status-badge { padding: 2px 5px; border-radius: 3px; font-size: 9px; color: #fff; font-weight: bold; }
+        .discount-badge { background-color: #e74c3c; color: #ffffff; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: bold; }
+        .totals-table { width: 300px; margin-left: auto; border-collapse: collapse; margin-top: 20px; }
+        .totals-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
         .grand-total { background-color: #27ae60; color: #ffffff; font-weight: bold; font-size: 14px; }
-        .discount-badge { background-color: #e74c3c; color: #ffffff; padding: 2px 5px; border-radius: 3px; font-size: 10px; margin-left: 5px; }
-        
-        .notes-box { border: 1px solid #eee; padding: 10px; min-height: 60px; background-color: #fcfcfc; margin-bottom: 20px; }
-        
-        .footer { margin-top: 30px; font-size: 10px; color: #7f8c8d; }
-        .terms { border-left: 3px solid #3498db; padding-left: 10px; margin-bottom: 30px; text-align: justify; }
-        
-        .signature-table { width: 100%; margin-top: 40px; }
-        .signature-box { width: 45%; text-align: center; border-top: 1px solid #333; padding-top: 5px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <table class="header-table">
-                <tr>
-                    <td>
-                        <p class="company-name">Myranda Informática</p>
-                        <p class="company-info">CNPJ: 13.558.678/0001-36 | Fone: (51) 3663-6445</p>
-                        <p class="company-info">Av. Getúlio Vargas, 1144 - Centro - Osório/RS</p>
-                    </td>
-                    <td style="text-align: right;">
-                        <h1 style="margin:0; color:#3498db;">ORÇAMENTO</h1>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="doc-title-box">
-            <table class="doc-title-table">
-                <tr>
-                    <td class="doc-title">Orçamento de Serviço</td>
-                    <td class="os-number">Nº <?php echo str_pad($ordem['id'] ?? '', 6, '0', STR_PAD_LEFT); ?></td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="section-title">Dados do Cliente</div>
-        <table class="info-table">
+    <div class="header">
+        <table width="100%">
             <tr>
-                <td class="label">Cliente:</td>
-                <td><?php echo $ordem['cliente_nome'] ?? 'N/A'; ?></td>
-                <td class="label">Data Emissão:</td>
-                <td><?php echo date('d/m/Y H:i'); ?></td>
-            </tr>
-            <tr>
-                <td class="label">Telefone:</td>
-                <td><?php echo $ordem['cliente_telefone'] ?? 'N/A'; ?></td>
-                <td class="label">Validade:</td>
-                <td>5 dias</td>
+                <td>
+                    <p class="company-name">Myranda Informática</p>
+                    <p style="font-size:10px; color:#7f8c8d; margin:0;">CNPJ: 13.558.678/0001-36 | (51) 3663-6445</p>
+                </td>
+                <td align="right"><h2 style="color:#3498db; margin:0;">EXTRATO DE DÉBITOS</h2></td>
             </tr>
         </table>
-
-        <div class="section-title">Dados do Equipamento</div>
-        <table class="info-table">
-            <tr>
-                <td class="label">Equipamento:</td>
-                <td><?php echo ($ordem['equipamento_tipo'] ?? '') . ' ' . ($ordem['equipamento_marca'] ?? '') . ' ' . ($ordem['equipamento_modelo'] ?? ''); ?></td>
-                <td class="label">Serial:</td>
-                <td><?php echo $ordem['equipamento_serial'] ?? 'N/A'; ?></td>
-            </tr>
-            <tr>
-                <td class="label">Acessórios:</td>
-                <td colspan="3"><?php echo $ordem['equipamento_acessorios'] ?? 'Nenhum'; ?></td>
-            </tr>
-        </table>
-
-        <div class="section-title">Itens do Orçamento</div>
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th>Descrição do Produto / Serviço</th>
-                    <th class="text-center" style="width: 50px;">Qtd</th>
-                    <th class="text-right" style="width: 90px;">Unitário</th>
-                    <th class="text-right" style="width: 90px;">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($itens)): ?>
-                    <tr><td colspan="4" class="text-center">Nenhum item adicionado.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($itens as $item): 
-                        $descontoItem = (float)($item['desconto'] ?? 0);
-                    ?>
-                        <tr>
-                            <td>
-                                <?php echo $item['descricao'] ?? ''; ?>
-                                <?php if ($descontoItem > 0): ?>
-                                    <span class="discount-badge">DESC. -<?php echo formatCurrency($descontoItem); ?></span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-center"><?php echo number_format($item['quantidade'] ?? 1, 0, ',', '.'); ?></td>
-                            <td class="text-right"><?php echo formatCurrency(($item['valor_unitario'] ?? 0) + ($item['valor_mao_de_obra'] ?? 0)); ?></td>
-                            <td class="text-right"><?php echo formatCurrency($item['valor_total'] ?? 0); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-
-        <table class="totals-table">
-            <tr>
-                <td>Total em Produtos:</td>
-                <td class="text-right"><?php echo formatCurrency($valorProdutos); ?></td>
-            </tr>
-            <tr>
-                <td>Total em Serviços (Bruto):</td>
-                <td class="text-right"><?php echo formatCurrency($valorServicosBruto); ?></td>
-            </tr>
-            <tr class="subtotal-row">
-                <td>SUBTOTAL BRUTO:</td>
-                <td class="text-right"><?php echo formatCurrency($subtotalGeralBruto); ?></td>
-            </tr>
-            <?php if ($totalDescontoGeral > 0): ?>
-            <tr class="discount-row">
-                <td>(-) DESCONTOS:</td>
-                <td class="text-right"><?php echo formatCurrency($totalDescontoGeral); ?></td>
-            </tr>
-            <?php endif; ?>
-            <tr class="grand-total">
-                <td>TOTAL FINAL:</td>
-                <td class="text-right"><?php echo formatCurrency($ordem['valor_total_os'] ?? 0); ?></td>
-            </tr>
-        </table>
-
-        <?php if ($showObs): ?>
-        <div class="section-title">Observações / Laudo</div>
-        <div class="notes-box"><?php echo !empty($ordem['laudo_tecnico']) ? nl2br($ordem['laudo_tecnico']) : 'Diagnóstico técnico conforme relatado.'; ?></div>
-        <?php endif; ?>
-
-        <div class="footer">
-            <div class="terms">
-                <strong>Informações Importantes:</strong><br>
-                <?php echo nl2br($textoObs); ?>
-            </div>
-
-            <table class="signature-table">
-                <tr>
-                    <td class="signature-box">Aprovação do Cliente</td>
-                    <td style="width: 10%;"></td>
-                    <td class="signature-box">Responsável Técnico</td>
-                </tr>
-            </table>
-        </div>
     </div>
+
+    <div class="doc-title-box">
+        <table width="100%">
+            <tr>
+                <td><strong>DETALHAMENTO FINANCEIRO</strong></td>
+                <td align="right">Data de Emissão: <?php echo date('d/m/Y H:i'); ?></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section-title">Informações do Cliente</div>
+    <table class="info-table">
+        <tr>
+            <td class="label">Cliente:</td>
+            <td colspan="3"><strong><?php echo htmlspecialchars($cliente['nome_completo'] ?? 'N/A'); ?></strong></td>
+        </tr>
+        <tr>
+            <td class="label">CPF/CNPJ:</td>
+            <td><?php echo htmlspecialchars($cliente['documento'] ?? 'N/A'); ?></td>
+            <td class="label">Telefone:</td>
+            <td><?php echo htmlspecialchars($cliente['telefone_principal'] ?? 'N/A'); ?></td>
+        </tr>
+        <tr>
+            <td class="label">Endereço:</td>
+            <td colspan="3">
+                <?php 
+                $end = ($cliente['endereco_logradouro'] ?? '') . ', ' . ($cliente['endereco_numero'] ?? '') . ' - ' . ($cliente['endereco_bairro'] ?? '') . ' / ' . ($cliente['endereco_cidade'] ?? '');
+                echo htmlspecialchars($end);
+                ?>
+            </td>
+        </tr>
+    </table>
+
+    <?php if (!empty($debitosOS)): ?>
+    <div class="section-title">Ordens de Serviço Pendentes</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th width="85">Data/OS</th>
+                <th>Equipamento / O que foi feito (Laudo)</th>
+                <th width="100" class="text-right">Valor Líquido</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($debitosOS as $os): ?>
+            <tr>
+                <td>
+                    <strong>#<?php echo str_pad($os['id'], 5, '0', STR_PAD_LEFT); ?></strong><br>
+                    <small>Abertura: <?php echo date('d/m/Y', strtotime($os['created_at'])); ?></small>
+                </td>
+                <td>
+                    <strong><?php echo htmlspecialchars($os['equipamento_modelo'] ?? 'Equipamento'); ?></strong><br>
+                    <div style="color: #555; font-size: 11px; margin: 5px 0;">
+                        <strong>Laudo/Serviço:</strong> <?php echo nl2br(htmlspecialchars($os['laudo_tecnico'] ?: $os['defeito_relatado'])); ?>
+                    </div>
+                    <span class="status-badge" style="background-color:<?php echo $os['status_cor']; ?>"><?php echo $os['status_nome']; ?></span>
+                    <?php if(($os['valor_desconto'] ?? 0) > 0): ?>
+                        <span class="discount-badge">DESC: -<?php echo formatCurrency($os['valor_desconto']); ?></span>
+                    <?php endif; ?>
+                </td>
+                <td class="text-right"><strong><?php echo formatCurrency($os['valor_total_os']); ?></strong></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <?php if (!empty($debitosAE)): ?>
+    <div class="section-title">Atendimentos Externos Pendentes</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th width="85">Data</th>
+                <th>Descrição do Serviço</th>
+                <th width="100" class="text-right">Valor Líquido</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($debitosAE as $ae): ?>
+            <tr>
+                <td><?php echo date('d/m/Y', strtotime($ae['data_agendada'])); ?></td>
+                <td>
+                    <?php echo nl2br(htmlspecialchars($ae['detalhes_servico'] ?: $ae['descricao_problema'])); ?>
+                    <?php if(($ae['valor_desconto'] ?? 0) > 0): ?>
+                        <br><span class="discount-badge">DESC: -<?php echo formatCurrency($ae['valor_desconto']); ?></span>
+                    <?php endif; ?>
+                </td>
+                <td class="text-right"><strong><?php echo formatCurrency($ae['valor_total']); ?></strong></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <table class="totals-table">
+        <tr>
+            <td>Subtotal Bruto:</td>
+            <td class="text-right"><?php echo formatCurrency($totalBrutoGeral); ?></td>
+        </tr>
+        <?php if($totalDescontoGeral > 0): ?>
+        <tr style="color: #e74c3c;">
+            <td>(-) Total Descontos:</td>
+            <td class="text-right"><?php echo formatCurrency($totalDescontoGeral); ?></td>
+        </tr>
+        <?php endif; ?>
+        <tr class="grand-total">
+            <td>TOTAL A PAGAR:</td>
+            <td class="text-right"><?php echo formatCurrency($totalBrutoGeral - $totalDescontoGeral); ?></td>
+        </tr>
+    </table>
 </body>
 </html>

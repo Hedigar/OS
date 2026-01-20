@@ -73,6 +73,8 @@ $router->get('ordens/search-items', 'OrdemServicoController@searchItems');
 $router->post('ordens/salvar-item', 'OrdemServicoController@saveItem');
 $router->post('ordens/atualizar-item', 'OrdemServicoController@updateItem');
 $router->post('ordens/remover-item', 'OrdemServicoController@removeItem');
+// Impressão de débitos do cliente
+$router->get('clientes/print-debitos', 'ClienteController@printDebitos');
 $router->get('clientes', 'ClienteController@index');
 $router->get('clientes/criar', 'ClienteController@create');
 $router->post('clientes/salvar', 'ClienteController@store');
@@ -83,5 +85,9 @@ $router->post('clientes/deletar', 'ClienteController@destroy'); // Ex: clientes/
 $router->get('clientes/search-ajax', 'ClienteController@searchAjax'); // Busca de cliente para Autocomplete
 $router->get('clientes/details', 'ClienteController@getClientDetails'); // Detalhes do cliente por ID (AJAX)
 $router->get('clientes/verificar-documento', 'ClienteController@verificarDocumento'); // Verificar se CPF/CNPJ já existe
+
+// Rotas de Web Push Notifications
+$router->post('push/subscribe', 'PushController@subscribe');
+$router->get('push/test', 'PushController@testSend');
 
 return $router;

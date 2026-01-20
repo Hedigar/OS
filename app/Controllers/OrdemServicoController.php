@@ -42,6 +42,9 @@ class OrdemServicoController extends BaseController
 
         try {
             $clientes = $this->clienteModel->buscarPorTermo($termo);
+            if (isset($this->logModel)) {
+                $this->logModel->registrar(\App\Core\Auth::id(), "Busca cliente OS", null, null, ['termo' => $termo, 'count' => is_array($clientes) ? count($clientes) : 0]);
+            }
             echo json_encode($clientes);
             exit;
         } catch (\Throwable $e) {
@@ -191,6 +194,15 @@ class OrdemServicoController extends BaseController
                         'usuario_id' => $_SESSION['usuario_id'] ?? null,
                         'observacao' => $observacao
                     ]);
+
+                    // Notificação Web Push para OS Finalizada (ID 5)
+                    if ($status_id == 5 && $osAntiga['status_atual_id'] != 5) {
+                        \App\Services\NotificationService::sendToAll(
+                            "OS #{$id} Finalizada",
+                            "A Ordem de Serviço #{$id} foi finalizada! Verifique para entrega.",
+                            BASE_URL . "ordens/view?id={$id}"
+                        );
+                    }
                 }
 
                 $this->log("Atualizou Ordem de Serviço", "OS #{$id}");

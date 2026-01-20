@@ -19,6 +19,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
             <a href="<?php echo BASE_URL; ?>clientes/editar?id=<?php echo $cliente_id; ?>" class="btn btn-primary btn-sm">✏️ Editar Cliente</a>
             <a href="<?php echo BASE_URL; ?>atendimentos-externos/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>&cliente_telefone=<?php echo urlencode($cliente['telefone_principal'] ?? ''); ?>&cliente_logradouro=<?php echo urlencode($cliente['endereco_logradouro'] ?? ''); ?>&cliente_numero=<?php echo urlencode($cliente['endereco_numero'] ?? ''); ?>&cliente_bairro=<?php echo urlencode($cliente['endereco_bairro'] ?? ''); ?>&cliente_cidade=<?php echo urlencode($cliente['endereco_cidade'] ?? ''); ?>" class="btn btn-warning btn-sm">🏠 Novo Atendimento Externo</a>
             <a href="<?php echo BASE_URL; ?>ordens/form?cliente_id=<?php echo $cliente_id; ?>&cliente_nome=<?php echo $cliente_nome; ?>&cliente_documento=<?php echo $cliente_documento; ?>" class="btn btn-success btn-sm">➕ Nova OS</a>
+            <a href="<?php echo BASE_URL; ?>clientes/print-debitos?id=<?php echo $cliente_id; ?>" target="_blank" class="btn btn-secondary btn-sm">🖨️ Imprimir Débitos</a>
         </div>
     </div>
 

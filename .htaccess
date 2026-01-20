@@ -1,6 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
+    # Redireciona todo acesso HTTP para HTTPS (remove porta do host)
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]
+    
     # Impede o acesso direto a pastas sensíveis
     RewriteRule ^(\.env|app|config|vendor) - [F,L]
 

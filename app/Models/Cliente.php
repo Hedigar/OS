@@ -16,23 +16,33 @@ class Cliente extends Model
     public function buscarPorTermo(string $termo): array
     {
         try {
-            $termoLike = "%" . $termo . "%";
-            // Query com todos os campos necessários para o endereço
-            $sql = "SELECT * 
-                    FROM {$this->table} 
-                    WHERE ativo = 1 
-                    AND (nome_completo LIKE :termo 
-                    OR documento LIKE :termo) 
-                    LIMIT 10";
-            
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindValue(':termo', $termoLike);
+            $termo = trim($termo);
+            if ($termo === '') return [];
+
+            $limit = 10;
+            $digits = preg_replace('/\D/', '', $termo);
+
+            if ($digits !== '' && ctype_digit($digits)) {
+                $sql = "SELECT * FROM {$this->table} 
+                        WHERE ativo = 1 
+                        AND REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') LIKE :doc 
+                        LIMIT :limit";
+                $stmt = $this->db->prepare($sql);
+                $stmt->bindValue(':doc', "%{$digits}%");
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            } else {
+                $sql = "SELECT * FROM {$this->table} 
+                        WHERE ativo = 1 
+                        AND nome_completo LIKE :nome 
+                        LIMIT :limit";
+                $stmt = $this->db->prepare($sql);
+                $stmt->bindValue(':nome', "%" . $termo . "%");
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            }
+
             $stmt->execute();
-            
-            $results = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            return $results ?: [];
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         } catch (\PDOException $e) {
-            // Em caso de erro, retorna um array vazio ou loga o erro
             error_log("Erro na busca de cliente: " . $e->getMessage());
             return [];
         }

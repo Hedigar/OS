@@ -20,19 +20,27 @@ define('DB_NAME', $_ENV['DB_DATABASE'] ?? 'os');
 define('APP_NAME', $_ENV['APP_NAME'] ?? 'Sistema OS');
 
 // 3. Detecção Dinâmica de BASE_URL
-// Se APP_URL estiver no .env, usamos ela. Caso contrário, detectamos pelo navegador.
+// Se APP_URL estiver no .env, usamos ela. Caso contrário, detectamos pelo navegador (considerando proxy).
 if (!empty($_ENV['APP_URL'])) {
     define('BASE_URL', rtrim($_ENV['APP_URL'], '/') . '/');
 } else {
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+    $httpsCandidates = [
+        $_SERVER['HTTPS'] ?? null,
+        $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null,
+        $_SERVER['HTTP_X_FORWARDED_SSL'] ?? null,
+    ];
+    $isHttps = false;
+    foreach ($httpsCandidates as $val) {
+        if ($val === 'on' || $val === '1' || $val === 'https') { $isHttps = true; break; }
+    }
+    if (!$isHttps && isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) {
+        $isHttps = true;
+    }
+    $protocol = $isHttps ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    
-    // Pega o caminho do script atual para lidar com subdiretórios automaticamente
-    // Ex: se acessar 192.168.0.233/sistema/public/index.php, o basePath será /sistema/
-    $scriptName = $_SERVER['SCRIPT_NAME'];
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/';
     $basePath = str_replace('/public/index.php', '', $scriptName);
     $basePath = str_replace('/index.php', '', $basePath);
-    
     define('BASE_URL', $protocol . '://' . $host . rtrim($basePath, '/') . '/');
 }
 
@@ -43,4 +51,18 @@ define('ASSETS_URL', BASE_URL . 'assets/');
 // 5. Configurações de Sessão
 ini_set('session.use_strict_mode', 1);
 ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 1 : 0);
+// 5.1 Cookie Secure se HTTPS (inclui proxies)
+$cookieSecure = 0;
+if (!empty($_ENV['APP_URL']) && strpos($_ENV['APP_URL'], 'https://') === 0) {
+    $cookieSecure = 1;
+} else {
+    $httpsCandidates = [
+        $_SERVER['HTTPS'] ?? null,
+        $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? null,
+        $_SERVER['HTTP_X_FORWARDED_SSL'] ?? null,
+    ];
+    foreach ($httpsCandidates as $val) {
+        if ($val === 'on' || $val === '1' || $val === 'https') { $cookieSecure = 1; break; }
+    }
+}
+ini_set('session.cookie_secure', $cookieSecure);

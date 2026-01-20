@@ -1,2 +1,30 @@
 .env
 .env.*
+
+# Certificados e chaves locais (não enviar para produção)
+certs/
+*.crt
+*.key
+*.pem
+*.pfx
+
+# Arquivos de ambiente locais
+.env.local
+.env.development
+.env.production
+
+# Logs, cache e temporários
+*.log
+cache/
+tmp/
+
+# Arquivos de SO e editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.code-workspace
+
+# Docker arquivos opcionais (se não usados no servidor)
+docker-compose.override.yml
+.env.*

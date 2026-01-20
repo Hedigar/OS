@@ -175,4 +175,138 @@ class OrdemServico extends Model
         $stmt->execute(['equipamento_id' => $equipamentoId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
+
+    public function getAlertasDashboard(
+        int $diasSemAtualizacao = 2,
+        int $diasAbertasAtraso = 3,
+        int $diasFinalizadasRecentes = 2
+    ): array {
+        $sql = "SELECT 
+                    os.id,
+                    os.status_atual_id,
+                    os.created_at,
+                    os.status_pagamento,
+                    os.status_entrega,
+                    s.nome as status_nome,
+                    s.cor as status_cor,
+                    COALESCE(
+                        (SELECT MAX(h.created_at) 
+                         FROM ordens_servico_status_historico h 
+                         WHERE h.ordem_servico_id = os.id),
+                        os.created_at
+                    ) as ultima_atualizacao
+                FROM {$this->table} os
+                JOIN status_os s ON os.status_atual_id = s.id
+                WHERE os.ativo = 1";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $now = new \DateTimeImmutable();
+        $alertas = [];
+
+        foreach ($rows as $row) {
+            if (empty($row['created_at']) || empty($row['ultima_atualizacao'])) {
+                continue;
+            }
+
+            try {
+                $dataCriacao = new \DateTimeImmutable($row['created_at']);
+                $dataUltimaAtualizacao = new \DateTimeImmutable($row['ultima_atualizacao']);
+            } catch (\Exception $e) {
+                continue;
+            }
+
+            $diasDesdeCriacao = $dataCriacao->diff($now)->days;
+            $diasDesdeUltimaAtualizacao = $dataUltimaAtualizacao->diff($now)->days;
+
+            $statusId = (int)($row['status_atual_id'] ?? 0);
+            $osId = (int)($row['id'] ?? 0);
+            $statusNome = $row['status_nome'] ?? '';
+            $statusPagamento = $row['status_pagamento'] ?? 'pendente';
+            $statusEntrega = $row['status_entrega'] ?? 'nao_entregue';
+
+            if ($statusId === 5) {
+                if ($statusPagamento === 'pago' && $statusEntrega === 'entregue') {
+                    continue;
+                }
+
+                $mensagem = '';
+
+                if ($statusPagamento !== 'pago' && $statusEntrega !== 'entregue') {
+                    $mensagem = sprintf(
+                        'OS #%d foi finalizada e está aguardando pagamento e entrega.',
+                        $osId
+                    );
+                } elseif ($statusPagamento === 'pago' && $statusEntrega !== 'entregue') {
+                    $mensagem = sprintf(
+                        'OS #%d foi finalizada e paga. Aguardando entrega ao cliente.',
+                        $osId
+                    );
+                } elseif ($statusPagamento !== 'pago' && $statusEntrega === 'entregue') {
+                    $mensagem = sprintf(
+                        'OS #%d foi finalizada e entregue. Pagamento pendente.',
+                        $osId
+                    );
+                } else {
+                    $mensagem = sprintf(
+                        'OS #%d foi finalizada. Verificar pendências.',
+                        $osId
+                    );
+                }
+
+                $alertas[] = [
+                    'tipo' => 'os_finalizada',
+                    'nivel' => 'todos',
+                    'prioridade' => 'alta',
+                    'os_id' => $osId,
+                    'status_nome' => $statusNome,
+                    'status_pagamento' => $statusPagamento,
+                    'status_entrega' => $statusEntrega,
+                    'dias' => $diasDesdeUltimaAtualizacao,
+                    'ultima_atualizacao' => $row['ultima_atualizacao'],
+                    'mensagem' => $mensagem
+                ];
+
+                continue;
+            }
+
+            if ($statusId === 6) {
+                continue;
+            }
+
+            if ($diasDesdeUltimaAtualizacao >= $diasSemAtualizacao) {
+                $alertas[] = [
+                    'tipo' => 'os_sem_atualizacao',
+                    'nivel' => 'tecnico',
+                    'os_id' => $osId,
+                    'status_nome' => $statusNome,
+                    'dias' => $diasDesdeUltimaAtualizacao,
+                    'ultima_atualizacao' => $row['ultima_atualizacao'],
+                    'mensagem' => sprintf(
+                        'OS #%d está sem atualização há %d dia(s). Verificar andamento.',
+                        $osId,
+                        $diasDesdeUltimaAtualizacao
+                    )
+                ];
+            } elseif ($diasDesdeCriacao >= $diasAbertasAtraso) {
+                $alertas[] = [
+                    'tipo' => 'os_atrasada',
+                    'nivel' => 'tecnico',
+                    'os_id' => $osId,
+                    'status_nome' => $statusNome,
+                    'dias' => $diasDesdeCriacao,
+                    'ultima_atualizacao' => $row['ultima_atualizacao'],
+                    'mensagem' => sprintf(
+                        'OS #%d está em aberto há %d dia(s).',
+                        $osId,
+                        $diasDesdeCriacao
+                    )
+                ];
+            }
+        }
+
+        return $alertas;
+    }
 }

@@ -6,6 +6,7 @@ services:
     container_name: os_web
     ports:
       - "8080:80"
+      - "443:443"
     volumes:
       - .:/var/www/html
     depends_on:

@@ -126,6 +126,58 @@ class ClienteController extends BaseController
         ]);
     }
 
+public function printDebitos()
+{
+    $clienteId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+    if (!$clienteId) $this->redirect('clientes');
+
+    $cliente = $this->clienteModel->find($clienteId);
+    if (!$cliente) $this->redirect('clientes');
+
+    $db = (new OrdemServico())->getConnection();
+
+    // SQL CORRIGIDO: Removido 'data_saida' que não existe no seu banco
+    $sqlOS = "SELECT os.id, os.created_at, os.valor_total_os, os.status_pagamento, 
+                     os.defeito_relatado, os.laudo_tecnico,
+                     s.nome as status_nome, s.cor as status_cor,
+                     e.modelo as equipamento_modelo,
+                     (SELECT SUM(desconto) FROM itens_ordem_servico WHERE ordem_servico_id = os.id AND ativo = 1) as valor_desconto
+              FROM ordens_servico os
+              JOIN status_os s ON os.status_atual_id = s.id
+              LEFT JOIN equipamentos e ON os.equipamento_id = e.id
+              WHERE os.cliente_id = :cid AND os.ativo = 1 AND (os.status_pagamento IS NULL OR os.status_pagamento != 'pago')
+              ORDER BY os.id DESC";
+    
+    $stmtOS = $db->prepare($sqlOS);
+    $stmtOS->execute(['cid' => $clienteId]);
+    $debitosOS = $stmtOS->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+    // Busca Atendimentos Externos
+    $sqlAE = "SELECT ae.id, ae.data_agendada, ae.pagamento, ae.valor_deslocamento, ae.descricao_problema, ae.detalhes_servico
+              FROM atendimentos_externos ae
+              WHERE ae.cliente_id = :cid AND (ae.pagamento IS NULL OR ae.pagamento != 'pago') AND ae.ativo = 1
+              ORDER BY ae.id DESC";
+    $stmtAE = $db->prepare($sqlAE);
+    $stmtAE->execute(['cid' => $clienteId]);
+    $debitosAE = $stmtAE->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+    $service = new \App\Services\AtendimentoService();
+    $aeDetalhados = [];
+    foreach ($debitosAE as $row) {
+        $det = $service->obterDetalhesVisualizacao((int)$row['id']);
+        $aeDetalhados[] = array_merge($row, [
+            'valor_total' => $det['valor_total'] ?? (float)($row['valor_deslocamento'] ?? 0),
+            'valor_desconto' => $det['valor_desconto'] ?? 0 
+        ]);
+    }
+
+    $this->renderPDF('cliente/print_debitos', [
+        'cliente' => $cliente,
+        'debitosOS' => $debitosOS,
+        'debitosAE' => $aeDetalhados
+    ], "Debitos_{$clienteId}.pdf");
+}
+
     public function edit()
     {
         $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);

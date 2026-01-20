@@ -51,6 +51,14 @@ class DashboardController extends BaseController
         $dadosLucro = $stmtLucro->fetch(\PDO::FETCH_ASSOC);
         $lucroMes = ($dadosLucro['total_bruto'] ?? 0) - ($dadosLucro['total_custo'] ?? 0);
 
+        $alertas = $osModel->getAlertasDashboard();
+
+        if (!Auth::isAdmin() && !Auth::isTecnico()) {
+            $alertas = array_values(array_filter($alertas, function ($alerta) {
+                return ($alerta['nivel'] ?? '') === 'todos';
+            }));
+        }
+
         $this->render('dashboard/index', [
             'title' => 'Dashboard',
             'user' => $user,
@@ -61,7 +69,8 @@ class DashboardController extends BaseController
                 'total_atrasadas' => $totalAtrasadas,
                 'lucro_mes' => $lucroMes
             ],
-            'atividades' => $atividades
+            'atividades' => $atividades,
+            'alertas' => $alertas
         ]);
     }
 }

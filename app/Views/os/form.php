@@ -215,15 +215,27 @@ document.addEventListener('DOMContentLoaded', () => {
         btnBuscar.disabled = true;
         resultsDiv.style.display = 'none';
 
-        fetch(`<?php echo BASE_URL; ?>ordens/search-client?termo=${encodeURIComponent(termo)}`)
+        fetch(`/ordens/search-client?termo=${encodeURIComponent(termo)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'include'
+            })
             .then(async r => {
-                const text = await r.text();
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Resposta inválida do servidor:', text);
-                    throw new Error('O servidor retornou um erro inesperado. Verifique o console.');
+                if (r.status === 401) {
+                    let msg = 'Sessão expirada. Faça login novamente.';
+                    try {
+                        const body = await r.json();
+                        if (body && body.error) msg = body.error;
+                    } catch (_) {}
+                    alert(msg);
+                    window.location.href = `<?php echo BASE_URL; ?>login`;
+                    throw new Error('Sessão expirada');
                 }
+                if (!r.ok) {
+                    const text = await r.text();
+                    console.error('Erro na resposta do servidor:', text);
+                    throw new Error('Falha ao buscar clientes.');
+                }
+                return r.json();
             })
             .then(clientes => {
                 resultsDiv.innerHTML = '';
@@ -295,8 +307,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadEquipamentos(clienteId) {
-        fetch(`<?php echo BASE_URL; ?>ordens/search-equipamentos?cliente_id=${clienteId}`)
-            .then(r => r.json())
+        fetch(`/ordens/search-equipamentos?cliente_id=${clienteId}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'include'
+            })
+            .then(async r => {
+                if (r.status === 401) {
+                    let msg = 'Sessão expirada. Faça login novamente.';
+                    try {
+                        const body = await r.json();
+                        if (body && body.error) msg = body.error;
+                    } catch (_) {}
+                    alert(msg);
+                    window.location.href = `<?php echo BASE_URL; ?>login`;
+                    throw new Error('Sessão expirada');
+                }
+                if (!r.ok) {
+                    const text = await r.text();
+                    console.error('Erro na resposta do servidor:', text);
+                    throw new Error('Falha ao buscar equipamentos.');
+                }
+                return r.json();
+            })
             .then(equips => {
                 equipSelect.innerHTML = '<option value="">-- Novo Equipamento --</option>';
                 if (Array.isArray(equips) && equips.length > 0) {

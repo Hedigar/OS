@@ -54,6 +54,7 @@ foreach ($debitosAE as $ae) {
             <tr>
                 <td>
                     <p class="company-name">Myranda Informática</p>
+                    <p style="font-size:10px; color:#7f8c8d; margin:0;">Av. Getulio Vargas, 1144 -  Centro - Osório</p>
                     <p style="font-size:10px; color:#7f8c8d; margin:0;">CNPJ: 13.558.678/0001-36 | (51) 3663-6445</p>
                 </td>
                 <td align="right"><h2 style="color:#3498db; margin:0;">EXTRATO DE DÉBITOS</h2></td>

@@ -7,6 +7,7 @@ use App\Core\Auth;
 use App\Models\Log;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use App\Services\AccessControlService;
 
 /**
  * Controlador base para rotas autenticadas.
@@ -14,37 +15,24 @@ use Dompdf\Options;
 abstract class BaseController extends Controller
 {
     protected Log $logModel;
+    protected AccessControlService $access;
 
     public function __construct()
     {
         $this->logModel = new Log();
+        $this->access = new AccessControlService();
         
-        // Verifica se o usuário está logado
-        if (!Auth::check()) {
-            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-            
-            if ($isAjax) {
+        if (!$this->access->isAuthenticated()) {
+            if ($this->access->isAjax()) {
                 $this->json(['error' => 'Sessão expirada'], 401);
             } else {
                 $this->redirect('login');
             }
         }
 
-        // Verifica se o usuário precisa trocar a senha
-        $user = Auth::user();
-        if (isset($user['trocar_senha']) && (int)$user['trocar_senha'] === 1) {
-            $controller = defined('CURRENT_CONTROLLER') ? CURRENT_CONTROLLER : '';
-            $action = defined('CURRENT_ACTION') ? CURRENT_ACTION : '';
-
-            $allowed_actions = [
-                'UsuarioController@showTrocarSenha',
-                'UsuarioController@salvarNovaSenha',
-                'AuthController@logout'
-            ];
-
-            $current_route = "{$controller}@{$action}";
-
-            if (!in_array($current_route, $allowed_actions, true)) {
+        if ($this->access->userMustChangePassword()) {
+            $route = $this->access->currentRoute();
+            if (!$this->access->isAllowedWhenChangePassword($route)) {
                 $this->redirect('usuarios/trocar-senha');
             }
         }
@@ -69,8 +57,7 @@ abstract class BaseController extends Controller
      */
     protected function requireAjax(): void
     {
-        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-        if (!$isAjax) {
+        if (!$this->access->isAjax()) {
             $this->json(['error' => 'Requisição inválida'], 400);
         }
     }
@@ -86,7 +73,7 @@ abstract class BaseController extends Controller
         
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $host = $_SERVER['HTTP_HOST'] ?? '';
-        if (!empty($referer) && strpos($referer, $host) === false) {
+        if (!$this->access->isValidPostReferer($referer, $host)) {
             $this->log("Tentativa de CSRF detectada", "Referer: {$referer}");
             $this->json(['error' => 'Origem da requisição inválida'], 403);
         }
@@ -97,7 +84,7 @@ abstract class BaseController extends Controller
      */
     protected function requireAdmin(): void
     {
-        if (!Auth::isAdmin()) {
+        if (!$this->access->isAdmin()) {
             $this->redirect('dashboard');
         }
     }
@@ -107,7 +94,7 @@ abstract class BaseController extends Controller
      */
     protected function requireTecnico(): void
     {
-        if (!Auth::isTecnico()) {
+        if (!$this->access->isTecnico()) {
             $this->redirect('dashboard');
         }
     }

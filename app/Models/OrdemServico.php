@@ -112,6 +112,106 @@ class OrdemServico extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Versão com filtros adicionais para a listagem.
+     */
+    public function countAllWithDetailsFiltered(string $search = '', array $filters = []): int
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} os
+                JOIN clientes c ON os.cliente_id = c.id
+                JOIN status_os s ON os.status_atual_id = s.id
+                WHERE os.ativo = 1";
+        $params = [];
+        if (!empty($search)) {
+            if (is_numeric($search)) {
+                $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
+                $params[':search_id'] = $search;
+                $params[':search_nome'] = "%{$search}%";
+            } else {
+                $sql .= " AND c.nome_completo LIKE :search_nome";
+                $params[':search_nome'] = "%{$search}%";
+            }
+        }
+        if (!empty($filters['status_id'])) {
+            $sql .= " AND os.status_atual_id = :status_id";
+            $params[':status_id'] = (int)$filters['status_id'];
+        }
+        if (!empty($filters['status_pagamento'])) {
+            $sql .= " AND os.status_pagamento = :status_pagamento";
+            $params[':status_pagamento'] = $filters['status_pagamento'];
+        }
+        if (!empty($filters['status_entrega'])) {
+            $sql .= " AND os.status_entrega = :status_entrega";
+            $params[':status_entrega'] = $filters['status_entrega'];
+        }
+        if (!empty($filters['sem_atualizacao_dias'])) {
+            $sql .= " AND DATEDIFF(NOW(), COALESCE((SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id), os.created_at)) >= :sem_dias";
+            $params[':sem_dias'] = (int)$filters['sem_atualizacao_dias'];
+        }
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $k => $v) {
+            if (is_int($v)) {
+                $stmt->bindValue($k, $v, \PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($k, $v);
+            }
+        }
+        $stmt->execute();
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($result['total'] ?? 0);
+    }
+
+    public function getAllWithDetailsPaginadoFiltered(string $search = '', int $limit = 10, int $offset = 0, array $filters = []): array
+    {
+        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor,
+                       e.modelo as equipamento_modelo
+                FROM {$this->table} os
+                JOIN clientes c ON os.cliente_id = c.id
+                JOIN status_os s ON os.status_atual_id = s.id
+                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
+                WHERE os.ativo = 1";
+        $params = [];
+        if (!empty($search)) {
+            if (is_numeric($search)) {
+                $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
+                $params[':search_id'] = $search;
+                $params[':search_nome'] = "%{$search}%";
+            } else {
+                $sql .= " AND c.nome_completo LIKE :search_nome";
+                $params[':search_nome'] = "%{$search}%";
+            }
+        }
+        if (!empty($filters['status_id'])) {
+            $sql .= " AND os.status_atual_id = :status_id";
+            $params[':status_id'] = (int)$filters['status_id'];
+        }
+        if (!empty($filters['status_pagamento'])) {
+            $sql .= " AND os.status_pagamento = :status_pagamento";
+            $params[':status_pagamento'] = $filters['status_pagamento'];
+        }
+        if (!empty($filters['status_entrega'])) {
+            $sql .= " AND os.status_entrega = :status_entrega";
+            $params[':status_entrega'] = $filters['status_entrega'];
+        }
+        if (!empty($filters['sem_atualizacao_dias'])) {
+            $sql .= " AND DATEDIFF(NOW(), COALESCE((SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id), os.created_at)) >= :sem_dias";
+            $params[':sem_dias'] = (int)$filters['sem_atualizacao_dias'];
+        }
+        $sql .= " ORDER BY os.id DESC LIMIT :limit OFFSET :offset";
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $k => $v) {
+            if (is_int($v)) {
+                $stmt->bindValue($k, $v, \PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($k, $v);
+            }
+        }
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
     public function getAllWithDetails(string $search = ''): array
     {
         return $this->getAllWithDetailsPaginado($search, 999999, 0);
@@ -187,6 +287,8 @@ class OrdemServico extends Model
                     os.created_at,
                     os.status_pagamento,
                     os.status_entrega,
+                    c.nome_completo as cliente_nome,
+                    c.telefone_principal as cliente_telefone,
                     s.nome as status_nome,
                     s.cor as status_cor,
                     COALESCE(
@@ -197,6 +299,7 @@ class OrdemServico extends Model
                     ) as ultima_atualizacao
                 FROM {$this->table} os
                 JOIN status_os s ON os.status_atual_id = s.id
+                JOIN clientes c ON os.cliente_id = c.id
                 WHERE os.ativo = 1";
 
         $stmt = $this->db->prepare($sql);
@@ -226,9 +329,32 @@ class OrdemServico extends Model
             $statusNome = $row['status_nome'] ?? '';
             $statusPagamento = $row['status_pagamento'] ?? 'pendente';
             $statusEntrega = $row['status_entrega'] ?? 'nao_entregue';
+            $clienteNome = $row['cliente_nome'] ?? '';
+            $clienteTelefone = $row['cliente_telefone'] ?? '';
 
             if ($statusId === 5) {
                 if ($statusPagamento === 'pago' && $statusEntrega === 'entregue') {
+                    $diasEntrega = $diasDesdeUltimaAtualizacao;
+                    if ($diasEntrega >= 7 && $diasEntrega <= 10) {
+                        $primeiroNome = explode(' ', trim($clienteNome))[0] ?? '';
+                        $alertas[] = [
+                            'tipo' => 'pos_venda',
+                            'nivel' => 'todos',
+                            'prioridade' => 'media',
+                            'os_id' => $osId,
+                            'status_nome' => $statusNome,
+                            'dias' => $diasEntrega,
+                            'ultima_atualizacao' => $row['ultima_atualizacao'],
+                            'cliente_nome' => $clienteNome,
+                            'cliente_telefone' => $clienteTelefone,
+                            'mensagem' => sprintf(
+                                'Pós-venda: contatar cliente da OS #%d (%s) após %d dia(s) da entrega.',
+                                $osId,
+                                $primeiroNome,
+                                $diasEntrega
+                            )
+                        ];
+                    }
                     continue;
                 }
 

@@ -6,15 +6,18 @@ use App\Models\Cliente;
 use App\Models\OrdemServico;
 use App\Models\Equipamento;
 use App\Models\AtendimentoExterno;
+use App\Services\ClienteService;
 
 class ClienteController extends BaseController
 {
     private $clienteModel;
+    private ClienteService $service;
 
     public function __construct()
     {
         parent::__construct();
         $this->clienteModel = new Cliente();
+        $this->service = new ClienteService();
     }
 
     public function index()
@@ -24,14 +27,7 @@ class ClienteController extends BaseController
         $offset = ($paginaAtual - 1) * $porPagina;
         $termo = filter_input(INPUT_GET, 'busca', FILTER_SANITIZE_SPECIAL_CHARS);
 
-        $whereClause = '';
-        $params = [];
-
-        if ($termo) {
-            $whereClause = "nome_completo LIKE :term_nome OR documento LIKE :term_documento";
-            $params['term_nome'] = "%{$termo}%";
-            $params['term_documento'] = "%{$termo}%";
-        }
+        [$whereClause, $params] = $this->service->buildSearchFilters($termo);
 
         $totalClientes = $this->clienteModel->countAll($whereClause, $params);
         $clientes = $this->clienteModel->getPaginated($porPagina, $offset, $whereClause, $params);
@@ -57,20 +53,12 @@ class ClienteController extends BaseController
     public function store()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = $this->getPostData();
+            $data = $this->service->normalizePostData($_POST);
             
-            // Verificar se o documento já existe antes de tentar criar
-            if (!empty($data['documento'])) {
-                $docLimpo = preg_replace('/\D/', '', $data['documento']);
-                $sql = "SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 LIMIT 1";
-                $stmt = $this->clienteModel->getConnection()->prepare($sql);
-                $stmt->execute(['documento' => $docLimpo]);
-                $existente = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-                if ($existente) {
-                    $this->redirect('clientes/view?id=' . $existente['id']);
-                    return;
-                }
+            $existenteId = $this->service->documentoExistente($data['documento'] ?? null);
+            if ($existenteId) {
+                $this->redirect('clientes/view?id=' . $existenteId);
+                return;
             }
 
             try {
@@ -82,15 +70,9 @@ class ClienteController extends BaseController
                 }
             } catch (\PDOException $e) {
                 if ($e->getCode() == 23000) { // Duplicate entry
-                    // Tentar buscar o ID novamente caso tenha ocorrido uma race condition
-                    $docLimpo = preg_replace('/\D/', '', $data['documento']);
-                    $sql = "SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 LIMIT 1";
-                    $stmt = $this->clienteModel->getConnection()->prepare($sql);
-                    $stmt->execute(['documento' => $docLimpo]);
-                    $existente = $stmt->fetch(\PDO::FETCH_ASSOC);
-                    
-                    if ($existente) {
-                        $this->redirect('clientes/view?id=' . $existente['id']);
+                    $existenteId = $this->service->documentoExistente($data['documento'] ?? null);
+                    if ($existenteId) {
+                        $this->redirect('clientes/view?id=' . $existenteId);
                     } else {
                         $this->render('cliente/form', ['error' => 'Este documento já está cadastrado no sistema.', 'cliente' => $data]);
                     }
@@ -106,77 +88,34 @@ class ClienteController extends BaseController
         $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
         if (!$id) $this->redirect('clientes');
 
-        $cliente = $this->clienteModel->find($id);
-        if (!$cliente) $this->redirect('clientes');
-
-        $osModel = new OrdemServico();
-        $equipamentoModel = new Equipamento();
-        $atendimentoExternoModel = new AtendimentoExterno();
-
-        $historicoOS = $osModel->findByClienteId($id);
-        $equipamentos = $equipamentoModel->findByClienteId($id);
-        $historicoExterno = $atendimentoExternoModel->findByClienteId($id);
+        $dados = $this->service->obterDadosVisualizacao($id);
+        if (empty($dados)) $this->redirect('clientes');
 
         $this->render('cliente/view', [
             'title' => 'Visualizar Cliente',
+            'cliente' => $dados['cliente'],
+            'historicoOS' => $dados['historicoOS'],
+            'equipamentos' => $dados['equipamentos'],
+            'historicoExterno' => $dados['historicoExterno']
+        ]);
+    }
+
+    public function printDebitos()
+    {
+        $clienteId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        if (!$clienteId) $this->redirect('clientes');
+
+        $cliente = $this->clienteModel->find($clienteId);
+        if (!$cliente) $this->redirect('clientes');
+
+        [$debitosOS, $debitosAE] = $this->service->gerarDebitos($clienteId);
+
+        $this->renderPDF('cliente/print_debitos', [
             'cliente' => $cliente,
-            'historicoOS' => $historicoOS,
-            'equipamentos' => $equipamentos,
-            'historicoExterno' => $historicoExterno
-        ]);
+            'debitosOS' => $debitosOS,
+            'debitosAE' => $debitosAE
+        ], "Debitos_{$clienteId}.pdf");
     }
-
-public function printDebitos()
-{
-    $clienteId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-    if (!$clienteId) $this->redirect('clientes');
-
-    $cliente = $this->clienteModel->find($clienteId);
-    if (!$cliente) $this->redirect('clientes');
-
-    $db = (new OrdemServico())->getConnection();
-
-    // SQL CORRIGIDO: Removido 'data_saida' que não existe no seu banco
-    $sqlOS = "SELECT os.id, os.created_at, os.valor_total_os, os.status_pagamento, 
-                     os.defeito_relatado, os.laudo_tecnico,
-                     s.nome as status_nome, s.cor as status_cor,
-                     e.modelo as equipamento_modelo,
-                     (SELECT SUM(desconto) FROM itens_ordem_servico WHERE ordem_servico_id = os.id AND ativo = 1) as valor_desconto
-              FROM ordens_servico os
-              JOIN status_os s ON os.status_atual_id = s.id
-              LEFT JOIN equipamentos e ON os.equipamento_id = e.id
-              WHERE os.cliente_id = :cid AND os.ativo = 1 AND (os.status_pagamento IS NULL OR os.status_pagamento != 'pago')
-              ORDER BY os.id DESC";
-    
-    $stmtOS = $db->prepare($sqlOS);
-    $stmtOS->execute(['cid' => $clienteId]);
-    $debitosOS = $stmtOS->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-
-    // Busca Atendimentos Externos
-    $sqlAE = "SELECT ae.id, ae.data_agendada, ae.pagamento, ae.valor_deslocamento, ae.descricao_problema, ae.detalhes_servico
-              FROM atendimentos_externos ae
-              WHERE ae.cliente_id = :cid AND (ae.pagamento IS NULL OR ae.pagamento != 'pago') AND ae.ativo = 1
-              ORDER BY ae.id DESC";
-    $stmtAE = $db->prepare($sqlAE);
-    $stmtAE->execute(['cid' => $clienteId]);
-    $debitosAE = $stmtAE->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-
-    $service = new \App\Services\AtendimentoService();
-    $aeDetalhados = [];
-    foreach ($debitosAE as $row) {
-        $det = $service->obterDetalhesVisualizacao((int)$row['id']);
-        $aeDetalhados[] = array_merge($row, [
-            'valor_total' => $det['valor_total'] ?? (float)($row['valor_deslocamento'] ?? 0),
-            'valor_desconto' => $det['valor_desconto'] ?? 0 
-        ]);
-    }
-
-    $this->renderPDF('cliente/print_debitos', [
-        'cliente' => $cliente,
-        'debitosOS' => $debitosOS,
-        'debitosAE' => $aeDetalhados
-    ], "Debitos_{$clienteId}.pdf");
-}
 
     public function edit()
     {
@@ -198,23 +137,14 @@ public function printDebitos()
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if (!$id) $this->redirect('clientes');
 
-            $data = $this->getPostData();
+            $data = $this->service->normalizePostData($_POST);
             
-            // Verificar se o documento já existe em OUTRO cliente
-            if (!empty($data['documento'])) {
-                $docLimpo = preg_replace('/\D/', '', $data['documento']);
-                $sql = "SELECT id FROM clientes WHERE REPLACE(REPLACE(REPLACE(documento, '.', ''), '-', ''), '/', '') = :documento AND ativo = 1 AND id != :id LIMIT 1";
-                $stmt = $this->clienteModel->getConnection()->prepare($sql);
-                $stmt->execute(['documento' => $docLimpo, 'id' => $id]);
-                $existente = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-                if ($existente) {
+            if ($this->service->documentoExistenteOutroCliente($data['documento'] ?? null, $id)) {
                     $this->render('cliente/form', [
                         'error' => 'Este documento já está cadastrado para outro cliente.', 
                         'cliente' => array_merge($data, ['id' => $id])
                     ]);
                     return;
-                }
             }
 
             try {
@@ -234,23 +164,7 @@ public function printDebitos()
         }
     }
 
-    private function getPostData()
-    {
-        return [
-            'nome_completo' => filter_input(INPUT_POST, 'nome_completo', FILTER_SANITIZE_SPECIAL_CHARS),
-            'telefone_principal' => filter_input(INPUT_POST, 'telefone_principal', FILTER_SANITIZE_SPECIAL_CHARS),
-            'telefone_secundario' => filter_input(INPUT_POST, 'telefone_secundario', FILTER_SANITIZE_SPECIAL_CHARS),
-            'email' => filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL),
-            'documento' => filter_input(INPUT_POST, 'documento', FILTER_SANITIZE_SPECIAL_CHARS),
-            'tipo_pessoa' => filter_input(INPUT_POST, 'tipo_pessoa', FILTER_SANITIZE_SPECIAL_CHARS),
-            'data_nascimento' => filter_input(INPUT_POST, 'data_nascimento', FILTER_SANITIZE_SPECIAL_CHARS) ?: null,
-            'endereco_logradouro' => filter_input(INPUT_POST, 'endereco_logradouro', FILTER_SANITIZE_SPECIAL_CHARS),
-            'endereco_numero' => filter_input(INPUT_POST, 'endereco_numero', FILTER_SANITIZE_SPECIAL_CHARS),
-            'endereco_bairro' => filter_input(INPUT_POST, 'endereco_bairro', FILTER_SANITIZE_SPECIAL_CHARS),
-            'endereco_cidade' => filter_input(INPUT_POST, 'endereco_cidade', FILTER_SANITIZE_SPECIAL_CHARS),
-            'observacoes' => filter_input(INPUT_POST, 'observacoes', FILTER_SANITIZE_SPECIAL_CHARS),
-        ];
-    }
+    // normalização movida para ClienteService
 
     public function destroy()
     {

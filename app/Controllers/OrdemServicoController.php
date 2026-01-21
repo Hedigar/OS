@@ -63,20 +63,36 @@ class OrdemServicoController extends BaseController
         // 2. Filtro de Busca
         $search = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_SPECIAL_CHARS) ?: '';
         
-        // 3. Obter Total para Cálculo de Páginas
-        // Nota: O método contarTotal deve existir no seu OrdemServico Model
-        $totalRegistros = $this->osModel->countAll($search); 
+        // 3. Filtros adicionais
+        $statusId = filter_input(INPUT_GET, 'status_id', FILTER_VALIDATE_INT) ?: null;
+        $statusPagamento = filter_input(INPUT_GET, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS) ?: null;
+        $statusEntrega = filter_input(INPUT_GET, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS) ?: null;
+        $semAtualizacaoDias = filter_input(INPUT_GET, 'sem_atualizacao_dias', FILTER_VALIDATE_INT) ?: null;
+        $filters = [
+            'status_id' => $statusId,
+            'status_pagamento' => in_array($statusPagamento, ['pendente', 'parcial', 'pago']) ? $statusPagamento : null,
+            'status_entrega' => in_array($statusEntrega, ['entregue', 'nao_entregue']) ? $statusEntrega : null,
+            'sem_atualizacao_dias' => $semAtualizacaoDias
+        ];
+        
+        // 4. Obter Total para Cálculo de Páginas
+        $totalRegistros = $this->osModel->countAllWithDetailsFiltered($search, $filters); 
         $totalPaginas = ceil($totalRegistros / $itensPorPagina);
 
-        // 4. Buscar apenas os dados da página atual
-        $ordens = $this->osModel->getAllWithDetailsPaginado($search, $itensPorPagina, $offset);
+        // 5. Buscar apenas os dados da página atual
+        $ordens = $this->osModel->getAllWithDetailsPaginadoFiltered($search, $itensPorPagina, $offset, $filters);
+        
+        // 6. Status para o filtro
+        $statuses = $this->statusModel->getAll();
 
         $this->render('os/index', [
             'title' => 'Gerenciar Ordens de Serviço',
             'ordens' => $ordens,
             'search' => $search,
             'totalPaginas' => $totalPaginas,
-            'paginaAtual' => $paginaAtual
+            'paginaAtual' => $paginaAtual,
+            'filters' => $filters,
+            'statuses' => $statuses
         ]);
     }
 
@@ -227,6 +243,16 @@ class OrdemServicoController extends BaseController
         
         $configModel = new \App\Models\ConfiguracaoGeral();
         $margemLucro = $configModel->getValor('porcentagem_venda') ?: 0;
+        $cfgJson = $configModel->getValor('pagamentos_config') ?: '';
+        $cfgService = new \App\Services\PaymentConfigService();
+        $cfg = $cfgService->parse($cfgJson);
+        $maquinasEnabled = $cfgService->enabledMachines($cfg);
+        $formas = $cfgService->aggregateForms($cfg);
+        $bandeiras = $cfgService->aggregateBrands($cfg);
+
+        $pgModel = new \App\Models\PagamentoTransacao();
+        $transacoes = $pgModel->findByOrigem('os', $id);
+        $totalPago = $pgModel->sumByOrigem('os', $id);
 
         $this->render('os/view', [
             'title' => 'Ordem de Serviço #' . $id,
@@ -234,7 +260,12 @@ class OrdemServicoController extends BaseController
             'itens' => $itens,
             'historico' => $historico,
             'statuses' => $statuses,
-            'margem_lucro' => $margemLucro
+            'margem_lucro' => $margemLucro,
+            'transacoes' => $transacoes,
+            'total_pago' => $totalPago,
+            'maquinas' => $maquinasEnabled,
+            'formas' => $formas,
+            'bandeiras' => $bandeiras
         ]);
     }
 

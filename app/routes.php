@@ -24,11 +24,22 @@ $router->post('configuracoes/produtos-servicos/deletar', 'ProdutoServicoControll
 	$router->post('configuracoes/salvar-porcentagem', 'ProdutoServicoController@salvarConfiguracao');
 	$router->get('configuracoes/get-porcentagem-ajax', 'ProdutoServicoController@getPorcentagemAjax');
 	$router->post('configuracoes/atualizar-precos-massa', 'ProdutoServicoController@atualizarPrecosGlobais');
+// Configurações de Pagamentos
+$router->get('configuracoes/pagamentos', 'PagamentoController@configurar');
+$router->post('configuracoes/pagamentos/salvar', 'PagamentoController@salvarConfig');
 // Despesas
 $router->get('despesas', 'DespesasController@index');
+$router->get('despesas/form', 'DespesasController@form');
+$router->post('despesas/salvar', 'DespesasController@store');
+$router->post('despesas/atualizar', 'DespesasController@update');
+$router->post('despesas/deletar', 'DespesasController@destroy');
 
 // Relatórios
 $router->get('relatorios', 'RelatorioController@index');
+
+// Pós-Venda
+$router->get('pos-venda', 'PosVendaController@index');
+$router->post('pos-venda/registrar-resposta', 'PosVendaController@registrarResposta');
 
 // Rotas CRUD de Clientes (Exemplo)
 $router->get('usuarios', 'UsuarioController@index');
@@ -73,6 +84,9 @@ $router->get('ordens/search-items', 'OrdemServicoController@searchItems');
 $router->post('ordens/salvar-item', 'OrdemServicoController@saveItem');
 $router->post('ordens/atualizar-item', 'OrdemServicoController@updateItem');
 $router->post('ordens/remover-item', 'OrdemServicoController@removeItem');
+// Registro de Pagamentos (OS e Atendimento Externo)
+$router->post('pagamentos/registrar', 'PagamentoController@registrar');
+$router->post('pagamentos/deletar', 'PagamentoController@deletar');
 // Impressão de débitos do cliente
 $router->get('clientes/print-debitos', 'ClienteController@printDebitos');
 $router->get('clientes', 'ClienteController@index');

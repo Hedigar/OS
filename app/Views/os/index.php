@@ -7,17 +7,60 @@ require_once __DIR__ . '/../layout/main.php';
     <div class="d-flex justify-between align-center mb-4 flex-wrap gap-2">
         <h1><?= $title ?></h1>
         <div class="d-flex gap-2 flex-wrap">
-            <form action="<?= BASE_URL ?>ordens" method="GET" class="d-flex gap-2">
-                <input type="text" name="search" class="form-control" placeholder="ID ou Nome do Cliente" value="<?= htmlspecialchars($search ?? '') ?>">
-                <button type="submit" class="btn btn-secondary">Pesquisar</button>
-                <?php if (!empty($search)): ?>
+            <form action="<?= BASE_URL ?>ordens" method="GET" class="d-flex gap-2 flex-wrap align-items-end">
+                <div>
+                    <label class="form-label mb-1">Busca</label>
+                    <input type="text" name="search" class="form-control" placeholder="ID ou Nome do Cliente" value="<?= htmlspecialchars($search ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label mb-1">Status OS</label>
+                    <select name="status_id" class="form-select">
+                        <option value="">Todos</option>
+                        <?php foreach (($statuses ?? []) as $st): ?>
+                            <option value="<?= (int)$st['id'] ?>" <?= (!empty($filters['status_id']) && (int)$filters['status_id'] === (int)$st['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($st['nome']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label mb-1">Pagamento</label>
+                    <select name="status_pagamento" class="form-select">
+                        <?php $sp = $filters['status_pagamento'] ?? ''; ?>
+                        <option value="">Todos</option>
+                        <option value="pendente" <?= $sp === 'pendente' ? 'selected' : '' ?>>Pendente</option>
+                        <option value="parcial" <?= $sp === 'parcial' ? 'selected' : '' ?>>Parcial</option>
+                        <option value="pago" <?= $sp === 'pago' ? 'selected' : '' ?>>Pago</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label mb-1">Entrega</label>
+                    <select name="status_entrega" class="form-select">
+                        <?php $se = $filters['status_entrega'] ?? ''; ?>
+                        <option value="">Todos</option>
+                        <option value="nao_entregue" <?= $se === 'nao_entregue' ? 'selected' : '' ?>>Não Entregue</option>
+                        <option value="entregue" <?= $se === 'entregue' ? 'selected' : '' ?>>Entregue</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label mb-1">Sem Atualização (dias)</label>
+                    <input type="number" name="sem_atualizacao_dias" class="form-control" min="0" value="<?= htmlspecialchars((string)($filters['sem_atualizacao_dias'] ?? '')) ?>" placeholder="ex: 2">
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-secondary">Filtrar</button>
                     <a href="<?= BASE_URL ?>ordens" class="btn btn-outline-secondary">Limpar</a>
-                <?php endif; ?>
+                </div>
             </form>
             <a href="<?= BASE_URL ?>ordens/form" class="btn btn-primary">
                 ➕ Nova Ordem de Serviço
             </a>
         </div>
+    </div>
+    
+    <div class="mb-3 d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-primary btn-sm" href="<?= BASE_URL ?>ordens?status_pagamento=pendente">Pagamento Pendente</a>
+        <a class="btn btn-outline-warning btn-sm" href="<?= BASE_URL ?>ordens?status_entrega=nao_entregue">Entrega Pendente</a>
+        <a class="btn btn-outline-danger btn-sm" href="<?= BASE_URL ?>ordens?sem_atualizacao_dias=2">Sem atualização há 2+ dias</a>
     </div>
 
     <?php if (empty($ordens)): ?>
@@ -95,14 +138,20 @@ require_once __DIR__ . '/../layout/main.php';
                         $p_atual = $paginaAtual ?? 1;
                         $raio = 2; 
                         $query_search = !empty($search) ? '&search=' . urlencode($search) : '';
+                        $query_filters = '';
+                        if (!empty($filters['status_id'])) $query_filters .= '&status_id=' . (int)$filters['status_id'];
+                        if (!empty($filters['status_pagamento'])) $query_filters .= '&status_pagamento=' . urlencode($filters['status_pagamento']);
+                        if (!empty($filters['status_entrega'])) $query_filters .= '&status_entrega=' . urlencode($filters['status_entrega']);
+                        if (!empty($filters['sem_atualizacao_dias'])) $query_filters .= '&sem_atualizacao_dias=' . (int)$filters['sem_atualizacao_dias'];
+                        $qs = $query_search . $query_filters;
                     ?>
 
                     <?php if ($p_atual > 1): ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . ($p_atual - 1) . $query_search ?>">«</a>
+                        <a href="<?= BASE_URL . 'ordens?pagina=' . ($p_atual - 1) . $qs ?>">«</a>
                     <?php endif; ?>
 
                     <?php if ($p_atual > ($raio + 1)): ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=1' . $query_search ?>">1</a>
+                        <a href="<?= BASE_URL . 'ordens?pagina=1' . $qs ?>">1</a>
                         <?php if ($p_atual > ($raio + 2)): ?>
                             <span class="gap" style="padding: 8px 14px;">...</span>
                         <?php endif; ?>
@@ -114,7 +163,7 @@ require_once __DIR__ . '/../layout/main.php';
 
                     for ($i = $inicio; $i <= $fim; $i++): 
                     ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . $i . $query_search ?>" class="<?= ($i == $p_atual) ? 'active' : '' ?>">
+                        <a href="<?= BASE_URL . 'ordens?pagina=' . $i . $qs ?>" class="<?= ($i == $p_atual) ? 'active' : '' ?>">
                             <?= $i ?>
                         </a>
                     <?php endfor; ?>
@@ -123,11 +172,11 @@ require_once __DIR__ . '/../layout/main.php';
                         <?php if ($p_atual < ($totalPaginas - $raio - 1)): ?>
                             <span class="gap" style="padding: 8px 14px;">...</span>
                         <?php endif; ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . $totalPaginas . $query_search ?>"><?= $totalPaginas ?></a>
+                        <a href="<?= BASE_URL . 'ordens?pagina=' . $totalPaginas . $qs ?>"><?= $totalPaginas ?></a>
                     <?php endif; ?>
 
                     <?php if ($p_atual < $totalPaginas): ?>
-                        <a href="<?= BASE_URL . 'ordens?pagina=' . ($p_atual + 1) . $query_search ?>">»</a>
+                        <a href="<?= BASE_URL . 'ordens?pagina=' . ($p_atual + 1) . $qs ?>">»</a>
                     <?php endif; ?>
                 </div>
             </div>

@@ -43,6 +43,17 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
 
             <!-- CARDS DE ESTATÍSTICAS -->
             <div class="dashboard-cards">
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-icon"><i class="fas fa-filter text-primary"></i></div>
+                        <h2>Filtros Rápidos</h2>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <a href="<?php echo BASE_URL; ?>ordens?status_pagamento=pendente" class="btn btn-outline-primary btn-sm">Pagamento Pendente</a>
+                        <a href="<?php echo BASE_URL; ?>ordens?status_entrega=nao_entregue" class="btn btn-outline-warning btn-sm">Entrega Pendente</a>
+                        <a href="<?php echo BASE_URL; ?>ordens?sem_atualizacao_dias=2" class="btn btn-outline-danger btn-sm">Sem atualização 2+ dias</a>
+                    </div>
+                </div>
                 <!-- OS ABERTAS (Sempre visível) -->
                 <div class="card stat-card">
                     <div>
@@ -105,6 +116,26 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                         </div>
                     </div>
                 <?php endif; ?>
+
+                <?php 
+                    $posVendaCount = 0;
+                    if (!empty($alertas)) {
+                        foreach ($alertas as $a) {
+                            if (($a['tipo'] ?? '') === 'pos_venda') $posVendaCount++;
+                        }
+                    }
+                ?>
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-icon"><i class="fas fa-handshake text-primary"></i></div>
+                        <h2>Pós-Venda</h2>
+                    </div>
+                    <div>
+                        <p class="card-value warning-text"><?php echo str_pad($posVendaCount, 2, '0', STR_PAD_LEFT); ?></p>
+                        <p class="fs-sm text-muted m-0">Acompanhar entregas</p>
+                    </div>
+                    <a href="<?php echo BASE_URL; ?>pos-venda" class="btn btn-outline-primary btn-sm mt-2">Abrir Painel</a>
+                </div>
             </div>
 
             <!-- ÁREA DE FLUXO DE ATIVIDADES -->
@@ -194,6 +225,16 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                                                 Ver OS
                                             </a>
                                         <?php endif; ?>
+                                        <?php 
+                                            $isPosVenda = ($alerta['tipo'] ?? '') === 'pos_venda';
+                                            $telefone = preg_replace('/\D+/', '', $alerta['cliente_telefone'] ?? '');
+                                            if ($isPosVenda && !empty($telefone)) {
+                                                $nomeCli = $alerta['cliente_nome'] ?? '';
+                                                $msg = "Olá {$nomeCli}, tudo bem? Sobre a OS #{$alerta['os_id']}, gostaríamos de saber como está o equipamento e sua experiência. Seu feedback é importante.";
+                                                $wa = "https://wa.me/55{$telefone}?text=" . urlencode($msg);
+                                                echo '<a href="' . $wa . '" target="_blank" class="btn btn-sm btn-success ms-1">WhatsApp</a>';
+                                            }
+                                        ?>
                                     </div>
                                 </div>
                             </div>

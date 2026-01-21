@@ -44,7 +44,25 @@ if (!function_exists('formatCurrency')) {
             </div>
             <div>
                 <h3>Telefone</h3>
-                <p><?php echo safe_text($atendimento, 'cliente_telefone', 'N/A'); ?></p>
+                <p>
+                    <?php 
+                        $telRaw = $atendimento['cliente_telefone'] ?? '';
+                        $tel = preg_replace('/\D+/', '', (string)$telRaw);
+                        if ($tel) {
+                            $nomeCli = trim((string)($atendimento['cliente_nome'] ?? ''));
+                            $primeiroNome = $nomeCli !== '' ? explode(' ', $nomeCli)[0] : '';
+                            $hora = (int)date('H');
+                            $saudacao = ($hora >= 5 && $hora < 12) ? 'Bom dia' : (($hora >= 12 && $hora < 18) ? 'Boa tarde' : 'Boa noite');
+                            $usuarioNomeRaw = isset($user['nome']) ? (string)$user['nome'] : 'Equipe';
+                            $usuarioNome = ucfirst($usuarioNomeRaw);
+                            $mensagem = $saudacao . ', ' . $primeiroNome . ', Tudo bem? Aqui é o ' . $usuarioNome . ' da Myranda informatica.';
+                            $wa = "https://wa.me/55{$tel}?text=" . urlencode($mensagem);
+                            echo '<a href="' . $wa . '" target="_blank" rel="noopener">' . htmlspecialchars($telRaw) . '</a>';
+                        } else {
+                            echo 'N/A';
+                        }
+                    ?>
+                </p>
             </div>
             <div>
                 <h3>Endereço</h3>
@@ -131,6 +149,118 @@ if (!function_exists('formatCurrency')) {
         </form>
     </div>
 
+    <div class="card mb-4">
+        <h2 class="card-title">💳 Pagamentos</h2>
+        <?php
+            $totalAPagar = (float)(safe_val($ordem, 'valor_total_os', 0));
+            $totalPago = (float)($total_pago ?? 0);
+            $saldo = max(0, $totalAPagar - $totalPago);
+        ?>
+        <div class="form-grid">
+            <div>
+                <h3 class="mb-2">Resumo</h3>
+                <p class="m-0">A Pagar: <strong class="text-primary"><?php echo formatCurrency($totalAPagar); ?></strong></p>
+                <p class="m-0">Pago: <strong class="text-success"><?php echo formatCurrency($totalPago); ?></strong></p>
+                <p class="m-0">Saldo: <strong class="text-warning"><?php echo formatCurrency($saldo); ?></strong></p>
+            </div>
+            <div>
+                <h3 class="mb-2">Registrar Pagamento</h3>
+                <form id="form-pagamento-ae" onsubmit="return registrarPagamentoAE(event)">
+                    <input type="hidden" name="tipo_origem" value="atendimento">
+                    <input type="hidden" name="origem_id" value="<?php echo safe_text($atendimento, 'id', ''); ?>">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Máquina</label>
+                            <?php $listaMaquinas = $maquinas ?? []; ?>
+                            <?php if (!empty($listaMaquinas)): ?>
+                                <select name="maquina" class="form-control">
+                                    <?php foreach ($listaMaquinas as $mq): ?>
+                                        <option value="<?php echo htmlspecialchars($mq); ?>"><?php echo htmlspecialchars($mq); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php else: ?>
+                                <input type="text" name="maquina" class="form-control" placeholder="TOM, Mercado Pago...">
+                            <?php endif; ?>
+                        </div>
+                        <div class="form-group">
+                            <label>Forma</label>
+                            <?php $listaFormas = isset($formas) && is_array($formas) && count($formas) ? $formas : ['debito','credito','pix','dinheiro']; ?>
+                            <select name="forma" class="form-control">
+                                <?php foreach ($listaFormas as $f): ?>
+                                    <option value="<?php echo htmlspecialchars($f); ?>"><?php echo htmlspecialchars(ucfirst($f)); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bandeira</label>
+                            <?php $listaBandeiras = isset($bandeiras) && is_array($bandeiras) && count($bandeiras) ? $bandeiras : ['visa','mastercard','elo','amex','hipercard','outros']; ?>
+                            <select name="bandeira" class="form-control">
+                                <option value="">Selecione</option>
+                                <?php foreach ($listaBandeiras as $b): ?>
+                                    <option value="<?php echo htmlspecialchars($b); ?>"><?php echo htmlspecialchars(ucfirst($b)); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Parcelas</label>
+                            <input type="number" name="parcelas" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor</label>
+                            <input type="number" name="valor_bruto" class="form-control" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-end">
+                        <button type="submit" class="btn btn-primary">Registrar</button>
+                    </div>
+                </form>
+                <div id="pagamento-msg-ae" class="mt-2"></div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <h3 class="mb-2">Transações</h3>
+            <?php if (empty($transacoes ?? [])): ?>
+                <div class="alert alert-info m-0">Nenhuma transação registrada.</div>
+            <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Máquina</th>
+                                <th>Forma</th>
+                                <th>Bandeira</th>
+                                <th>Parcelas</th>
+                                <th class="text-end">Bruto</th>
+                                <th class="text-end">Taxa (%)</th>
+                                <th class="text-end">Taxa (R$)</th>
+                                <th class="text-end">Líquido</th>
+                                <th class="text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach (($transacoes ?? []) as $t): ?>
+                                <tr>
+                                    <td><?php echo date('d/m/Y H:i', strtotime($t['created_at'])); ?></td>
+                                    <td><?php echo htmlspecialchars($t['maquina'] ?? ''); ?></td>
+                                    <td><?php echo htmlspecialchars($t['forma'] ?? ''); ?></td>
+                                    <td><?php echo htmlspecialchars($t['bandeira'] ?? ''); ?></td>
+                                    <td><?php echo (int)($t['parcelas'] ?? 1); ?></td>
+                                    <td class="text-end"><?php echo formatCurrency((float)$t['valor_bruto']); ?></td>
+                                    <td class="text-end"><?php echo number_format((float)($t['taxa_percentual'] ?? 0), 2, ',', '.'); ?>%</td>
+                                    <td class="text-end"><?php echo formatCurrency((float)($t['valor_taxa'] ?? 0)); ?></td>
+                                    <td class="text-end"><?php echo formatCurrency((float)($t['valor_liquido'] ?? 0)); ?></td>
+                                    <td class="text-center">
+                                        <button class="btn btn-danger btn-sm" onclick="return excluirTransacaoAE(<?php echo (int)$t['id']; ?>)">Excluir</button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
     <div class="card mb-4">
         <h2 class="card-title">➕ Adicionar Produto ou Serviço</h2>
         <form action="<?php echo BASE_URL; ?>atendimentos/saveItem" method="POST" id="form-add-item">
@@ -321,6 +451,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
 });
+
+function registrarPagamentoAE(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-pagamento-ae');
+    const msgDiv = document.getElementById('pagamento-msg-ae');
+    const formData = new FormData(form);
+    fetch('<?php echo BASE_URL; ?>pagamentos/registrar', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'include',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res && res.success) {
+            msgDiv.innerHTML = '<div class="alert alert-success">Pagamento registrado com sucesso.</div>';
+            setTimeout(() => { window.location.reload(); }, 800);
+        } else {
+            msgDiv.innerHTML = '<div class="alert alert-danger">Erro ao registrar pagamento.</div>';
+        }
+    })
+    .catch(() => {
+        msgDiv.innerHTML = '<div class="alert alert-danger">Erro de comunicação.</div>';
+    });
+    return false;
+}
+
+function excluirTransacaoAE(transacaoId) {
+    const msgDiv = document.getElementById('pagamento-msg-ae');
+    const fd = new FormData();
+    fd.append('transacao_id', transacaoId);
+    fetch('<?php echo BASE_URL; ?>pagamentos/deletar', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'include',
+        body: fd
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res && res.success) {
+            msgDiv.innerHTML = '<div class="alert alert-success">Transação excluída.</div>';
+            setTimeout(() => { window.location.reload(); }, 600);
+        } else {
+            msgDiv.innerHTML = '<div class="alert alert-danger">Erro ao excluir transação.</div>';
+        }
+    })
+    .catch(() => {
+        msgDiv.innerHTML = '<div class="alert alert-danger">Erro de comunicação.</div>';
+    });
+    return false;
+}
 </script>
 
 <style>

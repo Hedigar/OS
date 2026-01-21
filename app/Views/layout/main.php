@@ -48,6 +48,9 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'ordens') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>ordens"><i class="fas fa-file-invoice me-2"></i> Ordens de Serviço</a>
                 </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'pos_venda') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>pos-venda"><i class="fas fa-handshake me-2"></i> Pós-Venda</a>
+                </li>
                 <li class="<?php echo (isset($current_page) && $current_page === 'atendimentos_externos') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>atendimentos-externos"><i class="fas fa-truck me-2"></i> Atendimento Externo</a>
                 </li>
@@ -69,6 +72,9 @@
                         </li>
                         <li class="<?php echo (isset($current_page) && $current_page === 'configuracoes_os') ? 'active' : ''; ?>">
                             <a href="<?php echo BASE_URL; ?>configuracoes/os"><i class="fas fa-file-invoice me-2"></i> Config. OS</a>
+                        </li>
+                        <li class="<?php echo (isset($current_page) && $current_page === 'configuracoes_pagamentos') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>configuracoes/pagamentos"><i class="fas fa-credit-card me-2"></i> Pagamentos</a>
                         </li>
                         <li class="<?php echo (isset($current_page) && $current_page === 'usuarios') ? 'active' : ''; ?>">
                             <a href="<?php echo BASE_URL; ?>usuarios"><i class="fas fa-user-shield me-2"></i> Usuários</a>

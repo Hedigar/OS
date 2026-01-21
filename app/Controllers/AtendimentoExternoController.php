@@ -56,13 +56,28 @@ class AtendimentoExternoController extends BaseController
         if (!$dados) $this->redirect('atendimentos-externos');
 
         $statusModel = new \App\Models\StatusOS();
+        $pgModel = new \App\Models\PagamentoTransacao();
+        $transacoes = $pgModel->findByOrigem('atendimento', $id);
+        $totalPago = $pgModel->sumByOrigem('atendimento', $id);
+        $configModel = new \App\Models\ConfiguracaoGeral();
+        $cfgJson = $configModel->getValor('pagamentos_config') ?: '';
+        $cfgService = new \App\Services\PaymentConfigService();
+        $cfg = $cfgService->parse($cfgJson);
+        $maquinasEnabled = $cfgService->enabledMachines($cfg);
+        $formas = $cfgService->aggregateForms($cfg);
+        $bandeiras = $cfgService->aggregateBrands($cfg);
 
         $this->render('atendimento_externo/view', [
             'title'       => 'Atendimento Externo - Execução',
             'atendimento' => $dados['atendimento'],
             'itens'       => $dados['itens'],
             'ordem'       => ['valor_total_os' => $dados['valor_total']],
-            'statuses'    => $statusModel->getAll()
+            'statuses'    => $statusModel->getAll(),
+            'transacoes'  => $transacoes,
+            'total_pago'  => $totalPago,
+            'maquinas'    => $maquinasEnabled,
+            'formas'      => $formas,
+            'bandeiras'   => $bandeiras
         ]);
     }
 

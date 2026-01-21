@@ -65,7 +65,23 @@ require_once __DIR__ . '/../layout/main.php';
                                 <?php echo htmlspecialchars($cliente['documento'] ?? 'N/A'); ?>
                             </td>
                             <td>
-                                <?php echo htmlspecialchars($cliente['telefone_principal'] ?? 'N/A'); ?>
+                                <?php 
+                                    $telRaw = $cliente['telefone_principal'] ?? '';
+                                    $tel = preg_replace('/\D+/', '', (string)$telRaw);
+                                    if ($tel) {
+                                        $nomeCli = trim((string)($cliente['nome_completo'] ?? ''));
+                                        $primeiroNome = $nomeCli !== '' ? explode(' ', $nomeCli)[0] : '';
+                                        $hora = (int)date('H');
+                                        $saudacao = ($hora >= 5 && $hora < 12) ? 'Bom dia' : (($hora >= 12 && $hora < 18) ? 'Boa tarde' : 'Boa noite');
+                                        $usuarioNomeRaw = isset($user['nome']) ? (string)$user['nome'] : 'Equipe';
+                                        $usuarioNome = ucfirst($usuarioNomeRaw);
+                                        $mensagem = $saudacao . ', ' . $primeiroNome . ', Tudo bem? Aqui é o ' . $usuarioNome . ' da Myranda informatica.';
+                                        $wa = "https://wa.me/55{$tel}?text=" . urlencode($mensagem);
+                                        echo '<a href="' . $wa . '" target="_blank" rel="noopener">' . htmlspecialchars($telRaw) . '</a>';
+                                    } else {
+                                        echo 'N/A';
+                                    }
+                                ?>
                             </td>
                             <td>
                                 <span class="text-muted fs-sm">

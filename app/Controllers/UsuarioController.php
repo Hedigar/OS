@@ -3,10 +3,12 @@
 namespace App\Controllers;
 
 use App\Models\Usuario;
+use App\Services\UsuarioService;
 
 class UsuarioController extends BaseController
 {
     private $usuarioModel;
+    private UsuarioService $service;
 
     public function __construct()
     {
@@ -24,6 +26,7 @@ class UsuarioController extends BaseController
         }
         
         $this->usuarioModel = new Usuario();
+        $this->service = new UsuarioService();
     }
 
     // Listar todos os usuários
@@ -63,13 +66,7 @@ class UsuarioController extends BaseController
     public function store()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = [
-                'nome' => filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_SPECIAL_CHARS),
-                'email' => filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL),
-                'senha' => password_hash('12345678', PASSWORD_DEFAULT),
-                'nivel_acesso' => filter_input(INPUT_POST, 'nivel_acesso', FILTER_SANITIZE_SPECIAL_CHARS),
-                'trocar_senha' => 1
-            ];
+            $data = $this->service->normalizeCreateData($_POST);
 
             if ($this->usuarioModel->create($data)) {
                 $this->redirect('usuarios');
@@ -88,11 +85,7 @@ class UsuarioController extends BaseController
                 $this->redirect('usuarios');
             }
 
-            $data = [
-                'nome' => filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_SPECIAL_CHARS),
-                'email' => filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL),
-                'nivel_acesso' => filter_input(INPUT_POST, 'nivel_acesso', FILTER_SANITIZE_SPECIAL_CHARS),
-            ];
+            $data = $this->service->normalizeUpdateData($_POST);
             
             // A senha não é mais alterada por aqui, apenas via Resetar Senha na listagem.
 
@@ -138,23 +131,19 @@ class UsuarioController extends BaseController
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_SESSION['user_id'];
-            $nova_senha = filter_input(INPUT_POST, 'nova_senha', FILTER_SANITIZE_SPECIAL_CHARS);
-            $confirmar_senha = filter_input(INPUT_POST, 'confirmar_senha', FILTER_SANITIZE_SPECIAL_CHARS);
+            $nova_senha = $_POST['nova_senha'] ?? null;
+            $confirmar_senha = $_POST['confirmar_senha'] ?? null;
 
-            if (empty($nova_senha) || $nova_senha !== $confirmar_senha) {
+            $error = $this->service->validateNewPassword($nova_senha, $confirmar_senha);
+            if ($error) {
                 $this->render('usuario/trocar_senha', [
                     'title' => 'Trocar Senha Obrigatória',
-                    'error' => 'As senhas não coincidem ou estão vazias.'
+                    'error' => $error
                 ]);
                 return;
             }
 
-            $data = [
-                'senha' => password_hash($nova_senha, PASSWORD_DEFAULT),
-                'trocar_senha' => 0
-            ];
-
-            if ($this->usuarioModel->update($id, $data)) {
+            if ($this->service->updatePassword($id, $nova_senha)) {
                 // Atualizar a sessão para refletir que a senha foi trocada
                 $_SESSION['user']['trocar_senha'] = 0;
                 $this->redirect('dashboard');
@@ -177,11 +166,7 @@ class UsuarioController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             if ($id) {
-                $data = [
-                    'senha' => password_hash('12345678', PASSWORD_DEFAULT),
-                    'trocar_senha' => 1
-                ];
-                $this->usuarioModel->update($id, $data);
+                $this->service->resetPasswordDefault($id);
             }
         }
         $this->redirect('usuarios');

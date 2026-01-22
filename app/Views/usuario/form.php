@@ -59,6 +59,9 @@ require_once __DIR__ . '/../layout/main.php';
                     <div class="form-group">
                         <label for="nivel_acesso">Nível de Acesso *</label>
                         <select id="nivel_acesso" name="nivel_acesso" class="form-select" required>
+                            <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+                                <option value="superadmin" <?= $is_edit && $usuario['nivel_acesso'] == 'superadmin' ? 'selected' : '' ?>>Super Administrador</option>
+                            <?php endif; ?>
                             <option value="admin" <?= $is_edit && $usuario['nivel_acesso'] == 'admin' ? 'selected' : '' ?>>Administrador</option>
                             <option value="tecnico" <?= $is_edit && $usuario['nivel_acesso'] == 'tecnico' ? 'selected' : '' ?>>Técnico</option>
                             <option value="usuario" <?= $is_edit && $usuario['nivel_acesso'] == 'usuario' ? 'selected' : '' ?>>Padrão (Usuário)</option>

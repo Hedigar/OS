@@ -191,6 +191,7 @@ require_once __DIR__ . '/../layout/main.php';
 .pagination a.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
 .pagination a:hover:not
 (.active) { background-color: #f8f9fa; }
+
 </style>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

@@ -43,47 +43,45 @@ class PagamentoController extends BaseController
         }
 
         $enabled = $_POST['maquinas_enabled'] ?? [];
+        $buildCredito = function (string $prefix): array {
+            $vm = [];
+            $ea = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $kvm = "{$prefix}_vm_{$i}x";
+                $kea = "{$prefix}_ea_{$i}x";
+                if (isset($_POST[$kvm]) && $_POST[$kvm] !== '') { $vm[$i] = (float)$_POST[$kvm]; }
+                if (isset($_POST[$kea]) && $_POST[$kea] !== '') { $ea[$i] = (float)$_POST[$kea]; }
+            }
+            return ['visa_master' => $vm, 'elo_amex' => $ea];
+        };
+        $buildDebito = function (string $prefix): array {
+            $vm = isset($_POST["{$prefix}_vm_debito"]) && $_POST["{$prefix}_vm_debito"] !== '' ? (float)$_POST["{$prefix}_vm_debito"] : null;
+            $ea = isset($_POST["{$prefix}_ea_debito"]) && $_POST["{$prefix}_ea_debito"] !== '' ? (float)$_POST["{$prefix}_ea_debito"] : null;
+            return ['visa_master' => $vm, 'elo_amex' => $ea];
+        };
         $tom = [
             'nome' => 'TOM',
             'habilitada' => in_array('TOM', $enabled, true),
             'formas' => ['debito','credito','pix'],
             'bandeiras' => ['Visa','Mastercard','Elo','American Express'],
-            'taxa_debito' => isset($_POST['tom_taxa_debito']) ? (float)$_POST['tom_taxa_debito'] : null,
-            'bandeiras_taxas' => [
-                'Visa' => isset($_POST['tom_taxa_visa_master']) ? (float)$_POST['tom_taxa_visa_master'] : null,
-                'Mastercard' => isset($_POST['tom_taxa_visa_master']) ? (float)$_POST['tom_taxa_visa_master'] : null,
-                'Elo' => isset($_POST['tom_taxa_elo_amex']) ? (float)$_POST['tom_taxa_elo_amex'] : null,
-                'American Express' => isset($_POST['tom_taxa_elo_amex']) ? (float)$_POST['tom_taxa_elo_amex'] : null
-            ],
-            'taxa_padrao' => isset($_POST['tom_taxa_outros']) ? (float)$_POST['tom_taxa_outros'] : null
+            'debito_grupos' => $buildDebito('tom'),
+            'credito_taxas' => $buildCredito('tom')
         ];
         $mp = [
             'nome' => 'Mercado Pago',
             'habilitada' => in_array('Mercado Pago', $enabled, true),
             'formas' => ['debito','credito','pix'],
             'bandeiras' => ['Visa','Mastercard','Elo','American Express'],
-            'taxa_debito' => isset($_POST['mp_taxa_debito']) ? (float)$_POST['mp_taxa_debito'] : null,
-            'bandeiras_taxas' => [
-                'Visa' => isset($_POST['mp_taxa_visa_master']) ? (float)$_POST['mp_taxa_visa_master'] : null,
-                'Mastercard' => isset($_POST['mp_taxa_visa_master']) ? (float)$_POST['mp_taxa_visa_master'] : null,
-                'Elo' => isset($_POST['mp_taxa_elo_amex']) ? (float)$_POST['mp_taxa_elo_amex'] : null,
-                'American Express' => isset($_POST['mp_taxa_elo_amex']) ? (float)$_POST['mp_taxa_elo_amex'] : null
-            ],
-            'taxa_padrao' => isset($_POST['mp_taxa_outros']) ? (float)$_POST['mp_taxa_outros'] : null
+            'debito_grupos' => $buildDebito('mp'),
+            'credito_taxas' => $buildCredito('mp')
         ];
         $mod = [
             'nome' => 'Moderninha',
             'habilitada' => in_array('Moderninha', $enabled, true),
             'formas' => ['debito','credito','pix'],
             'bandeiras' => ['Visa','Mastercard','Elo','American Express'],
-            'taxa_debito' => isset($_POST['mod_taxa_debito']) ? (float)$_POST['mod_taxa_debito'] : null,
-            'bandeiras_taxas' => [
-                'Visa' => isset($_POST['mod_taxa_visa_master']) ? (float)$_POST['mod_taxa_visa_master'] : null,
-                'Mastercard' => isset($_POST['mod_taxa_visa_master']) ? (float)$_POST['mod_taxa_visa_master'] : null,
-                'Elo' => isset($_POST['mod_taxa_elo_amex']) ? (float)$_POST['mod_taxa_elo_amex'] : null,
-                'American Express' => isset($_POST['mod_taxa_elo_amex']) ? (float)$_POST['mod_taxa_elo_amex'] : null
-            ],
-            'taxa_padrao' => isset($_POST['mod_taxa_outros']) ? (float)$_POST['mod_taxa_outros'] : null
+            'debito_grupos' => $buildDebito('mod'),
+            'credito_taxas' => $buildCredito('mod')
         ];
         $config = [
             'maquinas' => [$tom, $mp, $mod]
@@ -169,19 +167,32 @@ class PagamentoController extends BaseController
         if (empty($config['maquinas']) || !is_array($config['maquinas'])) return null;
         foreach ($config['maquinas'] as $mq) {
             if (($mq['nome'] ?? '') !== $maquina) continue;
-            if ($forma === 'debito' && isset($mq['taxa_debito']) && $mq['taxa_debito'] !== null) {
-                return (float)$mq['taxa_debito'];
-            }
-            if (!empty($mq['bandeiras_taxas']) && is_array($mq['bandeiras_taxas'])) {
-                if (isset($mq['bandeiras_taxas'][$bandeira]) && $mq['bandeiras_taxas'][$bandeira] !== null) {
-                    return (float)$mq['bandeiras_taxas'][$bandeira];
+            $brandLc = strtolower(trim((string)$bandeira));
+            $isVM = in_array($brandLc, ['visa','mastercard'], true);
+            $isEA = in_array($brandLc, ['elo','american express','amex'], true);
+            if ($forma === 'debito') {
+                if (!empty($mq['debito_grupos']) && is_array($mq['debito_grupos'])) {
+                    if ($isVM && isset($mq['debito_grupos']['visa_master']) && $mq['debito_grupos']['visa_master'] !== null) {
+                        return (float)$mq['debito_grupos']['visa_master'];
+                    }
+                    if ($isEA && isset($mq['debito_grupos']['elo_amex']) && $mq['debito_grupos']['elo_amex'] !== null) {
+                        return (float)$mq['debito_grupos']['elo_amex'];
+                    }
                 }
-                if (isset($mq['taxa_padrao']) && $mq['taxa_padrao'] !== null) {
-                    return (float)$mq['taxa_padrao'];
+            }
+            if ($forma === 'credito') {
+                if (!empty($mq['credito_taxas']) && is_array($mq['credito_taxas'])) {
+                    $grp = $isVM ? 'visa_master' : ($isEA ? 'elo_amex' : '');
+                    if ($grp && isset($mq['credito_taxas'][$grp]) && is_array($mq['credito_taxas'][$grp])) {
+                        $arr = $mq['credito_taxas'][$grp];
+                        if (isset($arr[$parcelas]) && $arr[$parcelas] !== null) {
+                            return (float)$arr[$parcelas];
+                        }
+                    }
                 }
             }
             if (!empty($mq['formas']) && is_array($mq['formas'])) {
-                if (is_array($mq['formas']) && in_array($forma, $mq['formas'], true) && isset($mq['taxa_padrao'])) {
+                if (in_array($forma, $mq['formas'], true) && isset($mq['taxa_padrao'])) {
                     return (float)$mq['taxa_padrao'];
                 }
             }

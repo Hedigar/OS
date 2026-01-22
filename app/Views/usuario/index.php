@@ -47,7 +47,9 @@ require_once __DIR__ . '/../layout/main.php';
                             <td>
                                 <?php 
                                 $nivel = $usuario['nivel_acesso'] ?? 'usuario';
-                                if ($nivel === 'admin') {
+                                if ($nivel === 'superadmin') {
+                                    echo '<span class="badge" style="background-color: var(--primary-red);">Super Admin</span>';
+                                } elseif ($nivel === 'admin') {
                                     echo '<span class="badge" style="background-color: var(--primary-red);">Administrador</span>';
                                 } elseif ($nivel === 'tecnico') {
                                     echo '<span class="badge" style="background-color: var(--info);">Técnico</span>';

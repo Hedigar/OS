@@ -152,14 +152,47 @@ if (!function_exists('formatCurrency')) {
     <div class="card mb-4">
         <h2 class="card-title">💳 Pagamentos</h2>
         <?php
-            $totalAPagar = (float)(safe_val($ordem, 'valor_total_os', 0));
+            // Recálculo preciso dos totais baseado nos itens
+            $calcSomaBruta = 0;
+            $calcSomaDescontos = 0;
+            $calcSomaLiquida = 0;
+
+            if (!empty($itens)) {
+                foreach ($itens as $item) {
+                    $vUnit = (float)($item['valor_unitario'] ?? 0);
+                    $vMao = (float)($item['valor_mao_de_obra'] ?? 0);
+                    $qtd = (float)($item['quantidade'] ?? 1);
+                    $desc = (float)($item['desconto'] ?? 0);
+                    $vTotalItem = (float)($item['valor_total'] ?? 0);
+                    
+                    // Valor unitário completo (peça + mão de obra)
+                    $vUnitFull = $vUnit + $vMao;
+                    // Valor bruto total deste item
+                    $vBrutoItem = $vUnitFull * $qtd;
+                    
+                    $calcSomaBruta += $vBrutoItem;
+                    $calcSomaDescontos += $desc;
+                    $calcSomaLiquida += $vTotalItem;
+                }
+            } else {
+                // Fallback se não houver itens carregados
+                $calcSomaLiquida = (float)(safe_val($ordem, 'valor_total_os', 0));
+                // Tenta pegar desconto do atendimento ou ordem
+                $calcSomaDescontos = (float)(safe_val($atendimento, 'valor_desconto', 0));
+                $calcSomaBruta = $calcSomaLiquida + $calcSomaDescontos;
+            }
+
             $totalPago = (float)($total_pago ?? 0);
-            $saldo = max(0, $totalAPagar - $totalPago);
+            $saldo = max(0, $calcSomaLiquida - $totalPago);
         ?>
         <div class="form-grid">
             <div>
                 <h3 class="mb-2">Resumo</h3>
-                <p class="m-0">A Pagar: <strong class="text-primary"><?php echo formatCurrency($totalAPagar); ?></strong></p>
+                <p class="m-0">Subtotal: <strong><?php echo formatCurrency($calcSomaBruta); ?></strong></p>
+                <?php if ($calcSomaDescontos > 0): ?>
+                <p class="m-0">Descontos: <strong>- <?php echo formatCurrency($calcSomaDescontos); ?></strong></p>
+                <?php endif; ?>
+                <p class="m-0">Total a Pagar: <strong class="text-primary"><?php echo formatCurrency($calcSomaLiquida); ?></strong></p>
                 <p class="m-0">Pago: <strong class="text-success"><?php echo formatCurrency($totalPago); ?></strong></p>
                 <p class="m-0">Saldo: <strong class="text-warning"><?php echo formatCurrency($saldo); ?></strong></p>
             </div>
@@ -172,20 +205,25 @@ if (!function_exists('formatCurrency')) {
                         <div class="form-group">
                             <label>Máquina</label>
                             <?php $listaMaquinas = $maquinas ?? []; ?>
-                            <?php if (!empty($listaMaquinas)): ?>
-                                <select name="maquina" class="form-control">
+                            <select name="maquina" class="form-control">
+                                <?php if (empty($listaMaquinas)): ?>
+                                    <option value="">Nenhuma máquina habilitada</option>
+                                <?php else: ?>
                                     <?php foreach ($listaMaquinas as $mq): ?>
                                         <option value="<?php echo htmlspecialchars($mq); ?>"><?php echo htmlspecialchars($mq); ?></option>
                                     <?php endforeach; ?>
-                                </select>
-                            <?php else: ?>
-                                <input type="text" name="maquina" class="form-control" placeholder="TOM, Mercado Pago...">
-                            <?php endif; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Forma</label>
-                            <?php $listaFormas = isset($formas) && is_array($formas) && count($formas) ? $formas : ['debito','credito','pix','dinheiro']; ?>
-                            <select name="forma" class="form-control">
+                            <?php 
+                            $formasMaquinas = isset($formas) && is_array($formas) ? $formas : [];
+                            // Garante que dinheiro e boleto (e outros comuns) estejam sempre disponíveis
+                            $formasPadrao = ['dinheiro', 'boleto', 'pix', 'debito', 'credito'];
+                            $listaFormas = array_unique(array_merge($formasMaquinas, $formasPadrao));
+                            ?>
+                            <select name="forma" class="form-control" id="select-forma-ae">
                                 <?php foreach ($listaFormas as $f): ?>
                                     <option value="<?php echo htmlspecialchars($f); ?>"><?php echo htmlspecialchars(ucfirst($f)); ?></option>
                                 <?php endforeach; ?>
@@ -203,8 +241,23 @@ if (!function_exists('formatCurrency')) {
                         </div>
                         <div class="form-group">
                             <label>Parcelas</label>
-                            <input type="number" name="parcelas" class="form-control" value="1" min="1">
+                            <input type="number" name="parcelas" class="form-control" value="1" min="1" id="input-parcelas-ae">
                         </div>
+                        <script>
+                            document.getElementById('input-parcelas-ae').addEventListener('input', function() {
+                                var val = parseInt(this.value);
+                                if (val > 1) {
+                                    var select = document.getElementById('select-forma-ae');
+                                    // Tenta selecionar 'credito' se existir
+                                    for (var i = 0; i < select.options.length; i++) {
+                                        if (select.options[i].value === 'credito') {
+                                            select.selectedIndex = i;
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+                        </script>
                         <div class="form-group">
                             <label>Valor</label>
                             <input type="number" name="valor_bruto" class="form-control" step="0.01" min="0" required>

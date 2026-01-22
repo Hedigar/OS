@@ -44,6 +44,11 @@ class AccessControlService
         return Auth::isAdmin();
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return Auth::isSuperAdmin();
+    }
+
     public function isTecnico(): bool
     {
         return Auth::isTecnico();

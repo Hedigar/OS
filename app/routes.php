@@ -36,6 +36,8 @@ $router->post('despesas/deletar', 'DespesasController@destroy');
 
 // Relatórios
 $router->get('relatorios', 'RelatorioController@index');
+// Auditoria
+$router->get('auditoria', 'AuditoriaController@index');
 
 // Pós-Venda
 $router->get('pos-venda', 'PosVendaController@index');
@@ -76,6 +78,7 @@ $router->post('ordens/atualizar', 'OrdemServicoController@update');
 $router->get('ordens/view', 'OrdemServicoController@showView'); // Visualizar OS
 $router->get('ordens/print', 'OrdemServicoController@printOS'); // Imprimir OS
 $router->get('ordens/print-receipt', 'OrdemServicoController@printReceipt'); // Impressão: Recepção (2 cópias por A4)
+$router->get('ordens/print-payment-receipt', 'OrdemServicoController@printPaymentReceipt'); // Impressão: Recibo Pagamento (80mm)
 $router->get('ordens/print-estimate', 'OrdemServicoController@printEstimate'); // Impressão: Orçamento
 $router->post('ordens/deletar', 'OrdemServicoController@destroy');
 $router->get('ordens/search-client', 'OrdemServicoController@searchClient'); // Busca de cliente para Autocomplete na OS

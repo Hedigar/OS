@@ -90,6 +90,16 @@ abstract class BaseController extends Controller
     }
 
     /**
+     * Exige privilégios de super administrador.
+     */
+    protected function requireSuperAdmin(): void
+    {
+        if (!$this->access->isSuperAdmin()) {
+            $this->redirect('dashboard');
+        }
+    }
+
+    /**
      * Exige privilégios de técnico.
      */
     protected function requireTecnico(): void
@@ -101,8 +111,9 @@ abstract class BaseController extends Controller
 
     /**
      * Renderiza uma view e gera um PDF.
+     * @param string|array $paper Tamanho do papel (string ou array [0, 0, w, h])
      */
-    protected function renderPDF(string $view, array $data = [], string $filename = 'documento.pdf', string $paper = 'a4', string $orientation = 'portrait'): void
+    protected function renderPDF(string $view, array $data = [], string $filename = 'documento.pdf', string|array $paper = 'a4', string $orientation = 'portrait'): void
     {
         extract($data);
 

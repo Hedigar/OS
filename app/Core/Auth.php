@@ -51,7 +51,7 @@ class Auth
     {
         self::startSession();
         $nivel = $_SESSION['user']['nivel_acesso'] ?? '';
-        return in_array($nivel, ['admin', '1', 1], true);
+        return in_array($nivel, ['admin', 'superadmin', '1', 1], true);
     }
 
     /**
@@ -62,6 +62,16 @@ class Auth
         self::startSession();
         $nivel = $_SESSION['user']['nivel_acesso'] ?? 'usuario';
         return self::isAdmin() || $nivel === 'tecnico';
+    }
+
+    /**
+     * Verifica se o usuário é super administrador.
+     */
+    public static function isSuperAdmin(): bool
+    {
+        self::startSession();
+        $nivel = $_SESSION['user']['nivel_acesso'] ?? '';
+        return $nivel === 'superadmin';
     }
 
     /**

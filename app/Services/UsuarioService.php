@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Usuario;
+use App\Core\Auth;
 
 class UsuarioService
 {
@@ -15,21 +16,37 @@ class UsuarioService
 
     public function normalizeCreateData(array $post): array
     {
+        $nivel = filter_var($post['nivel_acesso'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS);
+        $allowed = ['usuario', 'tecnico', 'admin', 'superadmin'];
+        if (!in_array($nivel, $allowed, true)) {
+            $nivel = 'usuario';
+        }
+        if ($nivel === 'superadmin' && !Auth::isSuperAdmin()) {
+            $nivel = 'admin';
+        }
         return [
             'nome' => filter_var($post['nome'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
             'email' => filter_var($post['email'] ?? '', FILTER_VALIDATE_EMAIL),
             'senha' => password_hash('12345678', PASSWORD_DEFAULT),
-            'nivel_acesso' => filter_var($post['nivel_acesso'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
+            'nivel_acesso' => $nivel,
             'trocar_senha' => 1
         ];
     }
 
     public function normalizeUpdateData(array $post): array
     {
+        $nivel = filter_var($post['nivel_acesso'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS);
+        $allowed = ['usuario', 'tecnico', 'admin', 'superadmin'];
+        if (!in_array($nivel, $allowed, true)) {
+            $nivel = 'usuario';
+        }
+        if ($nivel === 'superadmin' && !Auth::isSuperAdmin()) {
+            $nivel = 'admin';
+        }
         return [
             'nome' => filter_var($post['nome'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
             'email' => filter_var($post['email'] ?? '', FILTER_VALIDATE_EMAIL),
-            'nivel_acesso' => filter_var($post['nivel_acesso'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
+            'nivel_acesso' => $nivel,
         ];
     }
 

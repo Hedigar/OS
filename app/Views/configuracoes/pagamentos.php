@@ -43,65 +43,113 @@ require_once __DIR__ . '/../layout/main.php';
                     </div>
                 </div>
                 <div class="mb-4">
-                    <h5 class="mb-2">TOM – Taxas por Bandeira</h5>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Débito (%)</label>
-                            <input type="number" step="0.01" name="tom_taxa_debito" class="form-control" value="<?= htmlspecialchars($tom['taxa_debito'] ?? '') ?>">
+                    <h5 class="mb-2">TOM – Taxas</h5>
+                    <div class="mt-3">
+                        <h6>Crédito – Visa/Master</h6>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Débito – Visa/Master (%)</label>
+                                <input type="number" step="0.01" name="tom_vm_debito" class="form-control" value="<?= htmlspecialchars($tom['debito_grupos']['visa_master'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Visa/Master (%)</label>
-                            <input type="number" step="0.01" name="tom_taxa_visa_master" class="form-control" value="<?= htmlspecialchars($tom['bandeiras_taxas']['Visa'] ?? $tom['bandeiras_taxas']['Mastercard'] ?? '') ?>">
+                        <div class="form-grid">
+                            <?php for ($i=1; $i<=12; $i++): ?>
+                                <div class="form-group">
+                                    <label><?php echo $i; ?>x (%)</label>
+                                    <input type="number" step="0.01" name="tom_vm_<?php echo $i; ?>x" class="form-control" value="<?= htmlspecialchars($tom['credito_taxas']['visa_master'][$i] ?? '') ?>">
+                                </div>
+                            <?php endfor; ?>
                         </div>
-                        <div class="form-group">
-                            <label>Elo/American Express (%)</label>
-                            <input type="number" step="0.01" name="tom_taxa_elo_amex" class="form-control" value="<?= htmlspecialchars($tom['bandeiras_taxas']['Elo'] ?? $tom['bandeiras_taxas']['American Express'] ?? '') ?>">
+                    </div>
+                    <div class="mt-3">
+                        <h6>Crédito – Elo/American Express</h6>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Débito – Elo/American Express (%)</label>
+                                <input type="number" step="0.01" name="tom_ea_debito" class="form-control" value="<?= htmlspecialchars($tom['debito_grupos']['elo_amex'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Outras Bandeiras (%)</label>
-                            <input type="number" step="0.01" name="tom_taxa_outros" class="form-control" value="<?= htmlspecialchars($tom['taxa_padrao'] ?? '') ?>">
+                        <div class="form-grid">
+                            <?php for ($i=1; $i<=12; $i++): ?>
+                                <div class="form-group">
+                                    <label><?php echo $i; ?>x (%)</label>
+                                    <input type="number" step="0.01" name="tom_ea_<?php echo $i; ?>x" class="form-control" value="<?= htmlspecialchars($tom['credito_taxas']['elo_amex'][$i] ?? '') ?>">
+                                </div>
+                            <?php endfor; ?>
                         </div>
                     </div>
                 </div>
                 <div class="mb-4">
-                    <h5 class="mb-2">Mercado Pago – Taxas por Bandeira</h5>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Débito (%)</label>
-                            <input type="number" step="0.01" name="mp_taxa_debito" class="form-control" value="<?= htmlspecialchars($mp['taxa_debito'] ?? '') ?>">
+                    <h5 class="mb-2">Mercado Pago – Taxas</h5>
+                    <div class="mt-3">
+                        <h6>Crédito – Visa/Master</h6>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Débito – Visa/Master (%)</label>
+                                <input type="number" step="0.01" name="mp_vm_debito" class="form-control" value="<?= htmlspecialchars($mp['debito_grupos']['visa_master'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Visa/Master (%)</label>
-                            <input type="number" step="0.01" name="mp_taxa_visa_master" class="form-control" value="<?= htmlspecialchars($mp['bandeiras_taxas']['Visa'] ?? $mp['bandeiras_taxas']['Mastercard'] ?? '') ?>">
+                        <div class="form-grid">
+                            <?php for ($i=1; $i<=12; $i++): ?>
+                                <div class="form-group">
+                                    <label><?php echo $i; ?>x (%)</label>
+                                    <input type="number" step="0.01" name="mp_vm_<?php echo $i; ?>x" class="form-control" value="<?= htmlspecialchars($mp['credito_taxas']['visa_master'][$i] ?? '') ?>">
+                                </div>
+                            <?php endfor; ?>
                         </div>
-                        <div class="form-group">
-                            <label>Elo/American Express (%)</label>
-                            <input type="number" step="0.01" name="mp_taxa_elo_amex" class="form-control" value="<?= htmlspecialchars($mp['bandeiras_taxas']['Elo'] ?? $mp['bandeiras_taxas']['American Express'] ?? '') ?>">
+                    </div>
+                    <div class="mt-3">
+                        <h6>Crédito – Elo/American Express</h6>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Débito – Elo/American Express (%)</label>
+                                <input type="number" step="0.01" name="mp_ea_debito" class="form-control" value="<?= htmlspecialchars($mp['debito_grupos']['elo_amex'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Outras Bandeiras (%)</label>
-                            <input type="number" step="0.01" name="mp_taxa_outros" class="form-control" value="<?= htmlspecialchars($mp['taxa_padrao'] ?? '') ?>">
+                        <div class="form-grid">
+                            <?php for ($i=1; $i<=12; $i++): ?>
+                                <div class="form-group">
+                                    <label><?php echo $i; ?>x (%)</label>
+                                    <input type="number" step="0.01" name="mp_ea_<?php echo $i; ?>x" class="form-control" value="<?= htmlspecialchars($mp['credito_taxas']['elo_amex'][$i] ?? '') ?>">
+                                </div>
+                            <?php endfor; ?>
                         </div>
                     </div>
                 </div>
                 <div class="mb-4">
-                    <h5 class="mb-2">Moderninha – Taxas por Bandeira</h5>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Débito (%)</label>
-                            <input type="number" step="0.01" name="mod_taxa_debito" class="form-control" value="<?= htmlspecialchars($mod['taxa_debito'] ?? '') ?>">
+                    <h5 class="mb-2">Moderninha – Taxas</h5>
+                    <div class="mt-3">
+                        <h6>Crédito – Visa/Master</h6>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Débito – Visa/Master (%)</label>
+                                <input type="number" step="0.01" name="mod_vm_debito" class="form-control" value="<?= htmlspecialchars($mod['debito_grupos']['visa_master'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Visa/Master (%)</label>
-                            <input type="number" step="0.01" name="mod_taxa_visa_master" class="form-control" value="<?= htmlspecialchars($mod['bandeiras_taxas']['Visa'] ?? $mod['bandeiras_taxas']['Mastercard'] ?? '') ?>">
+                        <div class="form-grid">
+                            <?php for ($i=1; $i<=12; $i++): ?>
+                                <div class="form-group">
+                                    <label><?php echo $i; ?>x (%)</label>
+                                    <input type="number" step="0.01" name="mod_vm_<?php echo $i; ?>x" class="form-control" value="<?= htmlspecialchars($mod['credito_taxas']['visa_master'][$i] ?? '') ?>">
+                                </div>
+                            <?php endfor; ?>
                         </div>
-                        <div class="form-group">
-                            <label>Elo/American Express (%)</label>
-                            <input type="number" step="0.01" name="mod_taxa_elo_amex" class="form-control" value="<?= htmlspecialchars($mod['bandeiras_taxas']['Elo'] ?? $mod['bandeiras_taxas']['American Express'] ?? '') ?>">
+                    </div>
+                    <div class="mt-3">
+                        <h6>Crédito – Elo/American Express</h6>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Débito – Elo/American Express (%)</label>
+                                <input type="number" step="0.01" name="mod_ea_debito" class="form-control" value="<?= htmlspecialchars($mod['debito_grupos']['elo_amex'] ?? '') ?>">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Outras Bandeiras (%)</label>
-                            <input type="number" step="0.01" name="mod_taxa_outros" class="form-control" value="<?= htmlspecialchars($mod['taxa_padrao'] ?? '') ?>">
+                        <div class="form-grid">
+                            <?php for ($i=1; $i<=12; $i++): ?>
+                                <div class="form-group">
+                                    <label><?php echo $i; ?>x (%)</label>
+                                    <input type="number" step="0.01" name="mod_ea_<?php echo $i; ?>x" class="form-control" value="<?= htmlspecialchars($mod['credito_taxas']['elo_amex'][$i] ?? '') ?>">
+                                </div>
+                            <?php endfor; ?>
                         </div>
                     </div>
                 </div>

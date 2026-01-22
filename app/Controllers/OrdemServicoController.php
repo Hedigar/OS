@@ -301,6 +301,30 @@ class OrdemServicoController extends BaseController
         ], "Recibo_OS_{$id}.pdf");
     }
 
+    public function printPaymentReceipt()
+    {
+        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        if (!$id) $this->redirect('ordens');
+
+        $ordem = $this->osModel->findWithDetails($id);
+        if (!$ordem) $this->redirect('ordens');
+
+        $pgModel = new \App\Models\PagamentoTransacao();
+        $transacoes = $pgModel->findByOrigem('os', $id);
+        $totalPago = $pgModel->sumByOrigem('os', $id);
+        $itens = $this->itemModel->findByOsId($id);
+
+        // Calcula altura aproximada: Base (350pts) + Transações + Itens
+        $height = 350 + (count($transacoes) * 30) + (count($itens) * 30);
+
+        $this->renderPDF('os/print_payment_receipt', [
+            'ordem' => $ordem,
+            'transacoes' => $transacoes,
+            'total_pago' => $totalPago,
+            'itens' => $itens
+        ], "Recibo_Pagamento_OS_{$id}.pdf", [0, 0, 226.77, $height]);
+    }
+
     public function printEstimate()
     {
         $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);

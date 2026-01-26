@@ -23,7 +23,7 @@ class RelatorioService
                     (SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) 
                      FROM itens_ordem_servico i 
                      JOIN ordens_servico o ON i.ordem_servico_id = o.id 
-                     WHERE o.status_atual_id = 5 AND o.ativo = 1 
+                     WHERE o.status_atual_id = 5 AND o.ativo = 1 AND i.ativo = 1
                      AND DATE(o.created_at) BETWEEN :sub_start AND :sub_end) as total_custo
                 FROM ordens_servico 
                 WHERE status_atual_id = 5 AND ativo = 1 
@@ -79,6 +79,7 @@ class RelatorioService
                   AND os.ativo = 1 
                   AND DATE(os.created_at) BETWEEN :start AND :end
                 GROUP BY os.id, c.nome_completo
+                HAVING custo_total > 0
                 ORDER BY os.id DESC";
         $stmt = $db->prepare($sql);
         $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);

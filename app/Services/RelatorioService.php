@@ -20,7 +20,7 @@ class RelatorioService
                     SUM(valor_total_os) as total_bruto,
                     SUM(valor_total_produtos) as total_produtos,
                     SUM(valor_total_servicos) as total_servicos,
-                    (SELECT SUM(i.quantidade * i.custo) 
+                    (SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) 
                      FROM itens_ordem_servico i 
                      JOIN ordens_servico o ON i.ordem_servico_id = o.id 
                      WHERE o.status_atual_id = 5 AND o.ativo = 1 
@@ -63,5 +63,59 @@ class RelatorioService
         $stmt = $db->prepare($sql);
         $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
         return $stmt->fetch() ?: [];
+    }
+
+    public function custosPorOS(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    os.id as os_id,
+                    c.nome_completo as cliente_nome,
+                    SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) as custo_total
+                FROM ordens_servico os
+                JOIN clientes c ON c.id = os.cliente_id
+                JOIN itens_ordem_servico i ON i.ordem_servico_id = os.id AND i.ativo = 1
+                WHERE os.status_atual_id = 5 
+                  AND os.ativo = 1 
+                  AND DATE(os.created_at) BETWEEN :start AND :end
+                GROUP BY os.id, c.nome_completo
+                ORDER BY os.id DESC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $lista = $stmt->fetchAll() ?: [];
+
+        if (empty($lista)) return [];
+
+        $ids = array_map(static fn($r) => (int)$r['os_id'], $lista);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sqlItens = "SELECT ordem_servico_id, descricao, tipo_item, quantidade, COALESCE(NULLIF(valor_custo, 0), NULLIF(custo, 0), 0) as valor_custo
+                     FROM itens_ordem_servico
+                     WHERE ativo = 1 AND ordem_servico_id IN ($placeholders)
+                     ORDER BY ordem_servico_id ASC, id ASC";
+        $stmtItens = $db->prepare($sqlItens);
+        foreach ($ids as $idx => $val) {
+            $stmtItens->bindValue($idx + 1, $val, \PDO::PARAM_INT);
+        }
+        $stmtItens->execute();
+        $itens = $stmtItens->fetchAll() ?: [];
+
+        $map = [];
+        foreach ($lista as $row) {
+            $row['custo_total'] = (float)($row['custo_total'] ?? 0);
+            $row['itens'] = [];
+            $map[(int)$row['os_id']] = $row;
+        }
+        foreach ($itens as $it) {
+            $osId = (int)$it['ordem_servico_id'];
+            if (isset($map[$osId])) {
+                $map[$osId]['itens'][] = [
+                    'descricao' => $it['descricao'],
+                    'tipo_item' => $it['tipo_item'],
+                    'quantidade' => (float)$it['quantidade'],
+                    'valor_custo' => (float)$it['valor_custo'],
+                ];
+            }
+        }
+        return array_values($map);
     }
 }

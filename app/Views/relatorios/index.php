@@ -81,6 +81,70 @@
                     </div>
                 </div>
             </div>
+
+            <div class="card shadow mb-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
+                    <h6 class="m-0 font-weight-bold text-primary">Origem de Custos (por OS)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover" style="color: var(--text-primary);">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <th style="color: var(--text-primary);">OS</th>
+                                    <th style="color: var(--text-primary);">Cliente</th>
+                                    <th class="text-end" style="color: var(--text-primary);">Custo Total</th>
+                                    <th class="text-center" style="color: var(--text-primary);">Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($custosPorOS ?? [])): ?>
+                                    <tr><td colspan="4">Sem custos registrados no período.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($custosPorOS as $row): ?>
+                                        <tr>
+                                            <td><a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo (int)$row['os_id']; ?>">#<?php echo (int)$row['os_id']; ?></a></td>
+                                            <td><?php echo htmlspecialchars($row['cliente_nome'] ?? ''); ?></td>
+                                            <td class="text-end"><strong>R$ <?php echo number_format((float)($row['custo_total'] ?? 0), 2, ',', '.'); ?></strong></td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-outline-primary" type="button" onclick="toggleDetalhes('os-<?php echo (int)$row['os_id']; ?>')">Ver</button>
+                                            </td>
+                                        </tr>
+                                        <tr id="os-<?php echo (int)$row['os_id']; ?>" style="display:none;">
+                                            <td colspan="4">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm" style="color: var(--text-primary);">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Item</th>
+                                                                <th>Tipo</th>
+                                                                <th class="text-center">Qtd</th>
+                                                                <th class="text-end">Custo Unit.</th>
+                                                                <th class="text-end">Subtotal</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php foreach (($row['itens'] ?? []) as $it): ?>
+                                                                <tr>
+                                                                    <td><?php echo htmlspecialchars($it['descricao'] ?? ''); ?></td>
+                                                                    <td><span class="badge bg-secondary"><?php echo htmlspecialchars($it['tipo_item'] ?? ''); ?></span></td>
+                                                                    <td class="text-center"><?php echo number_format((float)($it['quantidade'] ?? 0), 2, ',', '.'); ?></td>
+                                                                    <td class="text-end">R$ <?php echo number_format((float)($it['valor_custo'] ?? 0), 2, ',', '.'); ?></td>
+                                                                    <td class="text-end">R$ <?php echo number_format(((float)($it['quantidade'] ?? 0) * (float)($it['valor_custo'] ?? 0)), 2, ',', '.'); ?></td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="col-xl-4 col-lg-5">
@@ -116,3 +180,10 @@
         </div>
     </div>
 </div>
+<script>
+function toggleDetalhes(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'table-row' : 'none';
+}
+</script>

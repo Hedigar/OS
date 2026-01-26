@@ -30,6 +30,7 @@ class RelatorioController extends BaseController
         $statusResumo = $this->service->osPorStatus($dataInicio, $dataFim);
 
         $atendimentos = $this->service->atendimentosResumo($dataInicio, $dataFim);
+        $custosPorOS = $this->service->custosPorOS($dataInicio, $dataFim);
 
         $this->render('relatorios/index', [
             'title' => 'Relatórios e Resumos',
@@ -40,7 +41,8 @@ class RelatorioController extends BaseController
             ],
             'financeiro' => $financeiro,
             'statusResumo' => $statusResumo,
-            'atendimentos' => $atendimentos
+            'atendimentos' => $atendimentos,
+            'custosPorOS' => $custosPorOS
         ]);
     }
 }

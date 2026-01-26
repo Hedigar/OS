@@ -33,7 +33,7 @@ class DashboardService
 
         $stmtLucro = $db->query("SELECT 
                         SUM(os.valor_total_os) as total_bruto,
-                        (SELECT SUM(i.quantidade * i.custo) 
+                        (SELECT SUM(i.quantidade * COALESCE(i.valor_custo, i.custo, 0)) 
                          FROM itens_ordem_servico i 
                          JOIN ordens_servico o ON i.ordem_servico_id = o.id 
                          WHERE o.status_atual_id = 5 AND o.ativo = 1 

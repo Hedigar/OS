@@ -119,4 +119,25 @@ class RelatorioService
         }
         return array_values($map);
     }
+
+    public function itensVendidos(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    i.tipo_item,
+                    i.descricao,
+                    SUM(i.quantidade) AS quantidade_total
+                FROM itens_ordem_servico i
+                JOIN ordens_servico o ON i.ordem_servico_id = o.id
+                WHERE o.status_atual_id = 5
+                  AND o.ativo = 1
+                  AND i.ativo = 1
+                  AND DATE(o.created_at) BETWEEN :start AND :end
+                GROUP BY i.tipo_item, i.descricao
+                HAVING quantidade_total > 0
+                ORDER BY quantidade_total DESC, i.descricao ASC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        return $stmt->fetchAll() ?: [];
+    }
 }

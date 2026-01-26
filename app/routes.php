@@ -12,6 +12,10 @@ $router->get('logout', 'AuthController@logout');
 
 // Rotas Protegidas (Dashboard)
 $router->get('dashboard', 'DashboardController@index');
+// Caixa
+$router->get('caixa', 'CaixaController@index');
+$router->get('caixa/revisar', 'CaixaController@revisar');
+$router->post('caixa/marcar-verificado', 'CaixaController@marcarVerificado');
 // Configurações
 $router->get('configuracoes', 'ConfiguracoesController@index');
 $router->get('configuracoes/os', 'ConfiguracoesController@os');

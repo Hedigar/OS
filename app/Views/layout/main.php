@@ -59,6 +59,9 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'relatorios') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>relatorios"><i class="fas fa-chart-bar me-2"></i> Relatórios</a>
                 </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'caixa') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>caixa"><i class="fas fa-cash-register me-2"></i> Caixa</a>
+                </li>
                 <li class="<?php echo (isset($current_page) && $current_page === 'despesas') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>despesas"><i class="fas fa-wallet me-2"></i> Despesas</a>
                 </li>
@@ -80,6 +83,11 @@
                             <a href="<?php echo BASE_URL; ?>usuarios"><i class="fas fa-user-shield me-2"></i> Usuários</a>
                         </li>
                     </ul>
+                </li>
+                <?php endif; ?>
+                <?php if (\App\Core\Auth::isSuperAdmin()): ?>
+                <li class="<?php echo (isset($current_page) && $current_page === 'auditoria') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>auditoria"><i class="fas fa-clipboard-list me-2"></i> Auditoria</a>
                 </li>
                 <?php endif; ?>
             </ul>

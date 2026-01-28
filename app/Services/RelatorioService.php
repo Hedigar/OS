@@ -157,4 +157,46 @@ class RelatorioService
         $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
         return $stmt->fetchAll() ?: [];
     }
+
+    public function lucroReal(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        
+        // 1. Receita Líquida (Pagamentos Reais - Taxas)
+        // Considera todas as transações (OS e Atendimentos) que estão ativas
+        $sqlReceita = "SELECT SUM(valor_liquido) as total_liquido 
+                       FROM pagamentos_transacoes 
+                       WHERE ativo = 1 
+                       AND DATE(created_at) BETWEEN :start AND :end";
+        $stmtReceita = $db->prepare($sqlReceita);
+        $stmtReceita->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $receitaLiquida = (float)($stmtReceita->fetchColumn() ?: 0);
+
+        // 2. Custo de Peças/Produtos (OS + Atendimentos)
+        // Somente itens do tipo 'produto' que geraram custo
+        $sqlCustos = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) as total_custo_pecas
+                      FROM itens_ordem_servico i
+                      WHERE i.ativo = 1 
+                      AND i.tipo_item = 'produto'
+                      AND (
+                          -- Peças de OS Finalizadas
+                          EXISTS (SELECT 1 FROM ordens_servico o WHERE o.id = i.ordem_servico_id AND o.status_atual_id = 5 AND o.ativo = 1 AND DATE(o.created_at) BETWEEN :start1 AND :end1)
+                          OR
+                          -- Peças de Atendimentos Externos
+                          EXISTS (SELECT 1 FROM atendimentos_externos a WHERE a.id = i.atendimento_externo_id AND DATE(a.created_at) BETWEEN :start2 AND :end2)
+                      )";
+        
+        $stmtCustos = $db->prepare($sqlCustos);
+        $stmtCustos->execute([
+            'start1' => $dataInicio, 'end1' => $dataFim,
+            'start2' => $dataInicio, 'end2' => $dataFim
+        ]);
+        $custoPecas = (float)($stmtCustos->fetchColumn() ?: 0);
+
+        return [
+            'receita_liquida' => $receitaLiquida,
+            'custo_pecas' => $custoPecas,
+            'lucro_real' => $receitaLiquida - $custoPecas
+        ];
+    }
 }

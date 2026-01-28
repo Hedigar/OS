@@ -24,6 +24,43 @@
     </div>
 
     <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow" style="background-color: var(--bg-secondary); border-color: var(--border-color); border-left: 5px solid #1cc88a;">
+                <div class="card-header py-3" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
+                    <h6 class="m-0 font-weight-bold text-success"><i class="fas fa-coins me-2"></i>Resultado Líquido (Caixa Real)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center align-items-center">
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Entradas Líquidas (Pós-Taxas)</div>
+                            <div class="h4 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">
+                                R$ <?php echo number_format($lucroReal['receita_liquida'] ?? 0, 2, ',', '.'); ?>
+                            </div>
+                            <small class="text-muted">Total recebido em caixa/conta</small>
+                        </div>
+                        <div class="col-md-4 mb-2 mb-md-0 position-relative">
+                            <div class="d-none d-md-block position-absolute" style="left: 0; top: 50%; transform: translateY(-50%); font-size: 2rem; color: var(--text-muted); opacity: 0.3;">-</div>
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Custo Total de Peças</div>
+                            <div class="h4 mb-0 font-weight-bold text-danger">
+                                R$ <?php echo number_format($lucroReal['custo_pecas'] ?? 0, 2, ',', '.'); ?>
+                            </div>
+                            <small class="text-muted">Produtos usados em OS/Atendimentos</small>
+                            <div class="d-none d-md-block position-absolute" style="right: 0; top: 50%; transform: translateY(-50%); font-size: 2rem; color: var(--text-muted); opacity: 0.3;">=</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1" style="font-size: 0.9rem;">Lucro Disponível</div>
+                            <div class="h2 mb-0 font-weight-bold text-success">
+                                R$ <?php echo number_format($lucroReal['lucro_real'] ?? 0, 2, ',', '.'); ?>
+                            </div>
+                            <small class="text-success font-weight-bold">Valor final para divisão</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
         <div class="col-xl-8 col-lg-7">
             <div class="card shadow mb-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">

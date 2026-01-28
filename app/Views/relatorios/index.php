@@ -66,17 +66,21 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4 text-center">
+                        <div class="col-md-3 text-center">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Visitas</div>
                             <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);"><?php echo $atendimentos['total'] ?? 0; ?></div>
                         </div>
-                        <div class="col-md-4 text-center">
+                        <div class="col-md-3 text-center">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Valor Total</div>
                             <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($atendimentos['valor_total'] ?? 0, 2, ',', '.'); ?></div>
                         </div>
-                        <div class="col-md-4 text-center">
+                        <div class="col-md-3 text-center">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Deslocamentos</div>
                             <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($atendimentos['valor_deslocamento'] ?? 0, 2, ',', '.'); ?></div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Lucro Estimado</div>
+                            <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($atendimentos['lucro_total'] ?? 0, 2, ',', '.'); ?></div>
                         </div>
                     </div>
                 </div>

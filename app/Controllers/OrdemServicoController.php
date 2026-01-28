@@ -207,7 +207,7 @@ class OrdemServicoController extends BaseController
                     $this->historicoModel->create([
                         'ordem_servico_id' => $id,
                         'status_id' => $status_id,
-                        'usuario_id' => $_SESSION['usuario_id'] ?? null,
+                        'usuario_id' => \App\Core\Auth::id(),
                         'observacao' => $observacao
                     ]);
 

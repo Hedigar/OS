@@ -62,7 +62,7 @@ class ProdutoServicoController extends BaseController
 
         if ($id) {
             $this->logModel->registrar(
-                $_SESSION['usuario_id'] ?? null,
+                \App\Core\Auth::id(),
                 'Cadastrou novo produto/serviço',
                 "Item #{$id} - {$data['nome']}",
                 null,
@@ -91,7 +91,7 @@ class ProdutoServicoController extends BaseController
 
         if ($this->produtoModel->update($id, $data)) {
             $this->logModel->registrar(
-                $_SESSION['usuario_id'] ?? null,
+                \App\Core\Auth::id(),
                 'Atualizou produto/serviço',
                 "Item #{$id} - {$data['nome']}",
                 $dados_anteriores,
@@ -150,7 +150,7 @@ class ProdutoServicoController extends BaseController
         
         if ($this->produtoModel->atualizarPrecosEmMassa((float)$porcentagem)) {
             $this->logModel->registrar(
-                $_SESSION['usuario_id'] ?? null,
+                \App\Core\Auth::id(),
                 'Realizou atualização em massa de preços',
                 "Margem aplicada: {$porcentagem}%"
             );

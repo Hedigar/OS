@@ -21,35 +21,35 @@ function formatCurrency($value) {
     </form>
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card p-3">
-                <div class="text-muted">Entradas (líquido)</div>
-                <div class="h4">R$ <?php echo formatCurrency($totais['entradas'] ?? 0); ?></div>
+            <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Entradas (líquido)</div>
+                <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['entradas'] ?? 0); ?></div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card p-3">
-                <div class="text-muted">Taxas</div>
-                <div class="h4">R$ <?php echo formatCurrency($totais['taxas'] ?? 0); ?></div>
+            <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Taxas</div>
+                <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['taxas'] ?? 0); ?></div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card p-3">
-                <div class="text-muted">Saídas</div>
-                <div class="h4">R$ <?php echo formatCurrency($totais['saidas'] ?? 0); ?></div>
+            <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Saídas</div>
+                <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['saidas'] ?? 0); ?></div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card p-3">
-                <div class="text-muted">Saldo</div>
-                <div class="h4">R$ <?php echo formatCurrency($totais['saldo'] ?? 0); ?></div>
+            <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Saldo</div>
+                <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['saldo'] ?? 0); ?></div>
             </div>
         </div>
     </div>
     <div class="row">
         <div class="col-md-6">
-            <h2 class="mb-2">Entradas</h2>
+            <h2 class="mb-2" style="color: var(--text-primary, #fff);">Entradas</h2>
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped" style="color: var(--text-primary);">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -92,9 +92,9 @@ function formatCurrency($value) {
             </div>
         </div>
         <div class="col-md-6">
-            <h2 class="mb-2">Saídas</h2>
+            <h2 class="mb-2" style="color: var(--text-primary, #fff);">Saídas</h2>
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped" style="color: var(--text-primary);">
                     <thead>
                         <tr>
                             <th>Data</th>

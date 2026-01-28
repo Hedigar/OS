@@ -90,8 +90,10 @@ class DespesasController extends BaseController
 
     public function store()
     {
+        $categoriaId = $this->resolveCategoriaId();
+
         $data = [
-            'categoria_id' => filter_input(INPUT_POST, 'categoria_id', FILTER_VALIDATE_INT) ?: null,
+            'categoria_id' => $categoriaId,
             'usuario_id' => Auth::id(),
             'descricao' => trim((string)($_POST['descricao'] ?? '')),
             'valor' => (float)str_replace(',', '.', (string)($_POST['valor'] ?? '0')),
@@ -137,8 +139,10 @@ class DespesasController extends BaseController
             $this->redirect('despesas');
         }
 
+        $categoriaId = $this->resolveCategoriaId();
+
         $data = [
-            'categoria_id' => filter_input(INPUT_POST, 'categoria_id', FILTER_VALIDATE_INT) ?: null,
+            'categoria_id' => $categoriaId,
             'descricao' => trim((string)($_POST['descricao'] ?? '')),
             'valor' => (float)str_replace(',', '.', (string)($_POST['valor'] ?? '0')),
             'data_despesa' => $_POST['data_despesa'] ?? date('Y-m-d'),
@@ -174,6 +178,26 @@ class DespesasController extends BaseController
             'despesa' => array_merge($despesa ?: [], $data, ['id' => $id]),
             'categorias' => $categorias
         ]);
+    }
+
+    private function resolveCategoriaId(): ?int
+    {
+        $novaCategoria = trim((string)($_POST['nova_categoria'] ?? ''));
+        $categoriaId = filter_input(INPUT_POST, 'categoria_id', FILTER_VALIDATE_INT) ?: null;
+
+        if ($novaCategoria !== '') {
+            $existente = $this->categoriaModel->findByName($novaCategoria);
+            if ($existente) {
+                return (int)$existente['id'];
+            }
+            $newId = $this->categoriaModel->create([
+                'nome' => $novaCategoria,
+                'ativo' => 1
+            ]);
+            return $newId ? (int)$newId : null;
+        }
+
+        return $categoriaId;
     }
 
     public function destroy()

@@ -145,38 +145,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="card shadow mb-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
-                    <h6 class="m-0 font-weight-bold text-primary">Itens/Serviços Vendidos (No Período)</h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover" style="color: var(--text-primary);">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--border-color);">
-                                    <th style="color: var(--text-primary);">Tipo</th>
-                                    <th style="color: var(--text-primary);">Item</th>
-                                    <th class="text-end" style="color: var(--text-primary);">Quantidade</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($itensVendidos ?? [])): ?>
-                                    <tr><td colspan="3">Sem vendas registradas no período.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($itensVendidos as $iv): ?>
-                                        <tr>
-                                            <td><span class="badge bg-secondary"><?php echo htmlspecialchars($iv['tipo_item'] ?? ''); ?></span></td>
-                                            <td><?php echo htmlspecialchars($iv['descricao'] ?? ''); ?></td>
-                                            <td class="text-end"><?php echo number_format((float)($iv['quantidade_total'] ?? 0), 2, ',', '.'); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div class="col-xl-4 col-lg-5">

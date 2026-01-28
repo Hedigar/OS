@@ -15,4 +15,12 @@ class DespesaCategoria extends Model
         $stmt->execute();
         return $stmt->fetchAll() ?: [];
     }
+
+    public function findByName(string $nome)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE nome = :nome AND ativo = 1 LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['nome' => $nome]);
+        return $stmt->fetch();
+    }
 }

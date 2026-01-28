@@ -7,7 +7,6 @@ use App\Models\Cliente;
 use App\Models\StatusOS;
 use App\Models\ItemOS;
 use App\Models\Equipamento;
-use App\Models\PagamentoTransacao;
 
 class OrdemServicoController extends BaseController
 {
@@ -52,75 +51,6 @@ class OrdemServicoController extends BaseController
             echo json_encode([]);
             exit;
         }
-    }
-
-    public function exportCsv()
-    {
-        if (ob_get_length()) ob_clean();
-        $dataInicio = $_GET['data_inicio'] ?? date('Y-m-01');
-        $dataFim = $_GET['data_fim'] ?? date('Y-m-t');
-        $db = $this->osModel->getConnection();
-        $sql = "SELECT 
-                    os.id as os_id,
-                    c.nome_completo as cliente_nome,
-                    os.valor_total_os as total_bruto,
-                    COALESCE(SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)), 0) as custo_total
-                FROM ordens_servico os
-                JOIN clientes c ON c.id = os.cliente_id
-                LEFT JOIN itens_ordem_servico i ON i.ordem_servico_id = os.id AND i.ativo = 1
-                WHERE os.status_atual_id = 5
-                  AND os.ativo = 1
-                  AND DATE(os.created_at) BETWEEN :start AND :end
-                GROUP BY os.id, c.nome_completo, os.valor_total_os
-                ORDER BY os.id DESC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-        $ids = array_map(static fn($r) => (int)$r['os_id'], $rows);
-        $taxasPorOS = [];
-        if (!empty($ids)) {
-            $pt = new PagamentoTransacao();
-            $dbPg = $pt->getConnection();
-            $placeholders = implode(',', array_fill(0, count($ids), '?'));
-            $sqlTaxa = "SELECT origem_id, COALESCE(SUM(valor_taxa), 0) as total_taxa
-                        FROM pagamentos_transacoes
-                        WHERE ativo = 1 AND tipo_origem = 'os' AND origem_id IN ($placeholders)
-                          AND DATE(created_at) BETWEEN ? AND ?
-                        GROUP BY origem_id";
-            $stmtTaxa = $dbPg->prepare($sqlTaxa);
-            $bindIndex = 1;
-            foreach ($ids as $id) {
-                $stmtTaxa->bindValue($bindIndex++, $id, \PDO::PARAM_INT);
-            }
-            $stmtTaxa->bindValue($bindIndex++, $dataInicio);
-            $stmtTaxa->bindValue($bindIndex++, $dataFim);
-            $stmtTaxa->execute();
-            $taxRows = $stmtTaxa->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-            foreach ($taxRows as $tr) {
-                $taxasPorOS[(int)$tr['origem_id']] = (float)$tr['total_taxa'];
-            }
-        }
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="relatorio_os_' . $dataInicio . '_' . $dataFim . '.csv"');
-        $out = fopen('php://output', 'w');
-        fputcsv($out, ['OS', 'Cliente', 'Total Bruto', 'Custo', 'Taxas', 'Lucro'], ';');
-        foreach ($rows as $r) {
-            $osId = (int)$r['os_id'];
-            $totalBruto = (float)($r['total_bruto'] ?? 0);
-            $custo = (float)($r['custo_total'] ?? 0);
-            $taxa = (float)($taxasPorOS[$osId] ?? 0);
-            $lucro = $totalBruto - $custo - $taxa;
-            fputcsv($out, [
-                $osId,
-                $r['cliente_nome'] ?? '',
-                number_format($totalBruto, 2, '.', ''),
-                number_format($custo, 2, '.', ''),
-                number_format($taxa, 2, '.', ''),
-                number_format($lucro, 2, '.', '')
-            ], ';');
-        }
-        fclose($out);
-        exit;
     }
 
     public function index()

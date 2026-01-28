@@ -3,7 +3,7 @@ $fmt = fn($v) => number_format((float)$v, 2, ',', '.');
 ?>
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="mb-0"><?php echo htmlspecialchars($title ?? 'Revisão do Caixa'); ?></h1>
+        <h1 class="mb-0" style="color: var(--text-primary, #fff);"><?php echo htmlspecialchars($title ?? 'Revisão do Caixa'); ?></h1>
         <a href="<?php echo BASE_URL; ?>caixa" class="btn btn-outline-secondary">Voltar ao Caixa</a>
     </div>
     <form class="row g-2 mb-3" method="get" action="<?php echo BASE_URL; ?>caixa/revisar">
@@ -79,10 +79,10 @@ $fmt = fn($v) => number_format((float)$v, 2, ',', '.');
             </div>
         </div>
     </div>
-    <div class="card p-3">
-        <h3 class="mb-2">Transações no Período</h3>
+    <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+        <h3 class="mb-2" style="color: var(--text-primary, #fff);">Transações no Período</h3>
         <div class="table-responsive">
-            <table class="table table-striped">
+            <table class="table table-striped" style="color: var(--text-primary);">
                 <thead>
                     <tr>
                         <th>Data</th>

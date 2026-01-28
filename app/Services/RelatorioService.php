@@ -55,11 +55,28 @@ class RelatorioService
     {
         $db = $this->osModel->getConnection();
         $sql = "SELECT 
-                    COUNT(*) as total,
-                    SUM(valor_total) as valor_total,
-                    SUM(valor_deslocamento) as valor_deslocamento
-                FROM atendimentos_externos 
-                WHERE ativo = 1 AND DATE(created_at) BETWEEN :start AND :end";
+                    COUNT(*) AS total,
+                    COALESCE(SUM(COALESCE(a.valor_deslocamento, 0) + COALESCE((
+                        SELECT SUM((i.quantidade * (COALESCE(i.valor_unitario, 0) + COALESCE(i.valor_mao_de_obra, 0))) - COALESCE(i.desconto, 0))
+                        FROM itens_ordem_servico i
+                        WHERE i.atendimento_externo_id = a.id AND i.ativo = 1
+                    ), 0)), 0) AS valor_total,
+                    COALESCE(SUM(a.valor_deslocamento), 0) AS valor_deslocamento,
+                    COALESCE(SUM(
+                        COALESCE((
+                            SELECT SUM((i.quantidade * (COALESCE(i.valor_unitario, 0) + COALESCE(i.valor_mao_de_obra, 0))) - COALESCE(i.desconto, 0))
+                            FROM itens_ordem_servico i
+                            WHERE i.atendimento_externo_id = a.id AND i.ativo = 1
+                        ), 0)
+                        - COALESCE((
+                            SELECT SUM(i2.quantidade * COALESCE(NULLIF(i2.valor_custo, 0), NULLIF(i2.custo, 0), 0))
+                            FROM itens_ordem_servico i2
+                            WHERE i2.atendimento_externo_id = a.id AND i2.ativo = 1
+                        ), 0)
+                        + COALESCE(a.valor_deslocamento, 0)
+                    ), 0) AS lucro_total
+                FROM atendimentos_externos a
+                WHERE DATE(a.created_at) BETWEEN :start AND :end";
         $stmt = $db->prepare($sql);
         $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
         return $stmt->fetch() ?: [];

@@ -19,14 +19,15 @@
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">Categoria</label>
-                <select name="categoria_id" class="form-control">
-                    <option value="">Selecione</option>
+                <select name="categoria_id" class="form-control mb-2">
+                    <option value="">Selecione uma existente...</option>
                     <?php foreach (($categorias ?? []) as $cat): ?>
                         <option value="<?php echo (int)$cat['id']; ?>" <?php echo isset($d['categoria_id']) && (int)$d['categoria_id'] === (int)$cat['id'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($cat['nome']); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <input type="text" name="nova_categoria" class="form-control" placeholder="Ou digite uma nova categoria aqui" value="<?php echo htmlspecialchars($nova_categoria ?? ''); ?>">
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">Valor</label>

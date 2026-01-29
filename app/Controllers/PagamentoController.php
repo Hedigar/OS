@@ -28,11 +28,16 @@ class PagamentoController extends BaseController
             try { $config = json_decode($json, true) ?: []; } catch (\Throwable $e) { $config = []; }
         }
 
+        $margemPadrao = $this->configModel->getValor('calculadora_margem_padrao');
+        $impostoPadrao = $this->configModel->getValor('calculadora_imposto_padrao');
+
         $this->render('configuracoes/pagamentos', [
             'title' => 'Configurações de Pagamentos',
             'current_page' => 'configuracoes_pagamentos',
             'config' => $config,
-            'config_json' => $json
+            'config_json' => $json,
+            'margem_padrao' => $margemPadrao,
+            'imposto_padrao' => $impostoPadrao
         ]);
     }
 
@@ -40,6 +45,18 @@ class PagamentoController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('configuracoes/pagamentos');
+        }
+
+        // Salvar configurações da calculadora
+        $margem = filter_input(INPUT_POST, 'calculadora_margem_padrao', FILTER_VALIDATE_FLOAT);
+        $imposto = filter_input(INPUT_POST, 'calculadora_imposto_padrao', FILTER_VALIDATE_FLOAT);
+
+        if ($margem !== false) {
+            $this->configModel->setValor('calculadora_margem_padrao', (string)$margem, 'Margem de lucro padrão para calculadora');
+        }
+        
+        if ($imposto !== false) {
+            $this->configModel->setValor('calculadora_imposto_padrao', (string)$imposto, 'Imposto padrão para calculadora');
         }
 
         $enabled = $_POST['maquinas_enabled'] ?? [];

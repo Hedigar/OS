@@ -54,6 +54,9 @@
                 <li class="<?php echo (isset($current_page) && $current_page === 'atendimentos_externos') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>atendimentos-externos"><i class="fas fa-truck me-2"></i> Atendimento Externo</a>
                 </li>
+                <li class="<?php echo (isset($current_page) && $current_page === 'calculadora') ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>ferramentas/calculadora"><i class="fas fa-calculator me-2"></i> Calculadora</a>
+                </li>
 
                 <?php if (\App\Core\Auth::isAdmin()): ?>
                 <li class="<?php echo (isset($current_page) && $current_page === 'relatorios') ? 'active' : ''; ?>">

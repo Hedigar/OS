@@ -13,6 +13,26 @@ require_once __DIR__ . '/../layout/main.php';
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form action="<?= BASE_URL ?>configuracoes/pagamentos/salvar" method="POST">
+                <div class="mb-4">
+                    <h5 class="mb-2">Configurações da Calculadora de Preços</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Margem de Lucro Padrão (%)</label>
+                                <input type="number" step="0.1" name="calculadora_margem_padrao" class="form-control" value="<?= htmlspecialchars($margem_padrao ?? '30') ?>">
+                                <small class="form-text text-muted">Margem de lucro líquida sugerida na calculadora.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Imposto / Nota Fiscal Padrão (%)</label>
+                                <input type="number" step="0.1" name="calculadora_imposto_padrao" class="form-control" value="<?= htmlspecialchars($imposto_padrao ?? '3') ?>">
+                                <small class="form-text text-muted">Porcentagem de imposto/nota fiscal sugerida.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label">Máquinas habilitadas</label>
                     <?php

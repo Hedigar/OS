@@ -111,4 +111,8 @@ $router->get('clientes/verificar-documento', 'ClienteController@verificarDocumen
 $router->post('push/subscribe', 'PushController@subscribe');
 $router->get('push/test', 'PushController@testSend');
 
+// Ferramentas
+$router->get('ferramentas/calculadora', 'CalculadoraController@index');
+$router->post('calculadora/salvar-config', 'CalculadoraController@salvarConfig');
+
 return $router;

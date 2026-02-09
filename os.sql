@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: db
--- Tempo de geração: 28/01/2026 às 20:09
+-- Tempo de geração: 09/02/2026 às 12:27
 -- Versão do servidor: 8.0.43
 -- Versão do PHP: 8.3.26
 
@@ -827,7 +827,9 @@ CREATE TABLE `configuracoes_gerais` (
 
 INSERT INTO `configuracoes_gerais` (`id`, `chave`, `valor`, `descricao`, `created_at`, `updated_at`) VALUES
 (1, 'porcentagem_venda', '60', 'Percentual aplicado sobre o custo para calcular o valor de venda', '2025-12-29 16:21:36', '2026-01-06 20:19:38'),
-(16, 'pagamentos_config', '{\"maquinas\":[{\"nome\":\"TOM\",\"habilitada\":true,\"formas\":[\"debito\",\"credito\",\"pix\"],\"bandeiras\":[\"Visa\",\"Mastercard\",\"Elo\",\"American Express\"],\"debito_grupos\":{\"visa_master\":1.4,\"elo_amex\":2.69},\"credito_taxas\":{\"visa_master\":{\"1\":3.3,\"2\":7.37,\"3\":8.04,\"4\":8.92,\"5\":9.79,\"6\":11.87,\"7\":12.87,\"8\":13.05,\"9\":13.06,\"10\":13.07,\"11\":13.08,\"12\":13.09},\"elo_amex\":{\"1\":4.59,\"2\":8.81,\"3\":9.48,\"4\":10.36,\"5\":11.23,\"6\":13.31,\"7\":14.31,\"8\":14.49,\"9\":14.5,\"10\":14.66,\"11\":15.33,\"12\":15.38}}},{\"nome\":\"Mercado Pago\",\"habilitada\":false,\"formas\":[\"debito\",\"credito\",\"pix\"],\"bandeiras\":[\"Visa\",\"Mastercard\",\"Elo\",\"American Express\"],\"debito_grupos\":{\"visa_master\":null,\"elo_amex\":null},\"credito_taxas\":{\"visa_master\":[],\"elo_amex\":[]}},{\"nome\":\"Moderninha\",\"habilitada\":false,\"formas\":[\"debito\",\"credito\",\"pix\"],\"bandeiras\":[\"Visa\",\"Mastercard\",\"Elo\",\"American Express\"],\"debito_grupos\":{\"visa_master\":null,\"elo_amex\":null},\"credito_taxas\":{\"visa_master\":[],\"elo_amex\":[]}}]}', 'Configuração de máquinas, bandeiras e taxas de pagamento (JSON)', '2026-01-22 12:31:41', '2026-01-22 13:07:16');
+(16, 'pagamentos_config', '{\"maquinas\":[{\"nome\":\"TOM\",\"habilitada\":true,\"formas\":[\"debito\",\"credito\",\"pix\"],\"bandeiras\":[\"Visa\",\"Mastercard\",\"Elo\",\"American Express\"],\"debito_grupos\":{\"visa_master\":1.4,\"elo_amex\":2.69},\"credito_taxas\":{\"visa_master\":{\"1\":3.3,\"2\":7.37,\"3\":8.04,\"4\":8.92,\"5\":9.79,\"6\":11.87,\"7\":12.87,\"8\":13.05,\"9\":13.06,\"10\":13.07,\"11\":13.08,\"12\":13.09},\"elo_amex\":{\"1\":4.59,\"2\":8.81,\"3\":9.48,\"4\":10.36,\"5\":11.23,\"6\":13.31,\"7\":14.31,\"8\":14.49,\"9\":14.5,\"10\":14.66,\"11\":15.33,\"12\":15.38}}},{\"nome\":\"Mercado Pago\",\"habilitada\":false,\"formas\":[\"debito\",\"credito\",\"pix\"],\"bandeiras\":[\"Visa\",\"Mastercard\",\"Elo\",\"American Express\"],\"debito_grupos\":{\"visa_master\":null,\"elo_amex\":null},\"credito_taxas\":{\"visa_master\":[],\"elo_amex\":[]}},{\"nome\":\"Moderninha\",\"habilitada\":true,\"formas\":[\"debito\",\"credito\",\"pix\"],\"bandeiras\":[\"Visa\",\"Mastercard\",\"Elo\",\"American Express\"],\"debito_grupos\":{\"visa_master\":null,\"elo_amex\":null},\"credito_taxas\":{\"visa_master\":[],\"elo_amex\":[]}}]}', 'Configuração de máquinas, bandeiras e taxas de pagamento (JSON)', '2026-01-22 12:31:41', '2026-01-29 11:15:22'),
+(18, 'calculadora_margem_padrao', '20', 'Margem de lucro padrão para calculadora', '2026-01-28 20:22:21', NULL),
+(19, 'calculadora_imposto_padrao', '3', 'Imposto padrão para calculadora', '2026-01-28 20:22:21', NULL);
 
 -- --------------------------------------------------------
 
@@ -1068,7 +1070,8 @@ INSERT INTO `itens_ordem_servico` (`id`, `ordem_servico_id`, `atendimento_extern
 (93, 2026, NULL, 'produto', 'MONITOR 20&#39;', 1.00, 0.00, 800.00, 600.00, 'pendente', 1, '2026-01-21 19:56:14', 0.00, 0.00, 200.00, 0.00, 0, ''),
 (94, 2033, NULL, 'produto', 'Fonte ATX 500 W', 1.00, 0.00, 150.00, 130.00, 'pendente', 1, '2026-01-22 16:26:17', 0.00, 0.00, 20.00, 0.00, 0, ''),
 (95, NULL, 8, 'produto', 'Fonte ATX 400 W', 1.00, 50.00, 300.00, 320.00, 'pendente', 0, '2026-01-27 23:22:49', 0.00, 20.00, 0.00, 0.00, 0, NULL),
-(96, NULL, 8, 'produto', 'Fonte ATX 500 W', 1.00, 50.00, 250.00, 230.00, 'pendente', 1, '2026-01-27 23:24:27', 0.00, 0.00, 20.00, 0.00, 0, NULL);
+(96, NULL, 8, 'produto', 'Fonte ATX 500 W', 1.00, 50.00, 250.00, 230.00, 'pendente', 1, '2026-01-27 23:24:27', 0.00, 0.00, 20.00, 0.00, 0, NULL),
+(97, 2010, NULL, 'servico', 'REPARO ENTRADA DA FONTE', 1.00, 0.00, 0.00, 150.00, 'pendente', 1, '2026-01-29 11:08:48', 0.00, 150.00, 0.00, 0.00, 0, '');
 
 -- --------------------------------------------------------
 
@@ -1544,7 +1547,12 @@ INSERT INTO `logs` (`id`, `usuario_id`, `acao`, `referencia`, `ip_address`, `use
 (447, 2, 'Realizou login no sistema', NULL, '192.168.0.103', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-28 01:24:29'),
 (448, 2, 'Realizou logout do sistema', NULL, '192.168.0.103', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-28 01:30:25'),
 (449, 2, 'Realizou login no sistema', NULL, '192.168.0.103', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-28 01:30:31'),
-(450, 2, 'Realizou login no sistema', NULL, '192.168.0.103', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-28 10:37:50');
+(450, 2, 'Realizou login no sistema', NULL, '192.168.0.103', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-28 10:37:50'),
+(451, 2, 'Realizou login no sistema', NULL, '100.111.196.102', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-28 20:21:11'),
+(452, 2, 'Realizou login no sistema', NULL, '192.168.0.104', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-29 11:00:59'),
+(453, 2, 'Atualizou Ordem de Serviço', 'OS #2035', '192.168.0.104', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-29 11:04:30'),
+(454, 2, 'Realizou logout do sistema', NULL, '192.168.0.104', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-29 11:06:14'),
+(455, 2, 'Realizou login no sistema', NULL, '192.168.0.104', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '2026-01-29 11:06:41');
 
 -- --------------------------------------------------------
 
@@ -1586,7 +1594,7 @@ INSERT INTO `ordens_servico` (`id`, `cliente_id`, `equipamento_id`, `defeito_rel
 (2007, 737, 8, 'Computador não está ligando, falta protetor de parafusos da placa de vídeo, computador está com poeira', 'Computador estava muito empoeirado, após limpeza a limpeza voltou a funcionar normalmente', 0.00, 250.00, 250.00, 0.00, 5, 'pago', 'entregue', 1, '2026-01-07 13:14:25', NULL),
 (2008, 925, 9, 'Muito lento, algumas teclas não funciona, fica bipando as vezes quando liga, ja deu tela azul, apresenta bastante oscilação, de 7 meses a 1 ano parado. ', 'Bateria não está funcionando, notebook muito empoeirado e com pontos de oxidação, HD precisa ser trocado, apenas 4GB de memória recomendável expansão para 8GB, alto falantes com defeito', 1199.90, 150.00, 1349.90, 0.00, 5, 'pendente', 'nao_entregue', 1, '2026-01-07 17:49:36', NULL),
 (2009, 926, 10, 'Teve problema na elétrica do prédio e a fonte queimou', 'Fonte queimada, vazou fluido de fonte na impressora, a carcaça precisa ser limpa ', 390.00, 200.00, 590.00, 0.00, 12, 'pendente', 'nao_entregue', 1, '2026-01-08 17:22:12', NULL),
-(2010, 926, 11, 'Teve problema na elétrica do prédio e a fonte queimou', 'Fonte queimada, vazou fluido de fonte na impressora, a carcaça precisa ser limpa ', 390.00, 200.00, 590.00, 0.00, 5, 'pendente', 'entregue', 1, '2026-01-08 17:26:31', NULL),
+(2010, 926, 11, 'Teve problema na elétrica do prédio e a fonte queimou', 'Fonte queimada, vazou fluido de fonte na impressora, a carcaça precisa ser limpa ', 390.00, 350.00, 740.00, 0.00, 5, 'pago', 'entregue', 1, '2026-01-08 17:26:31', NULL),
 (2011, 927, 12, 'Computador parou de funcionar', 'Troca da fonte', 260.00, 0.00, 260.00, 75.00, 5, 'pago', 'entregue', 1, '2026-01-08 19:47:25', NULL),
 (2012, 927, 13, 'Fazer limpeza geral, formtar SEM BACKUP', 'Limpeza e formatação', 0.00, 390.00, 390.00, 125.00, 5, 'pago', 'entregue', 1, '2026-01-08 19:49:41', NULL),
 (2013, 927, 14, 'Limpeza geral, formatar sem backup. ', 'Limpeza e formatação', 0.00, 390.00, 390.00, 125.00, 5, 'pago', 'entregue', 1, '2026-01-08 19:50:35', NULL),
@@ -1611,7 +1619,7 @@ INSERT INTO `ordens_servico` (`id`, `cliente_id`, `equipamento_id`, `defeito_rel
 (2032, 941, 32, 'Ponta do carregador quebrou dentro do notebook, notebook com marcas de uso e mancha na tampa', 'Remoção da ponta do carregador da entrada da fonte. Carregador danificado, necessário a troca.', 219.90, 0.00, 219.90, 150.00, 5, 'pago', 'entregue', 1, '2026-01-20 14:25:12', NULL),
 (2033, 935, 33, 'INSTALAR OS PROGRAMAS PADRÕES', 'Instalação de aplicativos essenciais, incluindo navegação na internet, leitura de documentos, compactação de arquivos, acesso remoto, videoconferência e reprodução de mídia', 130.00, 190.00, 320.00, 100.00, 5, 'pago', 'entregue', 1, '2026-01-20 16:33:07', NULL),
 (2034, 942, 34, 'Precisa da instalação do programa PJE Shodo', 'Instalado PJE Shodo', 0.00, 0.00, 0.00, 0.00, 5, 'pago', 'entregue', 1, '2026-01-20 17:18:51', NULL),
-(2035, 943, 35, 'Cliente estava com problema no teclado, levou em outra assistência, após a troca do teclado o teclado foi resolvido mas apresentou problema no touchpad.  ', 'Desmontagem e remontagem do equipamento', 0.00, 250.00, 250.00, 100.00, 9, 'pago', 'nao_entregue', 1, '2026-01-20 19:45:07', NULL);
+(2035, 943, 35, 'Cliente estava com problema no teclado, levou em outra assistência, após a troca do teclado o teclado foi resolvido mas apresentou problema no touchpad.  ', 'Desmontagem e remontagem do equipamento', 0.00, 250.00, 250.00, 100.00, 5, 'pago', 'entregue', 1, '2026-01-20 19:45:07', NULL);
 
 -- --------------------------------------------------------
 
@@ -1704,7 +1712,9 @@ INSERT INTO `ordens_servico_status_historico` (`id`, `ordem_servico_id`, `status
 (70, 2030, 5, NULL, '', '2026-01-21 17:59:19'),
 (71, 2025, 9, NULL, '', '2026-01-21 18:01:16'),
 (72, 2026, 9, NULL, '', '2026-01-21 18:01:27'),
-(73, 2035, 9, 2, '456456', '2026-01-28 01:08:09');
+(73, 2035, 9, 2, '456456', '2026-01-28 01:08:09'),
+(74, 2035, 5, 2, 'PAgou via pix', '2026-01-29 11:04:06'),
+(75, 2035, 5, 2, 'PAgou via pix', '2026-01-29 11:04:30');
 
 -- --------------------------------------------------------
 
@@ -1749,7 +1759,9 @@ INSERT INTO `pagamentos_transacoes` (`id`, `tipo_origem`, `origem_id`, `maquina`
 (10, 'os', 2033, 'TOM', 'dinheiro', '', 1, 0.00, 110.00, 0.00, 110.00, 2, 1, '2026-01-26 16:17:53', 2, 1, '2026-01-22 16:23:39'),
 (11, 'os', 2035, 'TOM', 'credito', 'Visa', 1, 3.30, 150.00, 4.95, 145.05, 2, 1, '2026-01-26 16:17:48', 2, 1, '2026-01-26 12:23:44'),
 (12, 'atendimento', 8, 'TOM', 'debito', 'Mastercard', 1, 1.40, 320.00, 4.48, 315.52, 2, 0, NULL, NULL, 0, '2026-01-27 23:23:01'),
-(13, 'atendimento', 8, 'TOM', 'debito', '', 1, 0.00, 360.00, 0.00, 360.00, 2, 0, NULL, NULL, 1, '2026-01-27 23:51:21');
+(13, 'atendimento', 8, 'TOM', 'debito', '', 1, 0.00, 360.00, 0.00, 360.00, 2, 0, NULL, NULL, 1, '2026-01-27 23:51:21'),
+(14, 'os', 2010, 'TOM', 'pix', '', 1, 0.00, 200.00, 0.00, 200.00, 2, 0, NULL, NULL, 1, '2026-01-29 11:07:59'),
+(15, 'os', 2010, 'TOM', 'credito', 'Visa', 5, 9.79, 390.00, 38.18, 351.82, 2, 0, NULL, NULL, 1, '2026-01-29 11:08:19');
 
 -- --------------------------------------------------------
 
@@ -2049,7 +2061,7 @@ ALTER TABLE `clientes`
 -- AUTO_INCREMENT de tabela `configuracoes_gerais`
 --
 ALTER TABLE `configuracoes_gerais`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT de tabela `despesas`
@@ -2073,7 +2085,7 @@ ALTER TABLE `equipamentos`
 -- AUTO_INCREMENT de tabela `itens_ordem_servico`
 --
 ALTER TABLE `itens_ordem_servico`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=97;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
 
 --
 -- AUTO_INCREMENT de tabela `logs`
@@ -2091,13 +2103,13 @@ ALTER TABLE `ordens_servico`
 -- AUTO_INCREMENT de tabela `ordens_servico_status_historico`
 --
 ALTER TABLE `ordens_servico_status_historico`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT de tabela `pagamentos_transacoes`
 --
 ALTER TABLE `pagamentos_transacoes`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT de tabela `produtos_servicos`

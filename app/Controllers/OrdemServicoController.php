@@ -328,17 +328,57 @@ class OrdemServicoController extends BaseController
     public function printEstimate()
     {
         $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-        if (!$id) $this->redirect('ordens');
+        $type = filter_input(INPUT_GET, 'type', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'os';
 
-        $ordem = $this->osModel->findWithDetails($id);
-        if (!$ordem) $this->redirect('ordens');
+        if (!$id) {
+            $this->redirect('ordens');
+        }
 
-        $itens = $this->itemModel->findByOsId($id);
+        $ordem = null;
+        $itens = [];
+
+        if ($type === 'atendimento') {
+            $atendimentoModel = new \App\Models\AtendimentoExterno();
+            $atendimento = $atendimentoModel->findWithDetails($id);
+            if ($atendimento) {
+                // Mapeia os dados do atendimento para a estrutura da 'ordem'
+                $ordem = [
+                    'id' => $atendimento['id'],
+                    'cliente_nome' => $atendimento['cliente_nome'],
+                    'cliente_telefone' => $atendimento['cliente_telefone'],
+                    'equipamento_tipo' => 'Atendimento Externo',
+                    'equipamento_marca' => '',
+                    'equipamento_modelo' => '',
+                    'equipamento_serial' => '',
+                    'equipamento_acessorios' => '',
+                    'laudo_tecnico' => $atendimento['observacoes_tecnicas'],
+                    'valor_total_os' => $atendimento['valor_total_os'] ?? 0,
+                ];
+                $itens = $atendimentoModel->listarItens($id);
+            }
+        } else {
+            $ordem = $this->osModel->findWithDetails($id);
+            if ($ordem) {
+                $itens = $this->itemModel->findByOsId($id);
+            }
+        }
+
+        if (!$ordem) {
+            $this->redirect('ordens');
+        }
+
+        // Recalcula o valor total para garantir consistência
+        $totalOs = 0;
+        foreach ($itens as $item) {
+            $totalOs += (float)($item['valor_total'] ?? 0);
+        }
+        $ordem['valor_total_os'] = $totalOs;
+
 
         $this->renderPDF('os/print_orcamento', [
             'ordem' => $ordem,
             'itens' => $itens
-        ], "Orcamento_OS_{$id}.pdf");
+        ], "Orcamento_{$type}_{$id}.pdf");
     }
 
     public function searchEquipamentos()

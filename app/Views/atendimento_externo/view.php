@@ -31,6 +31,9 @@ if (!function_exists('formatCurrency')) {
     <div class="d-flex justify-between align-center mb-4 flex-wrap">
         <h1>🚗 Atendimento Externo #<?php echo safe_text($atendimento, 'id', 'N/A'); ?></h1>
         <div class="d-flex gap-2 flex-wrap">
+            <a href="<?php echo BASE_URL; ?>ordens/print-estimate?id=<?php echo safe_text($atendimento, 'id', ''); ?>&type=atendimento" target="_blank" class="btn btn-success">
+                💲 Imprimir Orçamento
+            </a>
             <a href="<?php echo BASE_URL; ?>atendimentos-externos" class="btn btn-secondary">← Voltar</a>
         </div>
     </div>

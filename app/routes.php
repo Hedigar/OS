@@ -47,6 +47,12 @@ $router->get('auditoria', 'AuditoriaController@index');
 $router->get('pos-venda', 'PosVendaController@index');
 $router->post('pos-venda/registrar-resposta', 'PosVendaController@registrarResposta');
 
+// Produtividade Pessoal
+$router->get('produtividade', 'ProdutividadeController@index');
+$router->get('produtividade/form', 'ProdutividadeController@form');
+$router->post('produtividade/salvar', 'ProdutividadeController@store');
+$router->get('produtividade/print', 'ProdutividadeController@print');
+
 // Rotas CRUD de Clientes (Exemplo)
 $router->get('usuarios', 'UsuarioController@index');
 $router->get('usuarios/form', 'UsuarioController@form'); // Usando 'form' para criar/editar
@@ -83,7 +89,7 @@ $router->get('ordens/view', 'OrdemServicoController@showView'); // Visualizar OS
 $router->get('ordens/print', 'OrdemServicoController@printOS'); // Imprimir OS
 $router->get('ordens/print-receipt', 'OrdemServicoController@printReceipt'); // Impressão: Recepção (2 cópias por A4)
 $router->get('ordens/print-payment-receipt', 'OrdemServicoController@printPaymentReceipt'); // Impressão: Recibo Pagamento (80mm)
-$router->get('ordens/print-estimate', 'OrdemServicoController@printEstimate'); // Impressão: Orçamento
+$router->get('ordens/print-estimate', 'OrdemServicoController@printEstimate'); // Impressão: Orçamento (OS ou Atendimento)
 $router->post('ordens/deletar', 'OrdemServicoController@destroy');
 $router->get('ordens/search-client', 'OrdemServicoController@searchClient'); // Busca de cliente para Autocomplete na OS
 $router->get('ordens/search-equipamentos', 'OrdemServicoController@searchEquipamentos');

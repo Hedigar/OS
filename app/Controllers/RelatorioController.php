@@ -26,12 +26,12 @@ class RelatorioController extends BaseController
         $dataFim = $_GET['data_fim'] ?? date('Y-m-t');
 
         $financeiro = $this->service->resumoFinanceiro($dataInicio, $dataFim);
-
         $statusResumo = $this->service->osPorStatus($dataInicio, $dataFim);
-
         $atendimentos = $this->service->atendimentosResumo($dataInicio, $dataFim);
         $custosPorOS = $this->service->custosPorOS($dataInicio, $dataFim);
         $lucroReal = $this->service->lucroReal($dataInicio, $dataFim);
+        $clientesResumo = $this->service->clientesNovos($dataInicio, $dataFim);
+        $itensVendidos = $this->service->itensVendidos($dataInicio, $dataFim);
 
         $this->render('relatorios/index', [
             'title' => 'Relatórios e Resumos',
@@ -44,7 +44,9 @@ class RelatorioController extends BaseController
             'statusResumo' => $statusResumo,
             'atendimentos' => $atendimentos,
             'custosPorOS' => $custosPorOS,
-            'lucroReal' => $lucroReal
+            'lucroReal' => $lucroReal,
+            'clientesResumo' => $clientesResumo,
+            'itensVendidos' => $itensVendidos
         ]);
     }
 }

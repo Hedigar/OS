@@ -38,6 +38,43 @@ class RelatorioService
         return $stmt->fetch() ?: [];
     }
 
+    public function clientesNovos(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+
+        $sqlTotal = "SELECT COUNT(*) AS total_novos
+                     FROM clientes
+                     WHERE DATE(created_at) BETWEEN :start AND :end";
+        $stmtTotal = $db->prepare($sqlTotal);
+        $stmtTotal->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $totalNovos = (int)($stmtTotal->fetchColumn() ?: 0);
+
+        $sqlQueVoltaram = "SELECT COUNT(DISTINCT os_nova.cliente_id) AS total_clientes_que_voltaram
+                           FROM ordens_servico os_nova
+                           WHERE DATE(os_nova.created_at) BETWEEN ? AND ?
+                             AND os_nova.ativo = 1
+                             AND EXISTS (
+                                SELECT 1
+                                FROM ordens_servico os_antiga
+                                WHERE os_antiga.cliente_id = os_nova.cliente_id
+                                  AND os_antiga.ativo = 1
+                                  AND DATE(os_antiga.created_at) < ?
+                           )";
+
+        $stmtVoltaram = $db->prepare($sqlQueVoltaram);
+        $stmtVoltaram->execute([
+            $dataInicio,
+            $dataFim,
+            $dataInicio
+        ]);
+        $totalQueVoltaram = (int)($stmtVoltaram->fetchColumn() ?: 0);
+
+        return [
+            'novos' => $totalNovos,
+            'clientes_que_voltaram' => $totalQueVoltaram
+        ];
+    }
+
     public function osPorStatus(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();

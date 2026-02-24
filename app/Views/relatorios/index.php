@@ -25,7 +25,7 @@
 
     <div class="row">
         <div class="col-12 mb-4">
-            <div class="card shadow" style="background-color: var(--bg-secondary); border-color: var(--border-color); border-left: 5px solid #1cc88a;">
+            <div class="card shadow mb-3" style="background-color: var(--bg-secondary); border-color: var(--border-color); border-left: 5px solid #1cc88a;">
                 <div class="card-header py-3" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
                     <h6 class="m-0 font-weight-bold text-success"><i class="fas fa-coins me-2"></i>Resultado Líquido (Caixa Real)</h6>
                 </div>
@@ -55,6 +55,31 @@
                             <small class="text-success font-weight-bold">Valor final para divisão</small>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="card shadow" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="card-header py-3" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-users me-2"></i>Clientes e Recorrência</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-6 mb-3">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Clientes Novos no Período</div>
+                            <div class="h4 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">
+                                <?php echo (int)($clientesResumo['novos'] ?? 0); ?>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Clientes que Voltaram (OS)</div>
+                            <div class="h4 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">
+                                <?php echo (int)($clientesResumo['clientes_que_voltaram'] ?? 0); ?>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        Considera clientes com nova OS no período e histórico anterior.
+                    </small>
                 </div>
             </div>
         </div>
@@ -93,6 +118,44 @@
                         ?>
                         <div class="text-sm font-weight-bold text-uppercase mb-1" style="color: var(--text-primary);">Lucro Estimado</div>
                         <div class="h3 mb-0 font-weight-bold <?php echo $corLucro; ?>">R$ <?php echo number_format($lucro, 2, ',', '.'); ?></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mb-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between" style="background-color: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border-color);">
+                    <h6 class="m-0 font-weight-bold text-primary">Itens Vendidos no Período (OS Finalizadas)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover" style="color: var(--text-primary);">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th class="text-center">Quantidade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($itensVendidos ?? [])): ?>
+                                    <tr><td colspan="3">Nenhum item vendido no período.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($itensVendidos as $item): ?>
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-<?php echo $item['tipo_item'] === 'produto' ? 'info' : 'secondary'; ?>">
+                                                    <?php echo htmlspecialchars($item['tipo_item']); ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($item['descricao']); ?></td>
+                                            <td class="text-center">
+                                                <?php echo number_format((float)$item['quantidade_total'], 2, ',', '.'); ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

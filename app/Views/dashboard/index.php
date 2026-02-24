@@ -41,20 +41,7 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                 </div>
             </div>
 
-            <!-- CARDS DE ESTATÍSTICAS -->
             <div class="dashboard-cards">
-                <div class="card stat-card">
-                    <div>
-                        <div class="stat-icon"><i class="fas fa-filter text-primary"></i></div>
-                        <h2>Filtros Rápidos</h2>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mt-2">
-                        <a href="<?php echo BASE_URL; ?>ordens?status_pagamento=pendente" class="btn btn-outline-primary btn-sm">Pagamento Pendente</a>
-                        <a href="<?php echo BASE_URL; ?>ordens?status_entrega=nao_entregue" class="btn btn-outline-warning btn-sm">Entrega Pendente</a>
-                        <a href="<?php echo BASE_URL; ?>ordens?sem_atualizacao_dias=2" class="btn btn-outline-danger btn-sm">Sem atualização 2+ dias</a>
-                    </div>
-                </div>
-                <!-- OS ABERTAS (Sempre visível) -->
                 <div class="card stat-card">
                     <div>
                         <div class="stat-icon"><i class="fas fa-folder-open text-info"></i></div>
@@ -62,11 +49,19 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                     </div>
                     <div>
                         <p class="card-value info-text"><?php echo str_pad($stats['total_abertas'], 2, '0', STR_PAD_LEFT); ?></p>
-                        <p class="fs-sm text-muted m-0">Aguardando conclusão</p>
                     </div>
                 </div>
 
-                <!-- OS FINALIZADAS / FATURAMENTO (Admin vê valor, outros veem contagem) -->
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle text-danger"></i></div>
+                        <h2>OS Atrasadas</h2>
+                    </div>
+                    <div>
+                        <p class="card-value danger-text"><?php echo str_pad($stats['total_atrasadas'], 2, '0', STR_PAD_LEFT); ?></p>
+                    </div>
+                </div>
+
                 <?php if (Auth::isAdmin()): ?>
                     <div class="card stat-card">
                         <div>
@@ -75,7 +70,6 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                         </div>
                         <div>
                             <p class="card-value success-text">R$ <?php echo number_format($stats['valor_finalizadas'], 2, ',', '.'); ?></p>
-                            <p class="fs-sm text-muted m-0"><?php echo $stats['total_finalizadas']; ?> OS concluídas</p>
                         </div>
                     </div>
                 <?php else: ?>
@@ -86,33 +80,18 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                         </div>
                         <div>
                             <p class="card-value success-text"><?php echo str_pad($stats['total_finalizadas'], 2, '0', STR_PAD_LEFT); ?></p>
-                            <p class="fs-sm text-muted m-0">Prontas para entrega</p>
                         </div>
                     </div>
                 <?php endif; ?>
 
-                <!-- OS ATRASADAS -->
-                <div class="card stat-card">
-                    <div>
-                        <div class="stat-icon"><i class="fas fa-exclamation-triangle text-danger"></i></div>
-                        <h2>OS Atrasadas</h2>
-                    </div>
-                    <div>
-                        <p class="card-value danger-text"><?php echo str_pad($stats['total_atrasadas'], 2, '0', STR_PAD_LEFT); ?></p>
-                        <p class="fs-sm text-muted m-0">Requerem atenção</p>
-                    </div>
-                </div>
-
-                <!-- LUCRO DO MÊS (Apenas Admin) -->
                 <?php if (Auth::isAdmin()): ?>
                     <div class="card stat-card">
                         <div>
                             <div class="stat-icon"><i class="fas fa-piggy-bank text-warning"></i></div>
-                            <h2>Lucro Estimado (Mês)</h2>
+                            <h2>Lucro do Mês</h2>
                         </div>
                         <div>
                             <p class="card-value warning-text">R$ <?php echo number_format($stats['lucro_mes'], 2, ',', '.'); ?></p>
-                            <p class="fs-sm text-muted m-0">Bruto - Custo de Peças</p>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -132,16 +111,27 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                     </div>
                     <div>
                         <p class="card-value warning-text"><?php echo str_pad($posVendaCount, 2, '0', STR_PAD_LEFT); ?></p>
-                        <p class="fs-sm text-muted m-0">Acompanhar entregas</p>
                     </div>
                     <a href="<?php echo BASE_URL; ?>pos-venda" class="btn btn-outline-primary btn-sm mt-2">Abrir Painel</a>
+                </div>
+
+                <div class="card stat-card">
+                    <div>
+                        <div class="stat-icon"><i class="fas fa-filter text-primary"></i></div>
+                        <h2>Filtros Rápidos</h2>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <a href="<?php echo BASE_URL; ?>ordens?status_pagamento=pendente" class="btn btn-outline-primary btn-sm">Pagamento Pendente</a>
+                        <a href="<?php echo BASE_URL; ?>ordens?status_entrega=nao_entregue" class="btn btn-outline-warning btn-sm">Entrega Pendente</a>
+                        <a href="<?php echo BASE_URL; ?>ordens?sem_atualizacao_dias=2" class="btn btn-outline-danger btn-sm">Sem atualização 2+ dias</a>
+                    </div>
                 </div>
             </div>
 
             <!-- ÁREA DE FLUXO DE ATIVIDADES -->
             <div class="card border-0 shadow-sm p-4" style="border-radius: 20px; background: var(--bg-secondary);">
     <h3 class="mb-4 fw-bold"><i class="fas fa-history text-info me-2"></i> Fluxo de Atividades Recentes</h3>
-    <div class="activity-feed">
+    <div class="activity-feed" style="max-height: 420px; overflow-y: auto;">
         <?php if (empty($atividades)): ?>
             <p class="text-muted text-center py-4">Nenhuma atividade registrada recentemente.</p>
         <?php else: ?>

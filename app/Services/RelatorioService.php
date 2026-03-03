@@ -209,19 +209,45 @@ class RelatorioService
         $stmtReceita->execute(['start' => $dataInicio, 'end' => $dataFim]);
         $receitaLiquida = (float)($stmtReceita->fetchColumn() ?: 0);
 
-        // 2. Custo de Peças/Produtos (OS + Atendimentos)
-        // Somente itens do tipo 'produto' que geraram custo
+        // 2. Custo de Peças/Produtos associado a RECEBIMENTOS no período (base de caixa)
+        // Conta apenas itens 'produto' de OS/Atendimentos que tiveram transação de pagamento no período
         $sqlCustos = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) as total_custo_pecas
                       FROM itens_ordem_servico i
-                      WHERE i.ativo = 1 
-                      AND i.tipo_item = 'produto'
-                      AND (
-                          -- Peças de OS Finalizadas
-                          EXISTS (SELECT 1 FROM ordens_servico o WHERE o.id = i.ordem_servico_id AND o.status_atual_id = 5 AND o.ativo = 1 AND DATE(o.created_at) BETWEEN :start1 AND :end1)
-                          OR
-                          -- Peças de Atendimentos Externos
-                          EXISTS (SELECT 1 FROM atendimentos_externos a WHERE a.id = i.atendimento_externo_id AND DATE(a.created_at) BETWEEN :start2 AND :end2)
-                      )";
+                      WHERE i.ativo = 1
+                        AND i.tipo_item = 'produto'
+                        AND (
+                            -- Itens de OS finalizadas com recebimento no período
+                            EXISTS (
+                                SELECT 1
+                                FROM ordens_servico o
+                                WHERE o.id = i.ordem_servico_id
+                                  AND o.status_atual_id = 5
+                                  AND o.ativo = 1
+                                  AND EXISTS (
+                                      SELECT 1
+                                      FROM pagamentos_transacoes pt
+                                      WHERE pt.tipo_origem = 'os'
+                                        AND pt.origem_id = o.id
+                                        AND pt.ativo = 1
+                                        AND DATE(pt.created_at) BETWEEN :start1 AND :end1
+                                  )
+                            )
+                            OR
+                            -- Itens de Atendimentos com recebimento no período
+                            EXISTS (
+                                SELECT 1
+                                FROM atendimentos_externos a
+                                WHERE a.id = i.atendimento_externo_id
+                                  AND EXISTS (
+                                      SELECT 1
+                                      FROM pagamentos_transacoes pt2
+                                      WHERE pt2.tipo_origem = 'atendimento'
+                                        AND pt2.origem_id = a.id
+                                        AND pt2.ativo = 1
+                                        AND DATE(pt2.created_at) BETWEEN :start2 AND :end2
+                                  )
+                            )
+                        )";
         
         $stmtCustos = $db->prepare($sqlCustos);
         $stmtCustos->execute([

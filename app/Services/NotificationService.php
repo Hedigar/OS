@@ -15,8 +15,14 @@ class NotificationService
             return;
         }
 
-        $model = new PushSubscription();
-        $subs = $model->getAll();
+        try {
+            $model = new PushSubscription();
+            $subs = $model->getAll();
+        } catch (\Throwable $e) {
+            // Se a tabela não existir, ignora as notificações para não travar o sistema
+            error_log("Erro ao buscar inscrições de push: " . $e->getMessage());
+            return;
+        }
 
         if (empty($subs)) return;
 

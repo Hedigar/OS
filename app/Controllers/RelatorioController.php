@@ -29,8 +29,13 @@ class RelatorioController extends BaseController
         $statusResumo = $this->service->osPorStatus($dataInicio, $dataFim);
         $atendimentos = $this->service->atendimentosResumo($dataInicio, $dataFim);
         $custosPorOS = $this->service->custosPorOS($dataInicio, $dataFim);
+        $custosPorAtendimento = $this->service->custosPorAtendimento($dataInicio, $dataFim);
+        $custosOSCaixa = $this->service->custosPorOSCaixa($dataInicio, $dataFim);
+        $custosAtendimentoCaixa = $this->service->custosPorAtendimentoCaixa($dataInicio, $dataFim);
         $lucroReal = $this->service->lucroReal($dataInicio, $dataFim);
         $clientesResumo = $this->service->clientesNovos($dataInicio, $dataFim);
+        $novosClientes = $this->service->getNovosClientes($dataInicio, $dataFim);
+        $clientesQueVoltaram = $this->service->getClientesQueVoltaram($dataInicio, $dataFim);
         $itensVendidos = $this->service->itensVendidos($dataInicio, $dataFim);
 
         $this->render('relatorios/index', [
@@ -44,9 +49,36 @@ class RelatorioController extends BaseController
             'statusResumo' => $statusResumo,
             'atendimentos' => $atendimentos,
             'custosPorOS' => $custosPorOS,
+            'custosPorAtendimento' => $custosPorAtendimento,
+            'custosOSCaixa' => $custosOSCaixa,
+            'custosAtendimentoCaixa' => $custosAtendimentoCaixa,
             'lucroReal' => $lucroReal,
             'clientesResumo' => $clientesResumo,
+            'novosClientes' => $novosClientes,
+            'clientesQueVoltaram' => $clientesQueVoltaram,
             'itensVendidos' => $itensVendidos
+        ]);
+    }
+
+    public function clientes()
+    {
+        Auth::check();
+        
+        $dataInicio = $_GET['data_inicio'] ?? date('Y-m-01');
+        $dataFim = $_GET['data_fim'] ?? date('Y-m-t');
+
+        $novosClientes = $this->service->getNovosClientes($dataInicio, $dataFim);
+        $clientesQueVoltaram = $this->service->getClientesQueVoltaram($dataInicio, $dataFim);
+
+        $this->render('relatorios/clientes', [
+            'title' => 'Relatório de Clientes',
+            'current_page' => 'relatorios',
+            'filtros' => [
+                'data_inicio' => $dataInicio,
+                'data_fim' => $dataFim
+            ],
+            'novosClientes' => $novosClientes,
+            'clientesQueVoltaram' => $clientesQueVoltaram
         ]);
     }
 }

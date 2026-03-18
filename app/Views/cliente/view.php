@@ -139,6 +139,7 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                                         <td><?php echo htmlspecialchars($ae['tecnico_nome'] ?? 'Não atribuído'); ?></td>
                                         <td>
                                             <a href="<?php echo BASE_URL; ?>atendimentos-externos/view?id=<?php echo $ae['id']; ?>" class="btn btn-info btn-xs">Ver/Editar</a>
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/print-receipt?id=<?php echo $ae['id']; ?>" target="_blank" class="btn btn-secondary btn-xs">🧾</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

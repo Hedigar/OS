@@ -71,6 +71,9 @@
                                             <a href="<?php echo BASE_URL; ?>atendimentos-externos/print?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-secondary" target="_blank" title="Imprimir Folha">
                                                 <i class="fas fa-print"></i>
                                             </a>
+                                            <a href="<?php echo BASE_URL; ?>atendimentos-externos/print-receipt?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-warning" target="_blank" title="Recibo (80mm)" style="background-color: #ff9800; border-color: #f57c00; color: white;">
+                                                <i class="fas fa-receipt"></i>
+                                            </a>
                                             <a href="<?php echo BASE_URL; ?>atendimentos-externos/view?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-info" title="Visualizar">
                                                 <i class="fas fa-eye"></i>
                                             </a>

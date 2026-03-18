@@ -94,6 +94,30 @@ class AtendimentoExternoController extends BaseController
         ], "Atendimento_Externo_{$id}.pdf");
     }
 
+    public function printPaymentReceipt()
+    {
+        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+        if (!$id) $this->redirect('atendimentos-externos');
+
+        $dados = $this->service->obterDetalhesVisualizacao($id);
+        if (!$dados) $this->redirect('atendimentos-externos');
+
+        $pgModel = new \App\Models\PagamentoTransacao();
+        $transacoes = $pgModel->findByOrigem('atendimento', $id);
+        $totalPago = $pgModel->sumByOrigem('atendimento', $id);
+
+        // Calcula altura aproximada: Base (350pts) + Transações + Itens
+        $height = 350 + (count($transacoes) * 30) + (count($dados['itens']) * 30);
+
+        $this->renderPDF('atendimento_externo/print_payment_receipt', [
+            'atendimento' => $dados['atendimento'],
+            'itens'       => $dados['itens'],
+            'transacoes'  => $transacoes,
+            'total_pago'  => $totalPago,
+            'valor_total' => $dados['valor_total']
+        ], "Recibo_Pagamento_Externo_{$id}.pdf", [0, 0, 226.77, $height]);
+    }
+
     public function store()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

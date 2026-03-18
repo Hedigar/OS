@@ -34,6 +34,12 @@ if (!function_exists('formatCurrency')) {
             <a href="<?php echo BASE_URL; ?>ordens/print-estimate?id=<?php echo safe_text($atendimento, 'id', ''); ?>&type=atendimento" target="_blank" class="btn btn-success">
                 💲 Imprimir Orçamento
             </a>
+            <a href="<?php echo BASE_URL; ?>atendimentos-externos/print?id=<?php echo safe_text($atendimento, 'id', ''); ?>" target="_blank" class="btn btn-primary">
+                🖨️ Imprimir Folha
+            </a>
+            <a href="<?php echo BASE_URL; ?>atendimentos-externos/print-receipt?id=<?php echo safe_text($atendimento, 'id', ''); ?>" target="_blank" class="btn btn-warning" style="background-color: #ff9800; border-color: #f57c00; color: white;">
+                🧾 Recibo (80mm)
+            </a>
             <a href="<?php echo BASE_URL; ?>atendimentos-externos" class="btn btn-secondary">← Voltar</a>
         </div>
     </div>

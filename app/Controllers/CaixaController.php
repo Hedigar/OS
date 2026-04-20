@@ -47,7 +47,41 @@ class CaixaController extends BaseController
         $totalEntradas = (float)($sumIn['total_liquido'] ?? 0);
         $totalTaxas = (float)($sumIn['total_taxa'] ?? 0);
         $totalSaidas = (float)($sumOut['total'] ?? 0);
-        $saldo = $totalEntradas - $totalSaidas;
+
+        // --- NOVO: Cálculo de Custos de OS/Atendimentos Finalizados no período ---
+        // Isso garante que o lucro real seja refletido no saldo do caixa
+        
+        // 1. Custo de Peças de OS Finalizadas no período
+        $sqlCustoPecas = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
+                          FROM itens_ordem_servico i
+                          JOIN ordens_servico o ON i.ordem_servico_id = o.id
+                          WHERE o.status_atual_id = 5 AND o.ativo = 1 AND i.ativo = 1
+                          AND DATE(COALESCE(o.updated_at, o.created_at)) BETWEEN :start AND :end";
+        $stmtCusto = $db->prepare($sqlCustoPecas);
+        $stmtCusto->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $custoPecasOS = (float)$stmtCusto->fetchColumn();
+
+        // 2. Custo de Peças de Atendimentos Externos Finalizados no período
+        $sqlCustoAt = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
+                       FROM itens_ordem_servico i
+                       JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
+                       WHERE a.status = 'finalizado' AND a.ativo = 1 AND i.ativo = 1
+                       AND DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start AND :end";
+        $stmtCustoAt = $db->prepare($sqlCustoAt);
+        $stmtCustoAt->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $custoPecasAt = (float)$stmtCustoAt->fetchColumn();
+
+        // 3. Custo de Impostos (NF) de OS/Atendimentos Finalizados no período
+        $sqlNF = "SELECT 
+                    (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM ordens_servico WHERE status_atual_id = 5 AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s1 AND :e1) +
+                    (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE status = 'finalizado' AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
+                  as total_nf";
+        $stmtNF = $db->prepare($sqlNF);
+        $stmtNF->execute(['s1' => $dataInicio, 'e1' => $dataFim, 's2' => $dataInicio, 'e2' => $dataFim]);
+        $custoNF = (float)$stmtNF->fetchColumn();
+
+        $totalCustosVenda = $custoPecasOS + $custoPecasAt + $custoNF;
+        $saldo = $totalEntradas - $totalSaidas - $totalCustosVenda;
 
         $this->render('caixa/index', [
             'title' => 'Caixa',
@@ -62,6 +96,7 @@ class CaixaController extends BaseController
                 'entradas' => $totalEntradas,
                 'taxas' => $totalTaxas,
                 'saidas' => $totalSaidas,
+                'custos_venda' => $totalCustosVenda,
                 'saldo' => $saldo
             ]
         ]);

@@ -5,7 +5,10 @@ require_once __DIR__ . '/../layout/main.php';
 <div class="container">
     <div class="d-flex justify-between align-center mb-4">
         <h1>Pós-Venda</h1>
-        <a href="<?php echo BASE_URL; ?>dashboard" class="btn btn-secondary btn-sm">← Dashboard</a>
+        <div class="d-flex gap-2">
+            <a href="<?php echo BASE_URL; ?>crm" class="btn btn-primary btn-sm">🚀 Ir para CRM Avançado</a>
+            <a href="<?php echo BASE_URL; ?>dashboard" class="btn btn-secondary btn-sm">← Dashboard</a>
+        </div>
     </div>
 
     <div class="card">
@@ -44,10 +47,25 @@ require_once __DIR__ . '/../layout/main.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <form action="<?php echo BASE_URL; ?>pos-venda/registrar-resposta" method="POST" class="d-flex gap-2">
+                                    <form action="<?php echo BASE_URL; ?>pos-venda/registrar-resposta" method="POST" class="d-flex flex-column gap-2">
                                         <input type="hidden" name="os_id" value="<?php echo (int)$a['os_id']; ?>">
-                                        <input type="text" name="resumo" class="form-control" placeholder="Resumo da resposta" required>
-                                        <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
+                                        
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <label class="small mb-0">Nota:</label>
+                                            <select name="nota" class="form-control form-control-sm" style="width: 70px;" required>
+                                                <option value="">--</option>
+                                                <option value="5">5 ⭐</option>
+                                                <option value="4">4 ⭐</option>
+                                                <option value="3">3 ⭐</option>
+                                                <option value="2">2 ⭐</option>
+                                                <option value="1">1 ⭐</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <input type="text" name="resumo" class="form-control form-control-sm" placeholder="Resumo do feedback" required>
+                                            <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
+                                        </div>
                                     </form>
                                 </td>
                             </tr>

@@ -34,13 +34,19 @@ function formatCurrency($value) {
         </div>
         <div class="col-md-3">
             <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
-                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Saídas</div>
+                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Saídas</div>
                 <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['saidas'] ?? 0); ?></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
-                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Saldo</div>
+                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Custo Vendas (Peças+NF)</div>
+                <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['custos_venda'] ?? 0); ?></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow p-3" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Saldo Líquido Real</div>
                 <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo formatCurrency($totais['saldo'] ?? 0); ?></div>
             </div>
         </div>

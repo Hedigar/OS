@@ -235,11 +235,27 @@ class OrdemServico extends Model
 
         $totalOS = $totalProdutos + $totalServicos;
 
+        // Buscar se deve emitir NF para calcular a taxa
+        $stmtNF = $this->db->prepare("SELECT emitir_nf FROM {$this->table} WHERE id = :id");
+        $stmtNF->execute(['id' => $osId]);
+        $osNF = $stmtNF->fetch();
+        $emitirNF = (int)($osNF['emitir_nf'] ?? 0);
+        
+        $valorTaxaNF = 0.00;
+        if ($emitirNF) {
+            $configModel = new \App\Models\ConfiguracaoGeral();
+            $percProdutos = (float)$configModel->getValor('nf_porcentagem_produtos') ?: 3;
+            $percServicos = (float)$configModel->getValor('nf_porcentagem_servicos') ?: 6;
+            
+            $valorTaxaNF = ($totalProdutos * ($percProdutos / 100)) + ($totalServicos * ($percServicos / 100));
+        }
+
         $sql = "UPDATE {$this->table} SET
                 valor_total_produtos = :vtp,
                 valor_total_servicos = :vts,
                 valor_total_os = :vto,
-                valor_desconto = :vd
+                valor_desconto = :vd,
+                valor_taxa_nf = :vtnf
                 WHERE id = :id";
 
         $stmt = $this->db->prepare($sql);
@@ -248,6 +264,7 @@ class OrdemServico extends Model
             'vts' => $totalServicos,
             'vto' => $totalOS,
             'vd'  => $totalDesconto,
+            'vtnf' => $valorTaxaNF,
             'id'  => $osId
         ]);
     }
@@ -287,6 +304,7 @@ class OrdemServico extends Model
                     os.created_at,
                     os.status_pagamento,
                     os.status_entrega,
+                    os.pos_venda_status,
                     c.nome_completo as cliente_nome,
                     c.telefone_principal as cliente_telefone,
                     s.nome as status_nome,
@@ -334,8 +352,12 @@ class OrdemServico extends Model
 
             if ($statusId === 5) {
                 if ($statusPagamento === 'pago' && $statusEntrega === 'entregue') {
+                    // Pós-venda: apenas se ainda não foi realizado (pos_venda_status = 0)
+                    // e se já se passaram pelo menos 7 dias da entrega (sem trava de 10 dias)
+                    $posVendaStatus = (int)($row['pos_venda_status'] ?? 0);
                     $diasEntrega = $diasDesdeUltimaAtualizacao;
-                    if ($diasEntrega >= 7 && $diasEntrega <= 10) {
+
+                    if ($posVendaStatus === 0 && $diasEntrega >= 7) {
                         $primeiroNome = explode(' ', trim($clienteNome))[0] ?? '';
                         $alertas[] = [
                             'tipo' => 'pos_venda',

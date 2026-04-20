@@ -39,4 +39,23 @@ class SettingsService
 
         return $ok1 && $ok2 && $ok3;
     }
+
+    public function getFinanceiro(): array
+    {
+        return [
+            'nf_porcentagem_produtos' => $this->configModel->getValor('nf_porcentagem_produtos') ?? '3',
+            'nf_porcentagem_servicos' => $this->configModel->getValor('nf_porcentagem_servicos') ?? '6'
+        ];
+    }
+
+    public function salvarFinanceiro(array $post): bool
+    {
+        $percProd = filter_var($post['nf_porcentagem_produtos'] ?? '3', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+        $percServ = filter_var($post['nf_porcentagem_servicos'] ?? '6', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+
+        $ok1 = $this->configModel->setValor('nf_porcentagem_produtos', $percProd, 'Porcentagem de imposto para produtos');
+        $ok2 = $this->configModel->setValor('nf_porcentagem_servicos', $percServ, 'Porcentagem de imposto para servicos');
+
+        return $ok1 && $ok2;
+    }
 }

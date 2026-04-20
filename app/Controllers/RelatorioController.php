@@ -32,6 +32,8 @@ class RelatorioController extends BaseController
         $custosPorAtendimento = $this->service->custosPorAtendimento($dataInicio, $dataFim);
         $custosOSCaixa = $this->service->custosPorOSCaixa($dataInicio, $dataFim);
         $custosAtendimentoCaixa = $this->service->custosPorAtendimentoCaixa($dataInicio, $dataFim);
+        $nfsOSCaixa = $this->service->nfsPorOSCaixa($dataInicio, $dataFim);
+        $nfsAtendimentoCaixa = $this->service->nfsPorAtendimentoCaixa($dataInicio, $dataFim);
         $lucroReal = $this->service->lucroReal($dataInicio, $dataFim);
         $clientesResumo = $this->service->clientesNovos($dataInicio, $dataFim);
         $novosClientes = $this->service->getNovosClientes($dataInicio, $dataFim);
@@ -52,6 +54,8 @@ class RelatorioController extends BaseController
             'custosPorAtendimento' => $custosPorAtendimento,
             'custosOSCaixa' => $custosOSCaixa,
             'custosAtendimentoCaixa' => $custosAtendimentoCaixa,
+            'nfsOSCaixa' => $nfsOSCaixa,
+            'nfsAtendimentoCaixa' => $nfsAtendimentoCaixa,
             'lucroReal' => $lucroReal,
             'clientesResumo' => $clientesResumo,
             'novosClientes' => $novosClientes,

@@ -464,6 +464,7 @@ class OrdemServicoController extends BaseController
             if ($this->itemModel->create($itemData)) {
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
+                $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
                 $this->redirect('ordens/view?id=' . $osId);
             } else {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao adicionar item');
@@ -495,6 +496,7 @@ class OrdemServicoController extends BaseController
             if ($this->itemModel->update($itemId, $itemData)) {
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
+                $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
                 $this->redirect('ordens/view?id=' . $osId);
             } else {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao atualizar item');
@@ -511,11 +513,51 @@ class OrdemServicoController extends BaseController
             if ($this->itemModel->delete($itemId)) {
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
+                $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
                 $this->redirect('ordens/view?id=' . $osId);
             } else {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao remover item');
             }
         }
+    }
+
+    public function toggleNF()
+    {
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+        $value = filter_input(INPUT_POST, 'value', FILTER_VALIDATE_INT);
+        $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'os';
+
+        if (!$id) {
+            echo json_encode(['success' => false, 'error' => 'ID inválido']);
+            exit;
+        }
+
+        try {
+            if ($type === 'atendimento') {
+                $atendimentoModel = new \App\Models\AtendimentoExterno();
+                $atendimentoService = new \App\Services\AtendimentoService();
+                if ($atendimentoModel->update($id, ['emitir_nf' => $value])) {
+                    $atendimentoService->obterDetalhesVisualizacao($id); // Força recálculo e salvamento da taxa
+                    echo json_encode(['success' => true]);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Erro ao atualizar atendimento']);
+                }
+            } else {
+                if ($this->osModel->update($id, ['emitir_nf' => $value, 'updated_at' => date('Y-m-d H:i:s')])) {
+                    $itens = $this->itemModel->findByOsId($id);
+                    $this->osModel->updateTotals($id, $itens);
+                    echo json_encode(['success' => true]);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Erro ao atualizar OS']);
+                }
+            }
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
 
     public function destroy()

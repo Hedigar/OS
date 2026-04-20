@@ -31,16 +31,26 @@ class PosVendaController extends BaseController
 
         $osId = filter_input(INPUT_POST, 'os_id', FILTER_VALIDATE_INT);
         $resumo = trim((string)filter_input(INPUT_POST, 'resumo', FILTER_SANITIZE_SPECIAL_CHARS));
-        if (!$osId || $resumo === '') {
+        $nota = filter_input(INPUT_POST, 'nota', FILTER_VALIDATE_INT);
+
+        if (!$osId || $resumo === '' || !$nota || $nota < 1 || $nota > 5) {
             $this->redirect('pos-venda');
         }
 
         $osModel = new OrdemServico();
+        
+        // Atualizar a OS com os dados do pós-venda
+        $osModel->update($osId, [
+            'pos_venda_status' => 1,
+            'pos_venda_nota' => $nota,
+            'pos_venda_data' => date('Y-m-d H:i:s')
+        ]);
+
         $os = $osModel->findWithDetails($osId);
         $clienteNome = $os['cliente_nome'] ?? '';
 
         $log = new Log();
-        $log->registrar(Auth::id(), 'Resposta Pós-Venda', "OS #{$osId} - {$clienteNome}", null, ['resumo' => $resumo]);
+        $log->registrar(Auth::id(), 'Resposta Pós-Venda', "OS #{$osId} - {$clienteNome} - Nota: {$nota}", null, ['resumo' => $resumo]);
 
         $this->redirect('pos-venda');
     }

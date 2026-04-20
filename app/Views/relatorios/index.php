@@ -1,4 +1,54 @@
 <div class="container-fluid">
+    <style>
+        .nav-pills .nav-link, .nav-tabs .nav-link {
+            cursor: pointer !important;
+            position: relative;
+            z-index: 500;
+        }
+        .tab-pane {
+            display: none !important;
+        }
+        .tab-pane.active {
+            display: block !important;
+        }
+        .nav-pills {
+            position: relative;
+            z-index: 1000;
+        }
+    </style>
+    <script>
+        window.switchMainTab = function(tabId, btn) {
+            console.log('Manual switch to:', tabId);
+            // Desativar botões
+            document.querySelectorAll('#pills-tab .nav-link').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Esconder painéis
+            document.querySelectorAll('#pills-tabContent .tab-pane').forEach(p => {
+                p.classList.remove('active', 'show');
+                p.style.display = 'none';
+            });
+            // Mostrar alvo
+            const target = document.getElementById(tabId);
+            if (target) {
+                target.classList.add('active', 'show');
+                target.style.display = 'block';
+            }
+        };
+
+        window.switchAuditTab = function(tabId, btn) {
+            document.querySelectorAll('#auditTabs .nav-link').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('#auditTabsContent .tab-pane').forEach(p => {
+                p.classList.remove('active', 'show');
+                p.style.display = 'none';
+            });
+            const target = document.getElementById(tabId);
+            if (target) {
+                target.classList.add('active', 'show');
+                target.style.display = 'block';
+            }
+        };
+    </script>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h3 mb-0" style="color: var(--text-primary, #fff);"><i class="fas fa-chart-bar me-2"></i>Relatórios e Resumos</h2>
     </div>
@@ -27,19 +77,19 @@
     <!-- Navegação por Abas -->
     <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="pills-geral-tab" data-bs-toggle="pill" data-bs-target="#pills-geral" type="button" role="tab" aria-controls="pills-geral" aria-selected="true"><i class="fas fa-tachometer-alt me-2"></i>Resumo Geral</button>
+            <button class="nav-link active" id="pills-geral-tab" type="button" role="tab" onclick="switchMainTab('pills-geral', this)"><i class="fas fa-tachometer-alt me-2"></i>Resumo Geral</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="pills-financeiro-tab" data-bs-toggle="pill" data-bs-target="#pills-financeiro" type="button" role="tab" aria-controls="pills-financeiro" aria-selected="false"><i class="fas fa-dollar-sign me-2"></i>Financeiro Detalhado</button>
+            <button class="nav-link" id="pills-financeiro-tab" type="button" role="tab" onclick="switchMainTab('pills-financeiro', this)"><i class="fas fa-dollar-sign me-2"></i>Financeiro Detalhado</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="pills-clientes-tab" data-bs-toggle="pill" data-bs-target="#pills-clientes" type="button" role="tab" aria-controls="pills-clientes" aria-selected="false"><i class="fas fa-users me-2"></i>Clientes e Recorrência</button>
+            <button class="nav-link" id="pills-clientes-tab" type="button" role="tab" onclick="switchMainTab('pills-clientes', this)"><i class="fas fa-users me-2"></i>Clientes e Recorrência</button>
         </li>
     </ul>
 
     <div class="tab-content" id="pills-tabContent">
         <!-- Aba 1: Resumo Geral -->
-        <div class="tab-pane fade show active" id="pills-geral" role="tabpanel" aria-labelledby="pills-geral-tab">
+        <div class="tab-pane show active" id="pills-geral" role="tabpanel">
             <div class="row">
                 <div class="col-lg-8">
                     <!-- Resumo Financeiro (Competência) -->
@@ -61,15 +111,24 @@
                                     <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Produtos</div>
                                     <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($financeiro['total_produtos'] ?? 0, 2, ',', '.'); ?></div>
                                 </div>
-                                <div class="col-md-3 mb-3">
+                                <div class="col-md-2 mb-3">
                                     <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Custo Peças</div>
                                     <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($financeiro['total_custo'] ?? 0, 2, ',', '.'); ?></div>
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Custo NF</div>
+                                    <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($financeiro['total_taxa_nf'] ?? 0, 2, ',', '.'); ?></div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <?php $totalDescontoComp = ($financeiro['total_custo'] ?? 0) + ($financeiro['total_taxa_nf'] ?? 0); ?>
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Descontado</div>
+                                    <div class="h5 mb-0 font-weight-bold" style="color: var(--text-primary, #fff);">R$ <?php echo number_format($totalDescontoComp, 2, ',', '.'); ?></div>
                                 </div>
                             </div>
                             <hr style="border-top: 1px solid var(--border-color);">
                             <div class="text-center">
                                 <?php 
-                                    $lucro = ($financeiro['total_bruto'] ?? 0) - ($financeiro['total_custo'] ?? 0);
+                                    $lucro = ($financeiro['total_bruto'] ?? 0) - $totalDescontoComp;
                                     $corLucro = $lucro >= 0 ? 'text-success' : 'text-danger';
                                 ?>
                                 <div class="text-sm font-weight-bold text-uppercase mb-1" style="color: var(--text-primary);">Lucro Estimado (Competência)</div>
@@ -146,7 +205,7 @@
         </div>
 
         <!-- Aba 2: Financeiro Detalhado -->
-        <div class="tab-pane fade" id="pills-financeiro" role="tabpanel" aria-labelledby="pills-financeiro-tab">
+        <div class="tab-pane" id="pills-financeiro" role="tabpanel" style="display: none;">
             <div class="row">
                 <div class="col-12">
                     <!-- Resultado Líquido (Caixa Real) -->
@@ -163,24 +222,42 @@
                                     </div>
                                     <small class="text-muted">Total recebido em caixa/conta</small>
                                 </div>
-                                <div class="col-md-4 mb-2 mb-md-0 position-relative">
-                                    <div class="d-none d-md-block position-absolute" style="left: 0; top: 50%; transform: translateY(-50%); font-size: 2rem; color: var(--text-muted); opacity: 0.3;">-</div>
-                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Custo Total (OS + Atend.)</div>
-                                    <div class="h4 mb-0 font-weight-bold text-danger">
+                                <div class="col-md-3 mb-2 mb-md-0 position-relative">
+                                    <div class="d-none d-md-block position-absolute" style="left: -10px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--text-muted); opacity: 0.3;">-</div>
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Custos Itens (OS + Atend.)</div>
+                                    <div class="h5 mb-0 font-weight-bold text-danger">
                                         R$ <?php echo number_format($lucroReal['custo_pecas'] ?? 0, 2, ',', '.'); ?>
                                     </div>
                                     <div class="mt-1">
-                                        <small class="text-muted d-block" style="font-size: 0.7rem;">OS: R$ <?php echo number_format($lucroReal['custo_os'] ?? 0, 2, ',', '.'); ?></small>
-                                        <small class="text-muted d-block" style="font-size: 0.7rem;">Atend.: R$ <?php echo number_format($lucroReal['custo_atendimentos'] ?? 0, 2, ',', '.'); ?></small>
+                                        <small class="text-muted d-block" style="font-size: 0.65rem;">OS: R$ <?php echo number_format($lucroReal['custo_os'] ?? 0, 2, ',', '.'); ?></small>
+                                        <small class="text-muted d-block" style="font-size: 0.65rem;">Atend.: R$ <?php echo number_format($lucroReal['custo_atendimentos'] ?? 0, 2, ',', '.'); ?></small>
                                     </div>
-                                    <div class="d-none d-md-block position-absolute" style="right: 0; top: 50%; transform: translateY(-50%); font-size: 2rem; color: var(--text-muted); opacity: 0.3;">=</div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1" style="font-size: 0.9rem;">Lucro Disponível</div>
+                                <div class="col-md-2 mb-2 mb-md-0 position-relative">
+                                    <div class="d-none d-md-block position-absolute" style="left: -10px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--text-muted); opacity: 0.3;">-</div>
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Custos Notas</div>
+                                    <div class="h5 mb-0 font-weight-bold text-warning">
+                                        R$ <?php echo number_format($lucroReal['custo_nf'] ?? 0, 2, ',', '.'); ?>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.65rem;">Impostos (NF)</small>
+                                </div>
+                                <div class="col-md-3 mb-2 mb-md-0 position-relative">
+                                    <div class="d-none d-md-block position-absolute" style="left: -10px; top: 50%; transform: translateY(-50%); font-size: 1.5rem; color: var(--text-muted); opacity: 0.3;">=</div>
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1" style="font-size: 0.75rem;">Total Descontado</div>
+                                    <div class="h4 mb-0 font-weight-bold text-danger">
+                                        R$ <?php echo number_format($lucroReal['total_descontos'] ?? 0, 2, ',', '.'); ?>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.65rem;">Soma de todos os custos</small>
+                                </div>
+                                <div class="col-md-1 d-none d-md-block">
+                                    <div style="font-size: 1.5rem; color: var(--text-muted); opacity: 0.3;">=</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1" style="font-size: 0.9rem;">Lucro Final</div>
                                     <div class="h2 mb-0 font-weight-bold text-success">
                                         R$ <?php echo number_format($lucroReal['lucro_real'] ?? 0, 2, ',', '.'); ?>
                                     </div>
-                                    <small class="text-success font-weight-bold">Valor final para divisão</small>
+                                    <small class="text-success font-weight-bold">Sobra real para a empresa</small>
                                 </div>
                             </div>
                         </div>
@@ -194,14 +271,20 @@
                         <div class="card-body">
                             <ul class="nav nav-tabs mb-3" id="auditTabs" role="tablist">
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="os-caixa-tab" data-bs-toggle="tab" data-bs-target="#os-caixa" type="button" role="tab">Custos OS (Caixa)</button>
+                                    <button class="nav-link active" id="os-caixa-tab" type="button" role="tab" onclick="switchAuditTab('os-caixa', this)">Custos OS (Caixa)</button>
                                 </li>
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="at-caixa-tab" data-bs-toggle="tab" data-bs-target="#at-caixa" type="button" role="tab">Custos Atendimentos (Caixa)</button>
+                                    <button class="nav-link" id="at-caixa-tab" type="button" role="tab" onclick="switchAuditTab('at-caixa', this)">Custos Atendimentos (Caixa)</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="nf-os-tab" type="button" role="tab" onclick="switchAuditTab('nf-os', this)">Notas OS (Caixa)</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="nf-at-tab" type="button" role="tab" onclick="switchAuditTab('nf-at', this)">Notas Atendimentos (Caixa)</button>
                                 </li>
                             </ul>
                             <div class="tab-content" id="auditTabsContent">
-                                <div class="tab-pane fade show active" id="os-caixa" role="tabpanel">
+                                <div class="tab-pane show active" id="os-caixa" role="tabpanel">
                                     <div class="table-responsive">
                                         <table class="table table-sm table-hover" style="color: var(--text-primary);">
                                             <thead>
@@ -244,7 +327,7 @@
                                         </table>
                                     </div>
                                 </div>
-                                <div class="tab-pane fade" id="at-caixa" role="tabpanel">
+                                <div class="tab-pane" id="at-caixa" role="tabpanel" style="display: none;">
                                     <div class="table-responsive">
                                         <table class="table table-sm table-hover" style="color: var(--text-primary);">
                                             <thead>
@@ -280,6 +363,62 @@
                                                                     <?php endforeach; ?>
                                                                 </table>
                                                             </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="tab-pane" id="nf-os" role="tabpanel" style="display: none;">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover" style="color: var(--text-primary);">
+                                            <thead>
+                                                <tr>
+                                                    <th>OS</th>
+                                                    <th>Cliente</th>
+                                                    <th class="text-end">Valor Total OS</th>
+                                                    <th class="text-end">Custo NF</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (empty($nfsOSCaixa)): ?>
+                                                    <tr><td colspan="4" class="text-center text-muted">Nenhuma nota fiscal de OS neste período de caixa.</td></tr>
+                                                <?php else: ?>
+                                                    <?php foreach ($nfsOSCaixa as $row): ?>
+                                                        <tr>
+                                                            <td>#<?php echo (int)$row['os_id']; ?></td>
+                                                            <td><?php echo htmlspecialchars($row['cliente_nome']); ?></td>
+                                                            <td class="text-end">R$ <?php echo number_format($row['valor_total_os'], 2, ',', '.'); ?></td>
+                                                            <td class="text-end text-warning">R$ <?php echo number_format($row['valor_taxa_nf'], 2, ',', '.'); ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="tab-pane" id="nf-at" role="tabpanel" style="display: none;">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover" style="color: var(--text-primary);">
+                                            <thead>
+                                                <tr>
+                                                    <th>Atend.</th>
+                                                    <th>Cliente</th>
+                                                    <th class="text-end">Valor Total Atend.</th>
+                                                    <th class="text-end">Custo NF</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php if (empty($nfsAtendimentoCaixa)): ?>
+                                                    <tr><td colspan="4" class="text-center text-muted">Nenhuma nota fiscal de atendimento neste período de caixa.</td></tr>
+                                                <?php else: ?>
+                                                    <?php foreach ($nfsAtendimentoCaixa as $row): ?>
+                                                        <tr>
+                                                            <td>#<?php echo (int)$row['atendimento_id']; ?></td>
+                                                            <td><?php echo htmlspecialchars($row['cliente_nome']); ?></td>
+                                                            <td class="text-end">R$ <?php echo number_format($row['valor_total'], 2, ',', '.'); ?></td>
+                                                            <td class="text-end text-warning">R$ <?php echo number_format($row['valor_taxa_nf'], 2, ',', '.'); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                 <?php endif; ?>
@@ -402,7 +541,7 @@
         </div>
 
         <!-- Aba 3: Clientes e Recorrência -->
-        <div class="tab-pane fade" id="pills-clientes" role="tabpanel" aria-labelledby="pills-clientes-tab">
+        <div class="tab-pane" id="pills-clientes" role="tabpanel" style="display: none;">
             <div class="row">
                 <div class="col-lg-6 mb-4">
                     <div class="card shadow h-100" style="background-color: var(--bg-secondary); border-color: var(--border-color);">

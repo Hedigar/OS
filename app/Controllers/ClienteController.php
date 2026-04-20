@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\Cliente;
+use App\Models\ClienteInteracao;
 use App\Models\OrdemServico;
 use App\Models\Equipamento;
 use App\Models\AtendimentoExterno;
@@ -11,12 +12,14 @@ use App\Services\ClienteService;
 class ClienteController extends BaseController
 {
     private $clienteModel;
+    private $interacaoModel;
     private ClienteService $service;
 
     public function __construct()
     {
         parent::__construct();
         $this->clienteModel = new Cliente();
+        $this->interacaoModel = new ClienteInteracao();
         $this->service = new ClienteService();
     }
 
@@ -91,12 +94,15 @@ class ClienteController extends BaseController
         $dados = $this->service->obterDadosVisualizacao($id);
         if (empty($dados)) $this->redirect('clientes');
 
+        $timeline = $this->interacaoModel->getHistoricoUnificado($id);
+
         $this->render('cliente/view', [
             'title' => 'Visualizar Cliente',
             'cliente' => $dados['cliente'],
             'historicoOS' => $dados['historicoOS'],
             'equipamentos' => $dados['equipamentos'],
-            'historicoExterno' => $dados['historicoExterno']
+            'historicoExterno' => $dados['historicoExterno'],
+            'timeline' => $timeline
         ]);
     }
 

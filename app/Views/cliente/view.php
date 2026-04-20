@@ -110,8 +110,6 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
             <!-- HISTÓRICO DE ATENDIMENTOS EXTERNOS -->
             <div class="card mt-4">
                 <h3 class="card-title">🏠 Histórico de Atendimentos Externos</h3>
-                    🏠 Histórico de Atendimentos Externos
-                </h3>
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
@@ -148,11 +146,189 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                     </table>
                 </div>
             </div>
+
+            <!-- CRM TIMELINE -->
+            <div class="card mt-4">
+                <div class="d-flex justify-between align-center mb-3">
+                    <h3 class="card-title mb-0">🕒 Linha do Tempo CRM (Jornada do Cliente)</h3>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('modalCRM').style.display='block'">+ Registrar Interação</button>
+                </div>
+                
+                <div class="timeline-container" style="max-height: 600px; overflow-y: auto; padding-right: 10px;">
+                    <?php if (empty($timeline)): ?>
+                        <p class="text-muted text-center">Nenhuma interação registrada na jornada deste cliente.</p>
+                    <?php else: ?>
+                        <?php foreach ($timeline as $item): ?>
+                            <?php 
+                                $bg_color = '#3498db';
+                                $icon = '💬';
+                                $border_color = '#3498db';
+
+                                switch($item['tipo_registro']) {
+                                    case 'os':
+                                        $bg_color = '#2ecc71';
+                                        $icon = '🛠️';
+                                        $border_color = '#2ecc71';
+                                        break;
+                                    case 'atendimento_externo':
+                                        $bg_color = '#f1c40f';
+                                        $icon = '🏠';
+                                        $border_color = '#f1c40f';
+                                        break;
+                                    case 'log':
+                                        $bg_color = '#95a5a6';
+                                        $icon = '⚙️';
+                                        $border_color = '#95a5a6';
+                                        break;
+                                    case 'crm':
+                                        if($item['tipo'] === 'pos_venda') {
+                                            $bg_color = '#e67e22';
+                                            $icon = '⭐';
+                                            $border_color = '#e67e22';
+                                        } elseif($item['tipo'] === 'campanha') {
+                                            $bg_color = '#9b59b6';
+                                            $icon = '📢';
+                                            $border_color = '#9b59b6';
+                                        }
+                                        break;
+                                }
+                            ?>
+                            <div class="timeline-item mb-4" style="border-left: 3px solid <?php echo $border_color; ?>; padding-left: 20px; position: relative;">
+                                <div style="position: absolute; left: -11px; top: 0; width: 20px; height: 20px; border-radius: 50%; background: <?php echo $bg_color; ?>; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <?php echo $icon; ?>
+                                </div>
+                                <div class="d-flex justify-between align-center mb-1">
+                                    <strong style="color: <?php echo $border_color; ?>; font-size: 0.95rem;">
+                                        <?php echo htmlspecialchars($item['tipo']); ?>: <?php echo htmlspecialchars($item['titulo']); ?>
+                                    </strong>
+                                    <span class="badge bg-light text-muted small" style="font-weight: normal;"><?php echo date('d/m/Y H:i', strtotime($item['created_at'])); ?></span>
+                                </div>
+                                
+                                <div style="background: #fdfdfd; padding: 10px; border-radius: 6px; border: 1px solid #f0f0f0;">
+                                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Ocorrência:</strong> <?php echo htmlspecialchars($item['descricao']); ?></p>
+                                    
+                                    <?php if ($item['detalhe']): ?>
+                                        <div class="mt-2 pt-2" style="border-top: 1px dashed #eee;">
+                                            <p class="mb-0 text-muted small" style="line-height: 1.4;">
+                                                <i class="fas fa-info-circle"></i> <em><?php echo nl2br(htmlspecialchars($item['detalhe'])); ?></em>
+                                            </p>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <div class="d-flex gap-3 mt-2 small text-muted">
+                                        <span><i class="fas fa-user"></i> <?php echo htmlspecialchars($item['usuario_nome']); ?></span>
+                                        <?php if ($item['nota']): ?>
+                                            <span class="text-warning"><i class="fas fa-star"></i> Nota: <?php echo (int)$item['nota']; ?>/5</span>
+                                        <?php endif; ?>
+                                        <?php if ($item['canal'] && $item['canal'] !== 'log'): ?>
+                                            <span class="text-uppercase"><i class="fas fa-broadcast-tower"></i> <?php echo htmlspecialchars($item['canal']); ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($item['os_id'] && $item['tipo_registro'] !== 'os'): ?>
+                                            <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo $item['os_id']; ?>" class="text-primary text-decoration-none">
+                                                <i class="fas fa-link"></i> Ver OS #<?php echo $item['os_id']; ?>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- MODAL CRM -->
+<div id="modalCRM" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+    <div class="modal-content card" style="background:#fff; margin: 10% auto; padding: 20px; width: 500px; border-radius: 8px;">
+        <div class="d-flex justify-between mb-3">
+            <h3>Registrar Interação CRM</h3>
+            <span style="cursor:pointer; font-size:24px;" onclick="document.getElementById('modalCRM').style.display='none'">&times;</span>
+        </div>
+        <form action="<?php echo BASE_URL; ?>crm/registrar-interacao" method="POST">
+            <input type="hidden" name="cliente_id" value="<?php echo $cliente_id; ?>">
+            
+            <div class="form-group mb-3">
+                <label>Tipo de Interação</label>
+                <select name="tipo" class="form-control" required onchange="toggleOSSelect(this.value)">
+                    <option value="anotacao_manual">Anotação Manual</option>
+                    <option value="pos_venda">Pós-Venda (Follow-up)</option>
+                    <option value="campanha">Campanha de Marketing</option>
+                    <option value="promocao">Envio de Promoção</option>
+                    <option value="retorno">Retorno de Cliente</option>
+                </select>
+            </div>
+
+            <div id="os-select-container" class="form-group mb-3" style="display:none;">
+                <label>Relacionar com OS</label>
+                <select name="ordem_servico_id" class="form-control">
+                    <option value="">-- Nenhuma --</option>
+                    <?php foreach ($historicoOS as $os): ?>
+                        <option value="<?php echo $os['id']; ?>">OS #<?php echo $os['id']; ?> (<?php echo date('d/m/Y', strtotime($os['created_at'])); ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Canal</label>
+                <select name="canal" class="form-control">
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="telefone">Telefone</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="email">E-mail</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Assunto</label>
+                <input type="text" name="assunto" class="form-control" placeholder="Ex: Promoção de Limpeza, Follow-up OS #123" required>
+            </div>
+
+            <div class="form-group mb-3">
+                <label>O que foi falado/feito</label>
+                <textarea name="descricao" class="form-control" rows="3" placeholder="Detalhes do que você enviou ou conversou"></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Resposta do Cliente</label>
+                <textarea name="resposta_cliente" class="form-control" rows="2" placeholder="O que o cliente respondeu (se houver)"></textarea>
+            </div>
+
+            <div class="form-group mb-3" id="nota-container" style="display:none;">
+                <label>Nota de Satisfação (1-5)</label>
+                <select name="nota_satisfacao" class="form-control">
+                    <option value="">Sem nota</option>
+                    <option value="5">5 ⭐⭐⭐⭐⭐</option>
+                    <option value="4">4 ⭐⭐⭐⭐</option>
+                    <option value="3">3 ⭐⭐⭐</option>
+                    <option value="2">2 ⭐⭐</option>
+                    <option value="1">1 ⭐</option>
+                </select>
+            </div>
+
+            <div class="d-flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalCRM').style.display='none'">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Interação</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+function toggleOSSelect(tipo) {
+    const osContainer = document.getElementById('os-select-container');
+    const notaContainer = document.getElementById('nota-container');
+    
+    if (tipo === 'pos_venda') {
+        osContainer.style.display = 'block';
+        notaContainer.style.display = 'block';
+    } else {
+        osContainer.style.display = 'none';
+        notaContainer.style.display = 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Lógica de filtro por equipamento
     const filterButtons = document.querySelectorAll('.filter-equip');

@@ -37,6 +37,26 @@ class ConfiguracoesController extends BaseController
         ]);
     }
 
+    public function financeiro()
+    {
+        $fin = $this->settings->getFinanceiro();
+        $this->render('configuracoes/financeiro', [
+            'title' => 'Configurações Financeiras',
+            'current_page' => 'configuracoes_financeiro',
+            'nf_porcentagem_produtos' => $fin['nf_porcentagem_produtos'],
+            'nf_porcentagem_servicos' => $fin['nf_porcentagem_servicos']
+        ]);
+    }
+
+    public function salvarFinanceiro()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ok = $this->settings->salvarFinanceiro($_POST);
+            $_SESSION['success'] = $ok ? "Configurações financeiras atualizadas!" : "Falha ao salvar configurações.";
+            $this->redirect('configuracoes/financeiro');
+        }
+    }
+
     public function salvarImpressao()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

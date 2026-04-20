@@ -20,13 +20,14 @@ class RelatorioService
                     SUM(valor_total_os) as total_bruto,
                     SUM(valor_total_produtos) as total_produtos,
                     SUM(valor_total_servicos) as total_servicos,
+                    SUM(valor_taxa_nf) as total_taxa_nf,
                     (SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) 
                      FROM itens_ordem_servico i 
                      JOIN ordens_servico o ON i.ordem_servico_id = o.id 
-                     WHERE o.status_atual_id NOT IN (1, 2, 3, 6, 7, 9, 13) AND o.ativo = 1 AND i.ativo = 1
+                     WHERE o.status_atual_id IN (4, 5, 8, 10, 11, 12) AND o.ativo = 1 AND i.ativo = 1
                      AND DATE(o.created_at) BETWEEN :sub_start AND :sub_end) as total_custo
                 FROM ordens_servico 
-                WHERE status_atual_id NOT IN (1, 2, 3, 6, 7, 9, 13) AND ativo = 1 
+                WHERE status_atual_id IN (4, 5, 8, 10, 11, 12) AND ativo = 1 
                 AND DATE(created_at) BETWEEN :start AND :end";
         $stmt = $db->prepare($sql);
         $stmt->execute([
@@ -178,7 +179,7 @@ class RelatorioService
         $db = $this->osModel->getConnection();
         $sql = "SELECT s.nome, COUNT(os.id) as total, s.cor 
                 FROM status_os s
-                LEFT JOIN ordens_servico os ON os.status_atual_id = s.id AND os.ativo = 1 AND DATE(os.created_at) BETWEEN :start AND :end
+                LEFT JOIN ordens_servico os ON os.status_atual_id = s.id AND os.ativo = 1 AND DATE(os.updated_at) BETWEEN :start AND :end
                 GROUP BY s.id
                 ORDER BY s.ordem ASC";
         $stmt = $db->prepare($sql);
@@ -197,6 +198,7 @@ class RelatorioService
                         WHERE i.atendimento_externo_id = a.id AND i.ativo = 1
                     ), 0)), 0) AS valor_total,
                     COALESCE(SUM(a.valor_deslocamento), 0) AS valor_deslocamento,
+                    COALESCE(SUM(a.valor_taxa_nf), 0) AS total_taxa_nf,
                     COALESCE(SUM((
                         SELECT SUM(i2.quantidade * COALESCE(NULLIF(i2.valor_custo, 0), NULLIF(i2.custo, 0), 0))
                         FROM itens_ordem_servico i2
@@ -214,9 +216,10 @@ class RelatorioService
                             WHERE i2.atendimento_externo_id = a.id AND i2.ativo = 1
                         ), 0)
                         + COALESCE(a.valor_deslocamento, 0)
+                        - COALESCE(a.valor_taxa_nf, 0)
                     ), 0) AS lucro_total
                 FROM atendimentos_externos a
-                WHERE DATE(a.created_at) BETWEEN :start AND :end";
+                WHERE a.status = 'finalizado' AND DATE(a.updated_at) BETWEEN :start AND :end";
         $stmt = $db->prepare($sql);
         $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
         return $stmt->fetch() ?: [];
@@ -224,24 +227,19 @@ class RelatorioService
 
     public function custosPorOS(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosOS($dataInicio, $dataFim, 'created_at');
+        return $this->obterCustosOS($dataInicio, $dataFim, 'updated_at');
     }
 
     public function custosPorOSCaixa(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosOS($dataInicio, $dataFim, 'first_payment');
+        return $this->obterCustosOS($dataInicio, $dataFim, 'updated_at');
     }
 
     private function obterCustosOS(string $dataInicio, string $dataFim, string $tipoData): array
     {
         $db = $this->osModel->getConnection();
         
-        $whereData = "DATE(os.created_at) BETWEEN :start AND :end";
-        // Para OS no Caixa Real, o custo é contabilizado pela data de criação (pagamento à vista)
-        // se a OS estiver aprovada/finalizada
-        if ($tipoData === 'first_payment') {
-            $whereData = "DATE(os.created_at) BETWEEN :start AND :end";
-        }
+        $whereData = "DATE(COALESCE(os.updated_at, os.created_at)) BETWEEN :start AND :end";
 
         $sql = "SELECT 
                     os.id as os_id,
@@ -250,7 +248,7 @@ class RelatorioService
                 FROM ordens_servico os
                 JOIN clientes c ON c.id = os.cliente_id
                 JOIN itens_ordem_servico i ON i.ordem_servico_id = os.id AND i.ativo = 1
-                WHERE os.status_atual_id NOT IN (1, 2, 3, 6, 7, 9, 13) 
+                WHERE os.status_atual_id = 5 
                   AND os.ativo = 1 
                   AND $whereData
                 GROUP BY os.id, c.nome_completo
@@ -297,23 +295,61 @@ class RelatorioService
 
     public function custosPorAtendimento(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosAtendimento($dataInicio, $dataFim, 'created_at');
+        return $this->obterCustosAtendimento($dataInicio, $dataFim, 'updated_at');
     }
 
     public function custosPorAtendimentoCaixa(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosAtendimento($dataInicio, $dataFim, 'first_payment');
+        return $this->obterCustosAtendimento($dataInicio, $dataFim, 'updated_at');
+    }
+
+    public function nfsPorOSCaixa(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    os.id as os_id,
+                    c.nome_completo as cliente_nome,
+                    os.valor_total_os,
+                    os.valor_taxa_nf
+                FROM ordens_servico os
+                JOIN clientes c ON c.id = os.cliente_id
+                WHERE os.ativo = 1 AND os.status_atual_id = 5 AND os.emitir_nf = 1
+                  AND DATE(COALESCE(os.updated_at, os.created_at)) BETWEEN :start AND :end
+                  AND os.valor_taxa_nf > 0
+                ORDER BY os.id DESC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    public function nfsPorAtendimentoCaixa(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    a.id as atendimento_id,
+                    c.nome_completo as cliente_nome,
+                    (COALESCE(a.valor_deslocamento, 0) + COALESCE((
+                        SELECT SUM(i.valor_total)
+                        FROM itens_ordem_servico i
+                        WHERE i.atendimento_externo_id = a.id AND i.ativo = 1
+                    ), 0)) as valor_total,
+                    a.valor_taxa_nf
+                FROM atendimentos_externos a
+                JOIN clientes c ON c.id = a.cliente_id
+                WHERE a.ativo = 1 AND a.status = 'finalizado' AND a.emitir_nf = 1
+                  AND DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start AND :end
+                  AND a.valor_taxa_nf > 0
+                ORDER BY a.id DESC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        return $stmt->fetchAll() ?: [];
     }
 
     private function obterCustosAtendimento(string $dataInicio, string $dataFim, string $tipoData): array
     {
         $db = $this->osModel->getConnection();
 
-        $whereData = "DATE(a.created_at) BETWEEN :start AND :end";
-        // Para Atendimentos, o custo é contabilizado pela data de criação (pagamento à vista)
-        if ($tipoData === 'first_payment') {
-            $whereData = "DATE(a.created_at) BETWEEN :start AND :end";
-        }
+        $whereData = "DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start AND :end";
 
         $sql = "SELECT 
                     a.id as atendimento_id,
@@ -322,7 +358,7 @@ class RelatorioService
                 FROM atendimentos_externos a
                 JOIN clientes c ON c.id = a.cliente_id
                 JOIN itens_ordem_servico i ON i.atendimento_externo_id = a.id AND i.ativo = 1
-                WHERE a.ativo = 1 
+                WHERE a.ativo = 1 AND a.status = 'finalizado'
                   AND $whereData
                 GROUP BY a.id, c.nome_completo
                 HAVING custo_total > 0
@@ -375,10 +411,10 @@ class RelatorioService
                     SUM(i.quantidade) AS quantidade_total
                 FROM itens_ordem_servico i
                 JOIN ordens_servico o ON i.ordem_servico_id = o.id
-                WHERE o.status_atual_id NOT IN (1, 2, 3, 6, 7, 9, 13)
+                WHERE o.status_atual_id = 5
                   AND o.ativo = 1
                   AND i.ativo = 1
-                  AND DATE(o.created_at) BETWEEN :start AND :end
+                  AND DATE(o.updated_at) BETWEEN :start AND :end
                 GROUP BY i.tipo_item, i.descricao
                 HAVING quantidade_total > 0
                 ORDER BY quantidade_total DESC, i.descricao ASC";
@@ -391,8 +427,7 @@ class RelatorioService
     {
         $db = $this->osModel->getConnection();
         
-        // 1. Receita Líquida (Pagamentos Reais - Taxas)
-        // Considera todas as transações (OS e Atendimentos) que estão ativas
+        // 1. Receita Liquida (Pagamentos Reais - Taxas de Maquina)
         $sqlReceita = "SELECT SUM(valor_liquido) as total_liquido 
                        FROM pagamentos_transacoes 
                        WHERE ativo = 1 
@@ -401,7 +436,8 @@ class RelatorioService
         $stmtReceita->execute(['start' => $dataInicio, 'end' => $dataFim]);
         $receitaLiquida = (float)($stmtReceita->fetchColumn() ?: 0);
 
-        // 2. Custos de OS associado ao MOMENTO DA CRIAÇÃO (pagamento à vista das peças)
+        // 2. Custos de OS (Pecas) - Baseado na data de FINALIZACAO da OS (Status 5)
+        // Usamos COALESCE(updated_at, created_at) caso o updated_at esteja nulo
         $sqlCustosOS = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
                         FROM itens_ordem_servico i
                         WHERE i.ativo = 1
@@ -410,15 +446,15 @@ class RelatorioService
                               SELECT 1
                               FROM ordens_servico o
                               WHERE o.id = i.ordem_servico_id
-                                AND o.status_atual_id NOT IN (1, 2, 3, 6, 7, 9, 13)
+                                AND o.status_atual_id = 5 
                                 AND o.ativo = 1
-                                AND DATE(o.created_at) BETWEEN :start1 AND :end1
+                                AND DATE(COALESCE(o.updated_at, o.created_at)) BETWEEN :start1 AND :end1
                           )";
         $stmtOS = $db->prepare($sqlCustosOS);
         $stmtOS->execute(['start1' => $dataInicio, 'end1' => $dataFim]);
         $custoOS = (float)($stmtOS->fetchColumn() ?: 0);
 
-        // 3. Custos de Atendimentos associado ao MOMENTO DA CRIAÇÃO (pagamento à vista das peças)
+        // 3. Custos de Atendimentos (Pecas)
         $sqlCustosAt = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
                         FROM itens_ordem_servico i
                         WHERE i.ativo = 1
@@ -427,18 +463,36 @@ class RelatorioService
                               SELECT 1
                               FROM atendimentos_externos a
                               WHERE a.id = i.atendimento_externo_id
-                                AND DATE(a.created_at) BETWEEN :start2 AND :end2
+                                AND a.status = 'finalizado'
+                                AND DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start2 AND :end2
                           )";
         $stmtAt = $db->prepare($sqlCustosAt);
         $stmtAt->execute(['start2' => $dataInicio, 'end2' => $dataFim]);
         $custoAt = (float)($stmtAt->fetchColumn() ?: 0);
 
+        // 4. Custos de Impostos (Nota Fiscal)
+        $sqlTaxaNF = "SELECT 
+                        (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM ordens_servico WHERE ativo = 1 AND status_atual_id = 5 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s1 AND :e1) +
+                        (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE ativo = 1 AND status = 'finalizado' AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
+                      as total_nf";
+        $stmtNF = $db->prepare($sqlTaxaNF);
+        $stmtNF->execute([
+            's1' => $dataInicio, 'e1' => $dataFim,
+            's2' => $dataInicio, 'e2' => $dataFim
+        ]);
+        $custoNF = (float)($stmtNF->fetchColumn() ?: 0);
+
+        $custoPecas = $custoOS + $custoAt;
+        $totalDescontos = $custoPecas + $custoNF;
+
         return [
             'receita_liquida' => $receitaLiquida,
             'custo_os' => $custoOS,
             'custo_atendimentos' => $custoAt,
-            'custo_pecas' => $custoOS + $custoAt,
-            'lucro_real' => $receitaLiquida - ($custoOS + $custoAt)
+            'custo_pecas' => $custoPecas,
+            'custo_nf' => $custoNF,
+            'total_descontos' => $totalDescontos,
+            'lucro_real' => $receitaLiquida - $totalDescontos
         ];
     }
 }

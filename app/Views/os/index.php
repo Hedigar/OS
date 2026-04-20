@@ -187,10 +187,9 @@ require_once __DIR__ . '/../layout/main.php';
 
 <style>
 .pagination { display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; margin-bottom: 20px; }
-.pagination a { padding: 8px 14px; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #007bff; }
+.pagination a { padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #007bff; }
 .pagination a.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
-.pagination a:hover:not
-(.active) { background-color: #f8f9fa; }
+.pagination a:hover:not(.active) { background-color: #f8f9fa; }
 
 </style>
 

@@ -19,6 +19,8 @@ $router->post('caixa/marcar-verificado', 'CaixaController@marcarVerificado');
 // Configurações
 $router->get('configuracoes', 'ConfiguracoesController@index');
 $router->get('configuracoes/os', 'ConfiguracoesController@os');
+$router->get('configuracoes/financeiro', 'ConfiguracoesController@financeiro');
+$router->post('configuracoes/salvar-financeiro', 'ConfiguracoesController@salvarFinanceiro');
 $router->post('configuracoes/salvar-impressao', 'ConfiguracoesController@salvarImpressao');
 $router->get('configuracoes/produtos-servicos', 'ProdutoServicoController@index');
 $router->get('configuracoes/produtos-servicos/form', 'ProdutoServicoController@form');
@@ -43,9 +45,14 @@ $router->get('relatorios', 'RelatorioController@index');
 // Auditoria
 $router->get('auditoria', 'AuditoriaController@index');
 
-// Pós-Venda
+// Pós-Venda e CRM
 $router->get('pos-venda', 'PosVendaController@index');
 $router->post('pos-venda/registrar-resposta', 'PosVendaController@registrarResposta');
+
+// CRM Avançado
+$router->get('crm', 'CRMController@index');
+$router->post('crm/registrar-interacao', 'CRMController@registrarInteracao');
+$router->post('crm/registrar-campanha-lote', 'CRMController@registrarCampanhaLote');
 
 // Produtividade Pessoal
 $router->get('produtividade', 'ProdutividadeController@index');
@@ -98,6 +105,7 @@ $router->get('ordens/search-items', 'OrdemServicoController@searchItems');
 $router->post('ordens/salvar-item', 'OrdemServicoController@saveItem');
 $router->post('ordens/atualizar-item', 'OrdemServicoController@updateItem');
 $router->post('ordens/remover-item', 'OrdemServicoController@removeItem');
+$router->post('ordens/toggle-nf', 'OrdemServicoController@toggleNF');
 // Registro de Pagamentos (OS e Atendimento Externo)
 $router->post('pagamentos/registrar', 'PagamentoController@registrar');
 $router->post('pagamentos/deletar', 'PagamentoController@deletar');

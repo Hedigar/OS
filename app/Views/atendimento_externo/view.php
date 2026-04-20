@@ -150,6 +150,22 @@ if (!function_exists('formatCurrency')) {
 	                        <?php endforeach; ?>
 	                    </select>
 	                </div>
+                    <div class="form-group">
+                        <h3 class="mb-2">📋 Impostos (Nota Fiscal)</h3>
+                        <div class="d-flex align-center gap-2 mt-2">
+                            <input type="checkbox" id="check_emitir_nf_ae" <?php echo (safe_val($atendimento, 'emitir_nf', 0) == 1) ? 'checked' : ''; ?> 
+                                   onchange="toggleNF(<?php echo $atendimento['id']; ?>, this.checked ? 1 : 0, 'atendimento')"
+                                   style="width: 20px; height: 20px; cursor: pointer;">
+                            <label for="check_emitir_nf_ae" class="m-0 cursor-pointer fw-bold <?php echo (safe_val($atendimento, 'emitir_nf', 0) == 1) ? 'text-success' : 'text-muted'; ?>">
+                                Emitir Nota Fiscal (Descontar custo)
+                            </label>
+                        </div>
+                        <?php if (safe_val($atendimento, 'valor_taxa_nf', 0) > 0): ?>
+                            <small class="text-danger d-block mt-1">
+                                <i class="fas fa-calculator"></i> Custo estimado do imposto: <strong><?php echo formatCurrency((float)$atendimento['valor_taxa_nf']); ?></strong>
+                            </small>
+                        <?php endif; ?>
+                    </div>
 	            </div>
 
             <div class="mt-4 text-end">
@@ -165,6 +181,7 @@ if (!function_exists('formatCurrency')) {
             $calcSomaBruta = 0;
             $calcSomaDescontos = 0;
             $calcSomaLiquida = 0;
+            $calcSomaCusto = 0;
 
             if (!empty($itens)) {
                 foreach ($itens as $item) {
@@ -173,6 +190,7 @@ if (!function_exists('formatCurrency')) {
                     $qtd = (float)($item['quantidade'] ?? 1);
                     $desc = (float)($item['desconto'] ?? 0);
                     $vTotalItem = (float)($item['valor_total'] ?? 0);
+                    $vCustoItem = (float)($item['custo'] ?? $item['valor_custo'] ?? 0);
                     
                     // Valor unitário completo (peça + mão de obra)
                     $vUnitFull = $vUnit + $vMao;
@@ -182,30 +200,51 @@ if (!function_exists('formatCurrency')) {
                     $calcSomaBruta += $vBrutoItem;
                     $calcSomaDescontos += $desc;
                     $calcSomaLiquida += $vTotalItem;
+                    $calcSomaCusto += ($vCustoItem * $qtd);
                 }
             } else {
                 // Fallback se não houver itens carregados
                 $calcSomaLiquida = (float)(safe_val($ordem, 'valor_total_os', 0));
-                // Tenta pegar desconto do atendimento ou ordem
                 $calcSomaDescontos = (float)(safe_val($atendimento, 'valor_desconto', 0));
                 $calcSomaBruta = $calcSomaLiquida + $calcSomaDescontos;
+                $calcSomaCusto = 0;
             }
 
-            $totalPago = (float)($total_pago ?? 0);
+            $valorDeslocamento = (float)($atendimento['valor_deslocamento'] ?? 0);
+            $calcSomaLiquida += $valorDeslocamento;
+            $calcSomaBruta += $valorDeslocamento;
+
+            $totalPago = 0;
+            $totalTaxasCartao = 0;
+            $totalLiquidoRecebido = 0;
+            
+            if (!empty($transacoes)) {
+                foreach ($transacoes as $t) {
+                    $totalPago += (float)$t['valor_bruto'];
+                    $totalTaxasCartao += (float)($t['valor_taxa'] ?? 0);
+                    $totalLiquidoRecebido += (float)($t['valor_liquido'] ?? $t['valor_bruto']);
+                }
+            }
+
             $saldo = max(0, $calcSomaLiquida - $totalPago);
+            $custoNF = (float)($atendimento['valor_taxa_nf'] ?? 0);
+            
+            // Lucro Líquido Real = O que entrou limpo no banco - O que gastou com peça - O que gastou com NF
+            $lucroLiquidoReal = $totalLiquidoRecebido - $calcSomaCusto - $custoNF;
         ?>
         <div class="form-grid">
             <div>
-                <h3 class="mb-2">Resumo</h3>
-                <p class="m-0">Subtotal: <strong><?php echo formatCurrency($calcSomaBruta); ?></strong></p>
+                <h3 class="mb-2">Resumo Financeiro do Atendimento</h3>
+                <p class="m-0">Subtotal Itens: <strong><?php echo formatCurrency($calcSomaBruta); ?></strong></p>
                 <?php if ($calcSomaDescontos > 0): ?>
-                <p class="m-0">Descontos: <strong>- <?php echo formatCurrency($calcSomaDescontos); ?></strong></p>
+                <p class="m-0 text-danger">Descontos: <strong>- <?php echo formatCurrency($calcSomaDescontos); ?></strong></p>
                 <?php endif; ?>
-                <p class="m-0">Total a Pagar: <strong class="text-primary"><?php echo formatCurrency($calcSomaLiquida); ?></strong></p>
-                <p class="m-0">Pago: <strong class="text-success"><?php echo formatCurrency($totalPago); ?></strong></p>
-                <p class="m-0">Saldo: <strong class="text-warning"><?php echo formatCurrency($saldo); ?></strong></p>
+                <p class="m-0">Total Final Atendimento: <strong class="text-primary"><?php echo formatCurrency($calcSomaLiquida); ?></strong></p>
+                <hr class="my-2" style="opacity: 0.1;">
+                <p class="m-0">Total Pago: <strong class="text-success"><?php echo formatCurrency($totalPago); ?></strong></p>
+                <p class="m-0">Saldo Restante: <strong class="text-warning"><?php echo formatCurrency($saldo); ?></strong></p>
             </div>
-            <div>
+            <div class="col-span-2">
                 <h3 class="mb-2">Registrar Pagamento</h3>
                 <form id="form-pagamento-ae" onsubmit="return registrarPagamentoAE(event)">
                     <input type="hidden" name="tipo_origem" value="atendimento">
@@ -318,6 +357,27 @@ if (!function_exists('formatCurrency')) {
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
+                        <tfoot>
+                            <tr class="bg-tertiary">
+                                <td colspan="8" class="text-end">Custo Total de Peças:</td>
+                                <td class="text-end text-danger">- <?php echo formatCurrency($calcSomaCusto); ?></td>
+                                <td></td>
+                            </tr>
+                            <?php if ($custoNF > 0): ?>
+                            <tr class="bg-tertiary">
+                                <td colspan="8" class="text-end">Custo de Impostos (NF):</td>
+                                <td class="text-end text-danger">- <?php echo formatCurrency($custoNF); ?></td>
+                                <td></td>
+                            </tr>
+                            <?php endif; ?>
+                            <tr class="bg-tertiary" style="border-top: 2px solid #ddd;">
+                                <td colspan="8" class="text-end fw-bold">LUCRO LÍQUIDO FINAL (CAIXA):</td>
+                                <td class="text-end fw-bold <?php echo $lucroLiquidoReal >= 0 ? 'text-success' : 'text-danger'; ?>" style="font-size: 1.1rem;">
+                                    <?php echo formatCurrency($lucroLiquidoReal); ?>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             <?php endif; ?>
@@ -538,6 +598,31 @@ function registrarPagamentoAE(e) {
         msgDiv.innerHTML = '<div class="alert alert-danger">Erro de comunicação.</div>';
     });
     return false;
+}
+
+function toggleNF(id, value, type) {
+    const fd = new FormData();
+    fd.append('id', id);
+    fd.append('value', value);
+    fd.append('type', type);
+    
+    fetch('<?php echo BASE_URL; ?>ordens/toggle-nf', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'include',
+        body: fd
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res && res.success) {
+            window.location.reload();
+        } else {
+            alert('Erro ao atualizar opção de NF: ' + (res.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(() => {
+        alert('Erro de comunicação ao atualizar NF.');
+    });
 }
 
 function excluirTransacaoAE(transacaoId) {

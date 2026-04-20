@@ -33,6 +33,19 @@ require_once __DIR__ . '/../layout/main.php';
         </div>
         
         <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body text-center">
+                    <div class="display-4 mb-3 text-success">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <h5 class="card-title text-success">Configurações Financeiras</h5>
+                    <p class="card-text text-muted">Defina as taxas de impostos (NF) para cálculo automático de lucro.</p>
+                    <a href="<?= BASE_URL ?>configuracoes/financeiro" class="btn btn-success">Configurar Taxas</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-body text-center">
                     <div class="display-4 mb-3 text-primary">

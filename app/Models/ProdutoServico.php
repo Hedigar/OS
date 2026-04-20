@@ -16,7 +16,18 @@ class ProdutoServico extends Model
         $sql = "SELECT * FROM {$this->table} WHERE ativo = 1 ORDER BY nome ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Busca nomes de serviços/produtos únicos que já foram usados em itens de OS.
+     */
+    public function getDescricoesUsadas(): array
+    {
+        $sql = "SELECT DISTINCT descricao FROM itens_ordem_servico WHERE ativo = 1 ORDER BY descricao ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
     }
 
     /**

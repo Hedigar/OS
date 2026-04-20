@@ -26,22 +26,48 @@ class AtendimentoService
 
         $itens = $this->atendimentoModel->listarItens($id);
         
-        $somaItens = 0;
+        $totalProdutos = 0;
+        $totalServicos = 0;
+        $totalDesconto = 0;
+
         if (!empty($itens)) {
             foreach ($itens as $item) {
-                // Soma valor unitário + mão de obra vezes a quantidade, subtraindo o desconto
+                $tipo = $item['tipo_item'] ?? 'servico';
                 $valorItem = ($item['quantidade'] * ($item['valor_unitario'] + ($item['valor_mao_de_obra'] ?? 0)));
                 $descontoItem = (float)($item['desconto'] ?? 0);
-                $somaItens += ($valorItem - $descontoItem);
+                
+                if ($tipo === 'produto') {
+                    $totalProdutos += ($valorItem - $descontoItem);
+                } else {
+                    $totalServicos += ($valorItem - $descontoItem);
+                }
+                $totalDesconto += $descontoItem;
             }
         }
 
         $valorDeslocamento = (float)($atendimento['valor_deslocamento'] ?? 0);
+        $totalAtendimento = $totalProdutos + $totalServicos + $valorDeslocamento;
+
+        // Cálculo da Taxa NF
+        $emitirNF = (int)($atendimento['emitir_nf'] ?? 0);
+        $valorTaxaNF = 0.00;
+
+        if ($emitirNF) {
+            $configModel = new \App\Models\ConfiguracaoGeral();
+            $percProdutos = (float)$configModel->getValor('nf_porcentagem_produtos') ?: 3;
+            $percServicos = (float)$configModel->getValor('nf_porcentagem_servicos') ?: 6;
+            
+            $valorTaxaNF = ($totalProdutos * ($percProdutos / 100)) + (($totalServicos + $valorDeslocamento) * ($percServicos / 100));
+        }
+
+        // Salvar o valor calculado da taxa no banco para relatórios
+        $this->atendimentoModel->update($id, ['valor_taxa_nf' => $valorTaxaNF]);
         
         return [
             'atendimento' => $atendimento,
             'itens'       => $itens,
-            'valor_total' => $somaItens + $valorDeslocamento
+            'valor_total' => $totalAtendimento,
+            'valor_taxa_nf' => $valorTaxaNF
         ];
     }
 

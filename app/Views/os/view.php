@@ -224,6 +224,22 @@ if (!function_exists('safe_val')) {
                     <h3 class="mb-2">Observação do Status (Histórico)</h3>
                     <input type="text" name="status_observacao" class="form-control" placeholder="Ex: Peça encomendada no Mercado Livre">
                 </div>
+                <div class="form-group">
+                    <h3 class="mb-2">📋 Impostos (Nota Fiscal)</h3>
+                    <div class="d-flex align-center gap-2 mt-2">
+                        <input type="checkbox" id="check_emitir_nf" <?php echo (safe_val($ordem, 'emitir_nf', 0) == 1) ? 'checked' : ''; ?> 
+                               onchange="toggleNF(<?php echo $ordem['id']; ?>, this.checked ? 1 : 0, 'os')"
+                               style="width: 20px; height: 20px; cursor: pointer;">
+                        <label for="check_emitir_nf" class="m-0 cursor-pointer fw-bold <?php echo (safe_val($ordem, 'emitir_nf', 0) == 1) ? 'text-success' : 'text-muted'; ?>">
+                            Emitir Nota Fiscal (Descontar custo)
+                        </label>
+                    </div>
+                    <?php if (safe_val($ordem, 'valor_taxa_nf', 0) > 0): ?>
+                        <small class="text-danger d-block mt-1">
+                            <i class="fas fa-calculator"></i> Custo estimado do imposto: <strong><?php echo formatCurrency((float)$ordem['valor_taxa_nf']); ?></strong>
+                        </small>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div class="mt-4 text-end">
@@ -275,6 +291,7 @@ if (!function_exists('safe_val')) {
             $calcSomaBruta = 0;
             $calcSomaDescontos = 0;
             $calcSomaLiquida = 0;
+            $calcSomaCusto = 0;
 
             if (!empty($itens)) {
                 foreach ($itens as $item) {
@@ -283,6 +300,7 @@ if (!function_exists('safe_val')) {
                     $qtd = (float)($item['quantidade'] ?? 1);
                     $desc = (float)($item['desconto'] ?? 0);
                     $vTotalItem = (float)($item['valor_total'] ?? 0);
+                    $vCustoItem = (float)($item['custo'] ?? $item['valor_custo'] ?? 0);
                     
                     // Valor unitário completo (peça + mão de obra)
                     $vUnitFull = $vUnit + $vMao;
@@ -292,29 +310,44 @@ if (!function_exists('safe_val')) {
                     $calcSomaBruta += $vBrutoItem;
                     $calcSomaDescontos += $desc;
                     $calcSomaLiquida += $vTotalItem;
+                    $calcSomaCusto += ($vCustoItem * $qtd);
                 }
             } else {
                 // Fallback se não houver itens carregados
                 $calcSomaLiquida = (float)(safe_val($ordem, 'valor_total_os', 0));
                 $calcSomaDescontos = (float)(safe_val($ordem, 'valor_desconto', 0));
                 $calcSomaBruta = $calcSomaLiquida + $calcSomaDescontos;
+                $calcSomaCusto = 0;
             }
 
-            $totalPago = (float)($total_pago ?? 0);
+            $totalPago = 0;
+            $totalTaxasCartao = 0;
+            $totalLiquidoRecebido = 0;
+            
+            if (!empty($transacoes)) {
+                foreach ($transacoes as $t) {
+                    $totalPago += (float)$t['valor_bruto'];
+                    $totalTaxasCartao += (float)($t['valor_taxa'] ?? 0);
+                    $totalLiquidoRecebido += (float)($t['valor_liquido'] ?? $t['valor_bruto']);
+                }
+            }
+
             $saldo = max(0, $calcSomaLiquida - $totalPago);
+            $custoNF = (float)($ordem['valor_taxa_nf'] ?? 0);
+            
+            // Lucro Líquido Real = O que entrou limpo no banco - O que gastou com peça - O que gastou com NF
+            $lucroLiquidoReal = $totalLiquidoRecebido - $calcSomaCusto - $custoNF;
         ?>
         <div class="form-grid">
-            <div>
-                <h3 class="mb-2">Resumo</h3>
-                <p class="m-0">Subtotal: <strong><?php echo formatCurrency($calcSomaBruta); ?></strong></p>
-                <?php if ($calcSomaDescontos > 0): ?>
-                <p class="m-0">Descontos: <strong>- <?php echo formatCurrency($calcSomaDescontos); ?></strong></p>
-                <?php endif; ?>
-                <p class="m-0">Total a Pagar: <strong class="text-primary"><?php echo formatCurrency($calcSomaLiquida); ?></strong></p>
-                <p class="m-0">Pago: <strong class="text-success"><?php echo formatCurrency($totalPago); ?></strong></p>
-                <p class="m-0">Saldo: <strong class="text-warning"><?php echo formatCurrency($saldo); ?></strong></p>
+            <div class="col-span-3">
+                <h3 class="mb-2">Resumo de Valores da OS</h3>
+                <div class="d-flex gap-4">
+                    <p class="m-0">Total Final OS: <strong class="text-primary" style="font-size: 1.1rem;"><?php echo formatCurrency($calcSomaLiquida); ?></strong></p>
+                    <p class="m-0">Total Pago: <strong class="text-success" style="font-size: 1.1rem;"><?php echo formatCurrency($totalPago); ?></strong></p>
+                    <p class="m-0">Saldo Devedor: <strong class="text-warning" style="font-size: 1.1rem;"><?php echo formatCurrency($saldo); ?></strong></p>
+                </div>
             </div>
-            <div>
+            <div class="col-span-full mt-3">
                 <h3 class="mb-2">Registrar Pagamento</h3>
                 <form id="form-pagamento" onsubmit="return registrarPagamentoOS(event)">
                     <input type="hidden" name="tipo_origem" value="os">
@@ -427,6 +460,32 @@ if (!function_exists('safe_val')) {
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
+                        <tfoot>
+                            <tr class="bg-tertiary">
+                                <td colspan="8" class="text-end fw-bold">VALOR LÍQUIDO RECEBIDO (CARTÃO/PIX/DINHEIRO):</td>
+                                <td class="text-end fw-bold text-info"><?php echo formatCurrency($totalLiquidoRecebido); ?></td>
+                                <td></td>
+                            </tr>
+                            <tr class="bg-tertiary">
+                                <td colspan="8" class="text-end text-danger">(-) CUSTO TOTAL DE PEÇAS:</td>
+                                <td class="text-end text-danger fw-bold">- <?php echo formatCurrency($calcSomaCusto); ?></td>
+                                <td></td>
+                            </tr>
+                            <?php if ($custoNF > 0): ?>
+                            <tr class="bg-tertiary">
+                                <td colspan="8" class="text-end text-danger">(-) IMPOSTOS (NOTA FISCAL):</td>
+                                <td class="text-end text-danger fw-bold">- <?php echo formatCurrency($custoNF); ?></td>
+                                <td></td>
+                            </tr>
+                            <?php endif; ?>
+                            <tr style="background: #f8f9fa; border-top: 2px solid #333;">
+                                <td colspan="8" class="text-end fw-bold" style="font-size: 1.1rem;">LUCRO LÍQUIDO FINAL (CAIXA):</td>
+                                <td class="text-end fw-bold <?php echo $lucroLiquidoReal >= 0 ? 'text-success' : 'text-danger'; ?>" style="font-size: 1.3rem; border: 2px solid #333; border-radius: 4px;">
+                                    <?php echo formatCurrency($lucroLiquidoReal); ?>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             <?php endif; ?>
@@ -615,6 +674,31 @@ document.addEventListener('DOMContentLoaded', function() {
             msgDiv.innerHTML = '<div class="alert alert-danger">Erro de comunicação.</div>';
         });
         return false;
+    }
+
+    window.toggleNF = function(id, value, type) {
+        const fd = new FormData();
+        fd.append('id', id);
+        fd.append('value', value);
+        fd.append('type', type);
+        
+        fetch('<?php echo BASE_URL; ?>ordens/toggle-nf', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'include',
+            body: fd
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res && res.success) {
+                window.location.reload();
+            } else {
+                alert('Erro ao atualizar opção de NF: ' + (res.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(() => {
+            alert('Erro de comunicação ao atualizar NF.');
+        });
     }
 
     window.excluirTransacao = function(tipo, origemId, transacaoId) {

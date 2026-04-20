@@ -49,14 +49,25 @@ require_once __DIR__ . '/../layout/main.php';
         <div class="col-md-5">
             <!-- CONFIGURAÇÃO MENSAGEM PADRÃO -->
             <div class="card mb-4">
-                <h3 class="card-title">⚙️ Mensagem Padrão CRM</h3>
-                <form action="<?php echo BASE_URL; ?>crm/salvar-configuracao" method="POST" class="d-flex gap-2 align-end">
-                    <div class="flex-1">
-                        <input type="text" name="crm_mensagem_padrao" class="form-control" value="<?php echo htmlspecialchars($mensagemPadrao); ?>" placeholder="Mensagem padrão...">
+                <h3 class="card-title">⚙️ Mensagens Padrão</h3>
+                <form action="<?php echo BASE_URL; ?>crm/salvar-configuracao" method="POST">
+                    <div class="mb-3">
+                        <label class="small text-muted">Mensagem CRM (Segmentação)</label>
+                        <div class="d-flex gap-2 align-end">
+                            <input type="text" name="crm_mensagem_padrao" class="form-control" value="<?php echo htmlspecialchars($mensagemPadrao); ?>" placeholder="Mensagem CRM...">
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-secondary">Atualizar</button>
+                    <div class="mb-3">
+                        <label class="small text-muted">Mensagem Pós-Venda (WhatsApp)</label>
+                        <div class="d-flex gap-2 align-end">
+                            <input type="text" name="pos_venda_mensagem_padrao" class="form-control" value="<?php echo htmlspecialchars($posVendaMensagemPadrao); ?>" placeholder="Mensagem Pós-Venda...">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-between align-center">
+                        <small class="text-muted">Use <strong>{nome}</strong> e <strong>{os_id}</strong>.</small>
+                        <button type="submit" class="btn btn-secondary btn-sm">Atualizar Todas</button>
+                    </div>
                 </form>
-                <small class="text-muted mt-1">Use <strong>{nome}</strong> para o primeiro nome do cliente.</small>
             </div>
         </div>
     </div>

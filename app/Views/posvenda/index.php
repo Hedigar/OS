@@ -32,7 +32,8 @@ require_once __DIR__ . '/../layout/main.php';
                         <?php foreach ($itens as $a): ?>
                             <?php 
                                 $telefone = preg_replace('/\D+/', '', $a['cliente_telefone'] ?? '');
-                                $msg = "Olá {$a['cliente_nome']}, tudo bem? Sobre a OS #{$a['os_id']}, gostaríamos de saber como está o equipamento e sua experiência. Seu feedback é importante.";
+                                $template = $mensagemPadrao;
+                                $msg = str_replace(['{nome}', '{os_id}'], [$a['cliente_nome'], $a['os_id']], $template);
                                 $wa = $telefone ? "https://wa.me/55{$telefone}?text=" . urlencode($msg) : '#';
                             ?>
                             <tr>

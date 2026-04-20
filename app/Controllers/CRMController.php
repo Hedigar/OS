@@ -49,6 +49,7 @@ class CRMController extends BaseController
         $servicosExistentes = $this->produtoServicoModel->getDescricoesUsadas();
         $campanhasAbertas = $this->campanhaModel->getAtivas();
         $mensagemPadrao = $this->configModel->getValor('crm_mensagem_padrao') ?? 'Olá {nome}! Notamos que você fez um serviço conosco e gostaríamos de oferecer...';
+        $posVendaMensagemPadrao = $this->configModel->getValor('pos_venda_mensagem_padrao') ?? 'Olá {nome}, tudo bem? Sobre a OS #{os_id}, gostaríamos de saber como está o equipamento e sua experiência. Seu feedback é importante.';
 
         $this->render('crm/index', [
             'title' => 'CRM - Gestão de Clientes',
@@ -58,7 +59,8 @@ class CRMController extends BaseController
             'servicosExistentes' => $servicosExistentes,
             'campanhasAbertas' => $campanhasAbertas,
             'campanhaAtiva' => $campanhaAtiva,
-            'mensagemPadrao' => $mensagemPadrao
+            'mensagemPadrao' => $mensagemPadrao,
+            'posVendaMensagemPadrao' => $posVendaMensagemPadrao
         ]);
     }
 
@@ -69,10 +71,16 @@ class CRMController extends BaseController
         }
 
         $mensagem = filter_input(INPUT_POST, 'crm_mensagem_padrao', FILTER_SANITIZE_SPECIAL_CHARS);
+        $posVendaMensagem = filter_input(INPUT_POST, 'pos_venda_mensagem_padrao', FILTER_SANITIZE_SPECIAL_CHARS);
         
         if ($mensagem) {
             $this->configModel->setValor('crm_mensagem_padrao', $mensagem, 'Mensagem padrão sugerida no CRM');
             $this->log("Atualizou Configuração CRM", "Nova mensagem padrão definida");
+        }
+
+        if ($posVendaMensagem) {
+            $this->configModel->setValor('pos_venda_mensagem_padrao', $posVendaMensagem, 'Mensagem padrão enviada no Pós-Venda');
+            $this->log("Atualizou Configuração Pós-Venda", "Nova mensagem de pós-venda definida");
         }
 
         $this->redirect('crm');

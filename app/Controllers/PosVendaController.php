@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\OrdemServico;
+use App\Models\ConfiguracaoGeral;
 use App\Models\Log;
 use App\Core\Auth;
 
@@ -11,15 +12,19 @@ class PosVendaController extends BaseController
     public function index()
     {
         $osModel = new OrdemServico();
+        $configModel = new ConfiguracaoGeral();
         $alertas = $osModel->getAlertasDashboard();
         $posVenda = array_values(array_filter($alertas, function ($a) {
             return ($a['tipo'] ?? '') === 'pos_venda';
         }));
 
+        $posVendaMensagemPadrao = $configModel->getValor('pos_venda_mensagem_padrao') ?? 'Olá {nome}, tudo bem? Sobre a OS #{os_id}, gostaríamos de saber como está o equipamento e sua experiência. Seu feedback é importante.';
+
         $this->render('posvenda/index', [
             'title' => 'Pós-Venda',
             'current_page' => 'pos_venda',
-            'itens' => $posVenda
+            'itens' => $posVenda,
+            'mensagemPadrao' => $posVendaMensagemPadrao
         ]);
     }
 

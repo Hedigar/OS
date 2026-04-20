@@ -220,7 +220,9 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
                                             $telefone = preg_replace('/\D+/', '', $alerta['cliente_telefone'] ?? '');
                                             if ($isPosVenda && !empty($telefone)) {
                                                 $nomeCli = $alerta['cliente_nome'] ?? '';
-                                                $msg = "Olá {$nomeCli}, tudo bem? Sobre a OS #{$alerta['os_id']}, gostaríamos de saber como está o equipamento e sua experiência. Seu feedback é importante.";
+                                                $configModel = new \App\Models\ConfiguracaoGeral();
+                                                $template = $configModel->getValor('pos_venda_mensagem_padrao') ?? "Olá {nome}, tudo bem? Sobre a OS #{os_id}, gostaríamos de saber como está o equipamento e sua experiência. Seu feedback é importante.";
+                                                $msg = str_replace(['{nome}', '{os_id}'], [$nomeCli, $alerta['os_id']], $template);
                                                 $wa = "https://wa.me/55{$telefone}?text=" . urlencode($msg);
                                                 echo '<a href="' . $wa . '" target="_blank" class="btn btn-sm btn-success ms-1">WhatsApp</a>';
                                             }

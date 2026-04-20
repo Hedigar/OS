@@ -53,6 +53,9 @@ $router->post('pos-venda/registrar-resposta', 'PosVendaController@registrarRespo
 $router->get('crm', 'CRMController@index');
 $router->post('crm/registrar-interacao', 'CRMController@registrarInteracao');
 $router->post('crm/registrar-campanha-lote', 'CRMController@registrarCampanhaLote');
+$router->post('crm/salvar-campanha', 'CRMController@salvarCampanha');
+$router->post('crm/finalizar-campanha', 'CRMController@finalizarCampanha');
+$router->post('crm/salvar-configuracao', 'CRMController@salvarConfiguracao');
 
 // Produtividade Pessoal
 $router->get('produtividade', 'ProdutividadeController@index');

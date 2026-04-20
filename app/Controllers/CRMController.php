@@ -7,6 +7,7 @@ use App\Models\OrdemServico;
 use App\Models\ClienteInteracao;
 use App\Models\ProdutoServico;
 use App\Models\CRMCampanha;
+use App\Models\ConfiguracaoGeral;
 use App\Models\Log;
 use App\Core\Auth;
 
@@ -16,6 +17,7 @@ class CRMController extends BaseController
     private $interacaoModel;
     private $produtoServicoModel;
     private $campanhaModel;
+    private $configModel;
 
     public function __construct()
     {
@@ -24,6 +26,7 @@ class CRMController extends BaseController
         $this->interacaoModel = new ClienteInteracao();
         $this->produtoServicoModel = new ProdutoServico();
         $this->campanhaModel = new CRMCampanha();
+        $this->configModel = new ConfiguracaoGeral();
     }
 
     public function index()
@@ -45,6 +48,7 @@ class CRMController extends BaseController
         $clientes = $this->interacaoModel->getClientesFiltroCRM($filtros);
         $servicosExistentes = $this->produtoServicoModel->getDescricoesUsadas();
         $campanhasAbertas = $this->campanhaModel->getAtivas();
+        $mensagemPadrao = $this->configModel->getValor('crm_mensagem_padrao') ?? 'Olá {nome}! Notamos que você fez um serviço conosco e gostaríamos de oferecer...';
 
         $this->render('crm/index', [
             'title' => 'CRM - Gestão de Clientes',
@@ -53,8 +57,25 @@ class CRMController extends BaseController
             'filtros' => $filtros,
             'servicosExistentes' => $servicosExistentes,
             'campanhasAbertas' => $campanhasAbertas,
-            'campanhaAtiva' => $campanhaAtiva
+            'campanhaAtiva' => $campanhaAtiva,
+            'mensagemPadrao' => $mensagemPadrao
         ]);
+    }
+
+    public function salvarConfiguracao()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('crm');
+        }
+
+        $mensagem = filter_input(INPUT_POST, 'crm_mensagem_padrao', FILTER_SANITIZE_SPECIAL_CHARS);
+        
+        if ($mensagem) {
+            $this->configModel->setValor('crm_mensagem_padrao', $mensagem, 'Mensagem padrão sugerida no CRM');
+            $this->log("Atualizou Configuração CRM", "Nova mensagem padrão definida");
+        }
+
+        $this->redirect('crm');
     }
 
     public function salvarCampanha()

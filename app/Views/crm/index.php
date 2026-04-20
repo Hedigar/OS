@@ -16,16 +16,16 @@ require_once __DIR__ . '/../layout/main.php';
     </div>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-7">
             <!-- FILTROS AVANÇADOS -->
             <div class="card mb-4">
                 <h3 class="card-title">🔍 Filtros de Segmentação</h3>
                 <form action="<?php echo BASE_URL; ?>crm" method="GET" class="row align-end">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label>Clientes sem vir há mais de (dias):</label>
                         <input type="number" name="dias_min" class="form-control" value="<?php echo $filtros['dias_min'] ?? ''; ?>" placeholder="Ex: 90" <?php echo $campanhaAtiva ? 'readonly' : ''; ?>>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label>Que já fizeram o serviço/produto:</label>
                         <input type="text" name="termo_servico" class="form-control" value="<?php echo htmlspecialchars($filtros['termo_servico'] ?? ''); ?>" placeholder="Digite ou selecione..." list="listaServicos" <?php echo $campanhaAtiva ? 'readonly' : ''; ?>>
                         <datalist id="listaServicos">
@@ -39,14 +39,30 @@ require_once __DIR__ . '/../layout/main.php';
                     <div class="col-md-4 d-flex gap-2">
                         <?php if (!$campanhaAtiva): ?>
                             <button type="submit" class="btn btn-primary flex-1">Filtrar</button>
-                            <button type="button" class="btn btn-success flex-1" onclick="abrirModalSalvarCampanha()">💾 Salvar como Campanha</button>
+                            <button type="button" class="btn btn-success flex-1" onclick="abrirModalSalvarCampanha()">💾 Salvar</button>
                         <?php endif; ?>
                     </div>
                 </form>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-5">
+            <!-- CONFIGURAÇÃO MENSAGEM PADRÃO -->
+            <div class="card mb-4">
+                <h3 class="card-title">⚙️ Mensagem Padrão CRM</h3>
+                <form action="<?php echo BASE_URL; ?>crm/salvar-configuracao" method="POST" class="d-flex gap-2 align-end">
+                    <div class="flex-1">
+                        <input type="text" name="crm_mensagem_padrao" class="form-control" value="<?php echo htmlspecialchars($mensagemPadrao); ?>" placeholder="Mensagem padrão...">
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Atualizar</button>
+                </form>
+                <small class="text-muted mt-1">Use <strong>{nome}</strong> para o primeiro nome do cliente.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
             <!-- CAMPANHAS ATIVAS -->
             <div class="card mb-4">
                 <h3 class="card-title">📁 Campanhas em Aberto</h3>
@@ -54,19 +70,21 @@ require_once __DIR__ . '/../layout/main.php';
                     <?php if (empty($campanhasAbertas)): ?>
                         <p class="text-muted small">Nenhuma campanha ativa no momento.</p>
                     <?php else: ?>
-                        <div class="list-group">
+                        <div class="row">
                             <?php foreach ($campanhasAbertas as $camp): ?>
-                                <div class="list-group-item d-flex justify-between align-center p-2">
-                                    <div class="small">
-                                        <strong><?php echo htmlspecialchars($camp['nome']); ?></strong><br>
-                                        <span class="text-muted">Enviados: <?php echo $camp['total_enviados']; ?></span>
-                                    </div>
-                                    <div class="d-flex gap-1">
-                                        <a href="<?php echo BASE_URL; ?>crm?campanha_id=<?php echo $camp['id']; ?>" class="btn btn-primary btn-xs" title="Retomar">▶️</a>
-                                        <form action="<?php echo BASE_URL; ?>crm/finalizar-campanha" method="POST" onsubmit="return confirm('Deseja finalizar esta campanha?')">
-                                            <input type="hidden" name="id" value="<?php echo $camp['id']; ?>">
-                                            <button type="submit" class="btn btn-danger btn-xs" title="Finalizar">🏁</button>
-                                        </form>
+                                <div class="col-md-4 mb-2">
+                                    <div class="list-group-item d-flex justify-between align-center p-2 border rounded">
+                                        <div class="small">
+                                            <strong><?php echo htmlspecialchars($camp['nome']); ?></strong><br>
+                                            <span class="text-muted">Enviados: <?php echo $camp['total_enviados']; ?></span>
+                                        </div>
+                                        <div class="d-flex gap-1">
+                                            <a href="<?php echo BASE_URL; ?>crm?campanha_id=<?php echo $camp['id']; ?>" class="btn btn-primary btn-xs" title="Retomar">▶️</a>
+                                            <form action="<?php echo BASE_URL; ?>crm/finalizar-campanha" method="POST" onsubmit="return confirm('Deseja finalizar esta campanha?')">
+                                                <input type="hidden" name="id" value="<?php echo $camp['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-xs" title="Finalizar">🏁</button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -162,7 +180,7 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
             <div class="form-group mb-3">
                 <label>Mensagem Padrão (Use {nome} para o primeiro nome)</label>
-                <textarea id="lote_mensagem" class="form-control" rows="5"><?php echo $campanhaAtiva ? htmlspecialchars($campanhaAtiva['mensagem_padrao']) : 'Olá {nome}! Notamos que faz um tempo que não nos visita. Temos uma oferta especial para você hoje!'; ?></textarea>
+                <textarea id="lote_mensagem" class="form-control" rows="5"><?php echo $campanhaAtiva ? htmlspecialchars($campanhaAtiva['mensagem_padrao']) : htmlspecialchars($mensagemPadrao); ?></textarea>
             </div>
             <div class="alert alert-info small">
                 O assistente abrirá o WhatsApp de cada cliente um por um. 
@@ -220,7 +238,7 @@ require_once __DIR__ . '/../layout/main.php';
             </div>
             <div class="form-group mb-3">
                 <label>Mensagem Padrão Sugerida</label>
-                <textarea name="mensagem_padrao" class="form-control" rows="4">Olá {nome}! Notamos que você fez um serviço conosco e gostaríamos de oferecer...</textarea>
+                <textarea name="mensagem_padrao" class="form-control" rows="4"><?php echo htmlspecialchars($mensagemPadrao); ?></textarea>
             </div>
             <div class="d-flex justify-end gap-2">
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalSalvarCampanha').style.display='none'">Cancelar</button>
@@ -364,7 +382,8 @@ function avancarLote() {
 function abrirMensagemCRM(id, nome, tel) {
     document.getElementById('crm_cliente_id').value = id;
     const primeiroNome = nome.split(' ')[0];
-    const msg = `Olá ${primeiroNome}! Notamos que faz um tempo que não revisamos seu equipamento. Temos uma promoção especial de limpeza preventiva esta semana. Gostaria de agendar?`;
+    const template = `<?php echo str_replace(["\r", "\n"], ['\r', '\n'], addslashes($mensagemPadrao)); ?>`;
+    const msg = template.replace('{nome}', primeiroNome);
     document.getElementById('crm_mensagem').value = msg;
     document.getElementById('crm_assunto').value = 'Promoção Reativação';
     document.getElementById('modalMsgCRM').style.display = 'block';

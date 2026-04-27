@@ -37,8 +37,8 @@ class DashboardService
                          FROM itens_ordem_servico i 
                          JOIN ordens_servico o ON i.ordem_servico_id = o.id 
                          WHERE o.status_atual_id = 5 AND o.ativo = 1 
-                         AND MONTH(o.created_at) = MONTH(CURRENT_DATE()) 
-                         AND YEAR(o.created_at) = YEAR(CURRENT_DATE())) as total_custo
+                         AND MONTH(i.created_at) = MONTH(CURRENT_DATE()) 
+                         AND YEAR(i.created_at) = YEAR(CURRENT_DATE())) as total_custo
                       FROM ordens_servico os
                       WHERE os.status_atual_id = 5 AND os.ativo = 1 
                       AND MONTH(os.created_at) = MONTH(CURRENT_DATE()) 

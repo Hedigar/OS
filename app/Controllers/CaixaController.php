@@ -56,7 +56,7 @@ class CaixaController extends BaseController
                           FROM itens_ordem_servico i
                           JOIN ordens_servico o ON i.ordem_servico_id = o.id
                           WHERE o.status_atual_id = 5 AND o.ativo = 1 AND i.ativo = 1
-                          AND DATE(COALESCE(o.updated_at, o.created_at)) BETWEEN :start AND :end";
+                          AND DATE(i.created_at) BETWEEN :start AND :end";
         $stmtCusto = $db->prepare($sqlCustoPecas);
         $stmtCusto->execute(['start' => $dataInicio, 'end' => $dataFim]);
         $custoPecasOS = (float)$stmtCusto->fetchColumn();
@@ -66,7 +66,7 @@ class CaixaController extends BaseController
                        FROM itens_ordem_servico i
                        JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
                        WHERE a.status = 'finalizado' AND a.ativo = 1 AND i.ativo = 1
-                       AND DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start AND :end";
+                       AND DATE(i.created_at) BETWEEN :start AND :end";
         $stmtCustoAt = $db->prepare($sqlCustoAt);
         $stmtCustoAt->execute(['start' => $dataInicio, 'end' => $dataFim]);
         $custoPecasAt = (float)$stmtCustoAt->fetchColumn();

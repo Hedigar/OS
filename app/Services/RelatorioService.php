@@ -25,7 +25,7 @@ class RelatorioService
                      FROM itens_ordem_servico i 
                      JOIN ordens_servico o ON i.ordem_servico_id = o.id 
                      WHERE o.status_atual_id IN (4, 5, 8, 10, 11, 12) AND o.ativo = 1 AND i.ativo = 1
-                     AND DATE(o.created_at) BETWEEN :sub_start AND :sub_end) as total_custo
+                     AND DATE(i.created_at) BETWEEN :sub_start AND :sub_end) as total_custo
                 FROM ordens_servico 
                 WHERE status_atual_id IN (4, 5, 8, 10, 11, 12) AND ativo = 1 
                 AND DATE(created_at) BETWEEN :start AND :end";
@@ -239,7 +239,7 @@ class RelatorioService
     {
         $db = $this->osModel->getConnection();
         
-        $whereData = "DATE(COALESCE(os.updated_at, os.created_at)) BETWEEN :start AND :end";
+        $whereData = "DATE(i.created_at) BETWEEN :start AND :end";
 
         $sql = "SELECT 
                     os.id as os_id,
@@ -349,7 +349,7 @@ class RelatorioService
     {
         $db = $this->osModel->getConnection();
 
-        $whereData = "DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start AND :end";
+        $whereData = "DATE(i.created_at) BETWEEN :start AND :end";
 
         $sql = "SELECT 
                     a.id as atendimento_id,
@@ -414,7 +414,7 @@ class RelatorioService
                 WHERE o.status_atual_id = 5
                   AND o.ativo = 1
                   AND i.ativo = 1
-                  AND DATE(o.updated_at) BETWEEN :start AND :end
+                  AND DATE(i.created_at) BETWEEN :start AND :end
                 GROUP BY i.tipo_item, i.descricao
                 HAVING quantidade_total > 0
                 ORDER BY quantidade_total DESC, i.descricao ASC";
@@ -436,20 +436,14 @@ class RelatorioService
         $stmtReceita->execute(['start' => $dataInicio, 'end' => $dataFim]);
         $receitaLiquida = (float)($stmtReceita->fetchColumn() ?: 0);
 
-        // 2. Custos de OS (Pecas) - Baseado na data de FINALIZACAO da OS (Status 5)
-        // Usamos COALESCE(updated_at, created_at) caso o updated_at esteja nulo
+        // 2. Custos de OS (Pecas) - Baseado na data de criacao do ITEM para OSs finalizadas
         $sqlCustosOS = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
                         FROM itens_ordem_servico i
+                        JOIN ordens_servico o ON i.ordem_servico_id = o.id
                         WHERE i.ativo = 1
-                          AND i.ordem_servico_id IS NOT NULL
-                          AND EXISTS (
-                              SELECT 1
-                              FROM ordens_servico o
-                              WHERE o.id = i.ordem_servico_id
-                                AND o.status_atual_id = 5 
-                                AND o.ativo = 1
-                                AND DATE(COALESCE(o.updated_at, o.created_at)) BETWEEN :start1 AND :end1
-                          )";
+                          AND o.status_atual_id = 5 
+                          AND o.ativo = 1
+                          AND DATE(i.created_at) BETWEEN :start1 AND :end1";
         $stmtOS = $db->prepare($sqlCustosOS);
         $stmtOS->execute(['start1' => $dataInicio, 'end1' => $dataFim]);
         $custoOS = (float)($stmtOS->fetchColumn() ?: 0);
@@ -457,15 +451,11 @@ class RelatorioService
         // 3. Custos de Atendimentos (Pecas)
         $sqlCustosAt = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
                         FROM itens_ordem_servico i
+                        JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
                         WHERE i.ativo = 1
-                          AND i.atendimento_externo_id IS NOT NULL
-                          AND EXISTS (
-                              SELECT 1
-                              FROM atendimentos_externos a
-                              WHERE a.id = i.atendimento_externo_id
-                                AND a.status = 'finalizado'
-                                AND DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start2 AND :end2
-                          )";
+                          AND a.status = 'finalizado'
+                          AND a.ativo = 1
+                          AND DATE(i.created_at) BETWEEN :start2 AND :end2";
         $stmtAt = $db->prepare($sqlCustosAt);
         $stmtAt->execute(['start2' => $dataInicio, 'end2' => $dataFim]);
         $custoAt = (float)($stmtAt->fetchColumn() ?: 0);

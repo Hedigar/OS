@@ -16,27 +16,81 @@ class RelatorioService
     public function resumoFinanceiro(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();
-        $sql = "SELECT 
-                    SUM(valor_total_os) as total_bruto,
-                    SUM(valor_total_produtos) as total_produtos,
-                    SUM(valor_total_servicos) as total_servicos,
-                    SUM(valor_taxa_nf) as total_taxa_nf,
-                    (SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) 
+        
+        // 1. Total Bruto, Produtos, Serviços, Taxa NF das OS
+        $sqlOS = "SELECT 
+                    COALESCE(SUM(valor_total_os), 0) as total_bruto_os,
+                    COALESCE(SUM(valor_total_produtos), 0) as total_produtos_os,
+                    COALESCE(SUM(valor_total_servicos), 0) as total_servicos_os,
+                    COALESCE(SUM(valor_taxa_nf), 0) as total_taxa_nf_os
+                FROM ordens_servico 
+                WHERE status_atual_id IN (4, 5, 8, 10, 11, 12) AND ativo = 1 
+                AND DATE(created_at) BETWEEN ? AND ?";
+        $stmtOS = $db->prepare($sqlOS);
+        $stmtOS->execute([$dataInicio, $dataFim]);
+        $dadosOS = $stmtOS->fetch() ?: [];
+        
+        // 2. Custo das Peças das OS
+        $sqlCustoOS = "SELECT COALESCE(SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)), 0) as total_custo_os
                      FROM itens_ordem_servico i 
                      JOIN ordens_servico o ON i.ordem_servico_id = o.id 
                      WHERE o.status_atual_id IN (4, 5, 8, 10, 11, 12) AND o.ativo = 1 AND i.ativo = 1
-                     AND DATE(i.created_at) BETWEEN :sub_start AND :sub_end) as total_custo
-                FROM ordens_servico 
-                WHERE status_atual_id IN (4, 5, 8, 10, 11, 12) AND ativo = 1 
-                AND DATE(created_at) BETWEEN :start AND :end";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([
-            'start' => $dataInicio,
-            'end' => $dataFim,
-            'sub_start' => $dataInicio,
-            'sub_end' => $dataFim
-        ]);
-        return $stmt->fetch() ?: [];
+                     AND DATE(i.created_at) BETWEEN ? AND ?";
+        $stmtCustoOS = $db->prepare($sqlCustoOS);
+        $stmtCustoOS->execute([$dataInicio, $dataFim]);
+        $custoOS = $stmtCustoOS->fetchColumn() ?: 0;
+        
+        // 3. Total Bruto e Taxa NF dos Atendimentos
+        $sqlAtend = "SELECT 
+                    COALESCE(SUM(COALESCE(a.valor_total, 0) + COALESCE(a.valor_deslocamento, 0)), 0) as total_bruto_atend,
+                    COALESCE(SUM(a.valor_taxa_nf), 0) as total_taxa_nf_atend
+                FROM atendimentos_externos a
+                WHERE a.status = 'concluido' AND a.ativo = 1 
+                AND DATE(a.created_at) BETWEEN ? AND ?";
+        $stmtAtend = $db->prepare($sqlAtend);
+        $stmtAtend->execute([$dataInicio, $dataFim]);
+        $dadosAtend = $stmtAtend->fetch() ?: [];
+        
+        // 4. Total Produtos dos Atendimentos
+        $sqlProdAtend = "SELECT COALESCE(SUM(i.quantidade * COALESCE(i.valor_unitario, 0)), 0) as total_produtos_atend
+                     FROM itens_ordem_servico i 
+                     JOIN atendimentos_externos ae ON i.atendimento_externo_id = ae.id
+                     WHERE ae.status = 'concluido' AND ae.ativo = 1 AND i.ativo = 1
+                     AND DATE(ae.created_at) BETWEEN ? AND ?";
+        $stmtProdAtend = $db->prepare($sqlProdAtend);
+        $stmtProdAtend->execute([$dataInicio, $dataFim]);
+        $prodAtend = $stmtProdAtend->fetchColumn() ?: 0;
+        
+        // 5. Total Serviços dos Atendimentos
+        $sqlServAtend = "SELECT COALESCE(SUM(i.quantidade * COALESCE(i.valor_mao_de_obra, 0)), 0) as total_servicos_atend
+                     FROM itens_ordem_servico i 
+                     JOIN atendimentos_externos ae ON i.atendimento_externo_id = ae.id
+                     WHERE ae.status = 'concluido' AND ae.ativo = 1 AND i.ativo = 1
+                     AND DATE(ae.created_at) BETWEEN ? AND ?";
+        $stmtServAtend = $db->prepare($sqlServAtend);
+        $stmtServAtend->execute([$dataInicio, $dataFim]);
+        $servAtend = $stmtServAtend->fetchColumn() ?: 0;
+        
+        // 6. Custo das Peças dos Atendimentos
+        $sqlCustoAtend = "SELECT COALESCE(SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)), 0) as total_custo_atend
+                     FROM itens_ordem_servico i 
+                     JOIN atendimentos_externos ae ON i.atendimento_externo_id = ae.id 
+                     WHERE ae.status = 'concluido' AND ae.ativo = 1 AND i.ativo = 1
+                     AND DATE(i.created_at) BETWEEN ? AND ?";
+        $stmtCustoAtend = $db->prepare($sqlCustoAtend);
+        $stmtCustoAtend->execute([$dataInicio, $dataFim]);
+        $custoAtend = $stmtCustoAtend->fetchColumn() ?: 0;
+        
+        // Somar os valores
+        return [
+            'total_bruto' => ($dadosOS['total_bruto_os'] ?? 0) + ($dadosAtend['total_bruto_atend'] ?? 0),
+            'total_produtos' => ($dadosOS['total_produtos_os'] ?? 0) + $prodAtend,
+            'total_servicos' => ($dadosOS['total_servicos_os'] ?? 0) + $servAtend,
+            'total_taxa_nf' => ($dadosOS['total_taxa_nf_os'] ?? 0) + ($dadosAtend['total_taxa_nf_atend'] ?? 0),
+            'total_custo' => $custoOS + $custoAtend,
+            'total_bruto_os' => $dadosOS['total_bruto_os'] ?? 0,
+            'total_bruto_atend' => $dadosAtend['total_bruto_atend'] ?? 0
+        ];
     }
 
     public function clientesNovos(string $dataInicio, string $dataFim): array
@@ -219,7 +273,7 @@ class RelatorioService
                         - COALESCE(a.valor_taxa_nf, 0)
                     ), 0) AS lucro_total
                 FROM atendimentos_externos a
-                WHERE a.status = 'finalizado' AND DATE(a.updated_at) BETWEEN :start AND :end";
+                WHERE a.status = 'concluido' AND DATE(a.updated_at) BETWEEN :start AND :end";
         $stmt = $db->prepare($sql);
         $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
         return $stmt->fetch() ?: [];
@@ -336,7 +390,7 @@ class RelatorioService
                     a.valor_taxa_nf
                 FROM atendimentos_externos a
                 JOIN clientes c ON c.id = a.cliente_id
-                WHERE a.ativo = 1 AND a.status = 'finalizado' AND a.emitir_nf = 1
+                WHERE a.ativo = 1 AND a.status = 'concluido' AND a.emitir_nf = 1
                   AND DATE(COALESCE(a.updated_at, a.created_at)) BETWEEN :start AND :end
                   AND a.valor_taxa_nf > 0
                 ORDER BY a.id DESC";
@@ -358,7 +412,7 @@ class RelatorioService
                 FROM atendimentos_externos a
                 JOIN clientes c ON c.id = a.cliente_id
                 JOIN itens_ordem_servico i ON i.atendimento_externo_id = a.id AND i.ativo = 1
-                WHERE a.ativo = 1 AND a.status = 'finalizado'
+                WHERE a.ativo = 1 AND a.status = 'concluido'
                   AND $whereData
                 GROUP BY a.id, c.nome_completo
                 HAVING custo_total > 0
@@ -453,7 +507,7 @@ class RelatorioService
                         FROM itens_ordem_servico i
                         JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
                         WHERE i.ativo = 1
-                          AND a.status = 'finalizado'
+                          AND a.status = 'concluido'
                           AND a.ativo = 1
                           AND DATE(i.created_at) BETWEEN :start2 AND :end2";
         $stmtAt = $db->prepare($sqlCustosAt);
@@ -463,7 +517,7 @@ class RelatorioService
         // 4. Custos de Impostos (Nota Fiscal)
         $sqlTaxaNF = "SELECT 
                         (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM ordens_servico WHERE ativo = 1 AND status_atual_id = 5 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s1 AND :e1) +
-                        (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE ativo = 1 AND status = 'finalizado' AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
+                        (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE ativo = 1 AND status = 'concluido' AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
                       as total_nf";
         $stmtNF = $db->prepare($sqlTaxaNF);
         $stmtNF->execute([
@@ -483,6 +537,124 @@ class RelatorioService
             'custo_nf' => $custoNF,
             'total_descontos' => $totalDescontos,
             'lucro_real' => $receitaLiquida - $totalDescontos
+        ];
+    }
+
+    public function resumoCRM(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+
+        $sqlResumo = "SELECT 
+                        COUNT(*) as total_interacoes,
+                        COUNT(DISTINCT cliente_id) as total_clientes_contactados,
+                        SUM(CASE WHEN tipo = 'pos_venda' THEN 1 ELSE 0 END) as total_pos_venda,
+                        SUM(CASE WHEN tipo = 'campanha' THEN 1 ELSE 0 END) as total_campanhas,
+                        SUM(CASE WHEN tipo = 'ligacao' THEN 1 ELSE 0 END) as total_ligacoes,
+                        SUM(CASE WHEN resposta_cliente IS NOT NULL AND resposta_cliente != '' THEN 1 ELSE 0 END) as total_com_resposta,
+                        AVG(nota_satisfacao) as media_nota,
+                        COUNT(DISTINCT campanha_id) as total_campanhas_ativas
+                    FROM cliente_interacoes
+                    WHERE DATE(created_at) BETWEEN :start AND :end";
+        $stmtResumo = $db->prepare($sqlResumo);
+        $stmtResumo->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $resumo = $stmtResumo->fetch() ?: [];
+
+        $sqlPorDia = "SELECT 
+                        DATE(created_at) as data,
+                        COUNT(*) as total,
+                        SUM(CASE WHEN tipo = 'pos_venda' THEN 1 ELSE 0 END) as pos_venda,
+                        SUM(CASE WHEN tipo = 'campanha' THEN 1 ELSE 0 END) as campanha,
+                        SUM(CASE WHEN resposta_cliente IS NOT NULL AND resposta_cliente != '' THEN 1 ELSE 0 END) as com_resposta
+                    FROM cliente_interacoes
+                    WHERE DATE(created_at) BETWEEN :start AND :end
+                    GROUP BY DATE(created_at)
+                    ORDER BY data DESC";
+        $stmtPorDia = $db->prepare($sqlPorDia);
+        $stmtPorDia->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $porDia = $stmtPorDia->fetchAll() ?: [];
+
+        $sqlPorUsuario = "SELECT 
+                            u.nome as usuario_nome,
+                            COUNT(*) as total_interacoes,
+                            SUM(CASE WHEN tipo = 'pos_venda' THEN 1 ELSE 0 END) as total_pos_venda,
+                            SUM(CASE WHEN tipo = 'campanha' THEN 1 ELSE 0 END) as total_campanhas,
+                            SUM(CASE WHEN resposta_cliente IS NOT NULL AND resposta_cliente != '' THEN 1 ELSE 0 END) as total_com_resposta,
+                            AVG(nota_satisfacao) as media_nota
+                        FROM cliente_interacoes ci
+                        LEFT JOIN usuarios u ON ci.usuario_id = u.id
+                        WHERE DATE(ci.created_at) BETWEEN :start AND :end
+                        GROUP BY u.id, u.nome
+                        ORDER BY total_interacoes DESC";
+        $stmtPorUsuario = $db->prepare($sqlPorUsuario);
+        $stmtPorUsuario->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $porUsuario = $stmtPorUsuario->fetchAll() ?: [];
+
+        $sqlDetalhes = "SELECT 
+                            ci.id,
+                            ci.tipo,
+                            ci.canal,
+                            ci.assunto,
+                            ci.descricao,
+                            ci.resposta_cliente,
+                            ci.nota_satisfacao,
+                            ci.created_at,
+                            ci.ordem_servico_id,
+                            c.nome_completo as cliente_nome,
+                            c.telefone_principal,
+                            u.nome as usuario_nome,
+                            cc.nome as campanha_nome
+                        FROM cliente_interacoes ci
+                        LEFT JOIN clientes c ON ci.cliente_id = c.id
+                        LEFT JOIN usuarios u ON ci.usuario_id = u.id
+                        LEFT JOIN crm_campanhas cc ON ci.campanha_id = cc.id
+                        WHERE DATE(ci.created_at) BETWEEN :start AND :end
+                        ORDER BY ci.created_at DESC";
+        $stmtDetalhes = $db->prepare($sqlDetalhes);
+        $stmtDetalhes->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $detalhes = $stmtDetalhes->fetchAll() ?: [];
+
+        $sqlPosVendaOS = "SELECT 
+                            os.id as os_id,
+                            os.pos_venda_status,
+                            os.pos_venda_nota,
+                            os.pos_venda_data,
+                            c.nome_completo as cliente_nome,
+                            os.created_at as os_data
+                        FROM ordens_servico os
+                        LEFT JOIN clientes c ON os.cliente_id = c.id
+                        WHERE os.ativo = 1 
+                        AND os.pos_venda_status = 1
+                        AND DATE(os.pos_venda_data) BETWEEN :start AND :end
+                        ORDER BY os.pos_venda_data DESC";
+        $stmtPosVendaOS = $db->prepare($sqlPosVendaOS);
+        $stmtPosVendaOS->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $posVendaOS = $stmtPosVendaOS->fetchAll() ?: [];
+
+        $sqlCampanhas = "SELECT 
+                            cc.id,
+                            cc.nome,
+                            cc.mensagem_padrao,
+                            cc.status,
+                            cc.created_at,
+                            u.nome as usuario_nome,
+                            COUNT(ci.id) as total_enviados
+                        FROM crm_campanhas cc
+                        LEFT JOIN usuarios u ON cc.usuario_id = u.id
+                        LEFT JOIN cliente_interacoes ci ON cc.id = ci.campanha_id
+                        WHERE DATE(cc.created_at) BETWEEN :start AND :end OR cc.status = 'ativa'
+                        GROUP BY cc.id
+                        ORDER BY cc.created_at DESC";
+        $stmtCampanhas = $db->prepare($sqlCampanhas);
+        $stmtCampanhas->execute(['start' => $dataInicio, 'end' => $dataFim]);
+        $campanhas = $stmtCampanhas->fetchAll() ?: [];
+
+        return [
+            'resumo' => $resumo,
+            'por_dia' => $porDia,
+            'por_usuario' => $porUsuario,
+            'detalhes' => $detalhes,
+            'pos_venda_os' => $posVendaOS,
+            'campanhas' => $campanhas
         ];
     }
 }

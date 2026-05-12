@@ -42,6 +42,7 @@ $router->post('despesas/deletar', 'DespesasController@destroy');
 
 // Relatórios
 $router->get('relatorios', 'RelatorioController@index');
+$router->get('relatorios/crm', 'RelatorioController@crm');
 // Auditoria
 $router->get('auditoria', 'AuditoriaController@index');
 

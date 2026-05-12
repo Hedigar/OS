@@ -85,4 +85,25 @@ class RelatorioController extends BaseController
             'clientesQueVoltaram' => $clientesQueVoltaram
         ]);
     }
+
+    public function crm()
+    {
+        Auth::check();
+        $this->requireAdmin();
+
+        $dataInicio = $_GET['data_inicio'] ?? date('Y-m-01');
+        $dataFim = $_GET['data_fim'] ?? date('Y-m-t');
+
+        $dadosCRM = $this->service->resumoCRM($dataInicio, $dataFim);
+
+        $this->render('relatorios/crm', [
+            'title' => 'Relatório de CRM',
+            'current_page' => 'relatorios',
+            'filtros' => [
+                'data_inicio' => $dataInicio,
+                'data_fim' => $dataFim
+            ],
+            'dados' => $dadosCRM
+        ]);
+    }
 }

@@ -51,6 +51,9 @@
     </script>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h3 mb-0" style="color: var(--text-primary, #fff);"><i class="fas fa-chart-bar me-2"></i>Relatórios e Resumos</h2>
+        <a href="<?php echo BASE_URL; ?>relatorios/crm" class="btn btn-info">
+            <i class="fas fa-comments me-2"></i>Relatório de CRM
+        </a>
     </div>
 
     <!-- Filtros -->

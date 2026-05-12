@@ -65,7 +65,7 @@ class CaixaController extends BaseController
         $sqlCustoAt = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
                        FROM itens_ordem_servico i
                        JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
-                       WHERE a.status = 'finalizado' AND a.ativo = 1 AND i.ativo = 1
+                       WHERE a.status = 'concluido' AND a.ativo = 1 AND i.ativo = 1
                        AND DATE(i.created_at) BETWEEN :start AND :end";
         $stmtCustoAt = $db->prepare($sqlCustoAt);
         $stmtCustoAt->execute(['start' => $dataInicio, 'end' => $dataFim]);
@@ -74,7 +74,7 @@ class CaixaController extends BaseController
         // 3. Custo de Impostos (NF) de OS/Atendimentos Finalizados no período
         $sqlNF = "SELECT 
                     (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM ordens_servico WHERE status_atual_id = 5 AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s1 AND :e1) +
-                    (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE status = 'finalizado' AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
+                    (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE status = 'concluido' AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
                   as total_nf";
         $stmtNF = $db->prepare($sqlNF);
         $stmtNF->execute(['s1' => $dataInicio, 'e1' => $dataFim, 's2' => $dataInicio, 'e2' => $dataFim]);

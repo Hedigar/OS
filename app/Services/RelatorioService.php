@@ -657,4 +657,362 @@ class RelatorioService
             'campanhas' => $campanhas
         ];
     }
+
+    public function relatorioFinanceiroDetalhado(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+
+        $producao = $this->getListaProducao($db, $dataInicio, $dataFim);
+        $caixa = $this->getListaCaixa($db, $dataInicio, $dataFim);
+        $pendencias = $this->getListaPendencias($db, $dataFim);
+
+        return [
+            'producao' => $producao,
+            'caixa' => $caixa,
+            'pendencias' => $pendencias
+        ];
+    }
+
+    private function getListaProducao($db, string $dataInicio, string $dataFim): array
+    {
+        $sql = "SELECT 
+                    'OS' as tipo,
+                    os.id as origem_id,
+                    DATE(os.created_at) as data,
+                    c.nome_completo as cliente,
+                    os.valor_total_os as valor_total,
+                    os.valor_taxa_nf as taxa_nf,
+                    os.defeito_relatado as descricao,
+                    os.id as numero
+                FROM ordens_servico os
+                JOIN clientes c ON os.cliente_id = c.id
+                WHERE os.ativo = 1 
+                AND DATE(os.created_at) BETWEEN ? AND ?
+                AND os.valor_total_os > 0
+                AND os.status_atual_id NOT IN (3, 9)
+
+                UNION ALL
+
+                SELECT 
+                    'Atendimento' as tipo,
+                    ae.id as origem_id,
+                    DATE(ae.created_at) as data,
+                    c.nome_completo as cliente,
+                    (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
+                    ae.valor_taxa_nf as taxa_nf,
+                    ae.descricao_problema as descricao,
+                    ae.id as numero
+                FROM atendimentos_externos ae
+                JOIN clientes c ON ae.cliente_id = c.id
+                WHERE ae.ativo = 1 
+                AND DATE(ae.created_at) BETWEEN ? AND ?
+                AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
+
+                ORDER BY data DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$dataInicio, $dataFim, $dataInicio, $dataFim]);
+        $itens = $stmt->fetchAll() ?: [];
+
+        $totalProducao = 0;
+        $totalCustos = 0;
+        $totalTaxas = 0;
+        $totalLucro = 0;
+
+        foreach ($itens as &$item) {
+            $item['custos'] = $this->getCustosPorOrigem($item['tipo'], $item['origem_id']);
+            $item['itens'] = $this->getItensPorOrigem($item['tipo'], $item['origem_id']);
+            $item['lucro_previsto'] = $item['valor_total'] - $item['custos'] - ($item['taxa_nf'] ?? 0);
+            
+            $totalProducao += $item['valor_total'];
+            $totalCustos += $item['custos'];
+            $totalTaxas += ($item['taxa_nf'] ?? 0);
+            $totalLucro += $item['lucro_previsto'];
+        }
+
+        return [
+            'itens' => $itens,
+            'totais' => [
+                'valor_total' => $totalProducao,
+                'custos' => $totalCustos,
+                'taxas' => $totalTaxas,
+                'lucro_previsto' => $totalLucro
+            ]
+        ];
+    }
+
+    private function getListaCaixa($db, string $dataInicio, string $dataFim): array
+    {
+        $sql = "SELECT 
+                    pt.id,
+                    pt.tipo_origem,
+                    pt.origem_id,
+                    pt.valor_bruto,
+                    pt.valor_liquido,
+                    pt.valor_taxa as taxa_cartao,
+                    pt.created_at,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
+                        WHEN pt.tipo_origem = 'atendimento' THEN ae.descricao_problema
+                        ELSE pt.tipo_origem
+                    END as descricao,
+                    c.nome_completo as cliente,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.valor_total_os
+                        WHEN pt.tipo_origem = 'atendimento' THEN (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0))
+                        ELSE 0
+                    END as valor_total_origem,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.valor_taxa_nf
+                        WHEN pt.tipo_origem = 'atendimento' THEN ae.valor_taxa_nf
+                        ELSE 0
+                    END as taxa_nf
+                FROM pagamentos_transacoes pt
+                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
+                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
+                WHERE pt.ativo = 1 
+                AND DATE(pt.created_at) BETWEEN ? AND ?
+                ORDER BY pt.created_at DESC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$dataInicio, $dataFim]);
+        $itens = $stmt->fetchAll() ?: [];
+
+        $totalCaixa = 0;
+        $totalCustosCaixa = 0;
+        $totalTaxasNF = 0;
+        $totalTaxasCartao = 0;
+        $totalLucroCaixa = 0;
+
+        foreach ($itens as &$item) {
+            $item['custos'] = $this->getCustosPorOrigem($item['tipo_origem'] === 'os' ? 'OS' : 'Atendimento', $item['origem_id']);
+            $item['lucro'] = $item['valor_bruto'] - $item['custos'] - ($item['taxa_nf'] ?? 0) - ($item['taxa_cartao'] ?? 0);
+            
+            $totalCaixa += $item['valor_bruto'];
+            $totalCustosCaixa += $item['custos'];
+            $totalTaxasNF += ($item['taxa_nf'] ?? 0);
+            $totalTaxasCartao += ($item['taxa_cartao'] ?? 0);
+            $totalLucroCaixa += $item['lucro'];
+        }
+
+        return [
+            'itens' => $itens,
+            'totais' => [
+                'valor_bruto' => $totalCaixa,
+                'custos' => $totalCustosCaixa,
+                'taxas_nf' => $totalTaxasNF,
+                'taxas_cartao' => $totalTaxasCartao,
+                'lucro' => $totalLucroCaixa
+            ]
+        ];
+    }
+
+    private function getListaPendencias($db, string $dataFim): array
+    {
+        $result = [];
+
+        $sqlOS = "SELECT 
+                    'OS' as tipo,
+                    os.id as origem_id,
+                    DATE(os.created_at) as data,
+                    c.nome_completo as cliente,
+                    os.valor_total_os as valor_total,
+                    os.valor_taxa_nf as taxa_nf,
+                    os.defeito_relatado as descricao,
+                    os.id as numero,
+                    COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'os' AND origem_id = os.id AND ativo = 1), 0) as valor_pago
+                FROM ordens_servico os
+                JOIN clientes c ON os.cliente_id = c.id
+                WHERE os.ativo = 1 
+                AND os.valor_total_os > 0
+                AND os.status_atual_id NOT IN (3, 9)
+                AND DATE(os.created_at) <= ?
+                HAVING valor_pago < valor_total_os OR valor_pago = 0
+                ORDER BY os.created_at DESC";
+        $stmtOS = $db->prepare($sqlOS);
+        $stmtOS->execute([$dataFim]);
+        $result = array_merge($result, $stmtOS->fetchAll() ?: []);
+
+        $sqlAtend = "SELECT 
+                        'Atendimento' as tipo,
+                        ae.id as origem_id,
+                        DATE(ae.created_at) as data,
+                        c.nome_completo as cliente,
+                        (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
+                        ae.valor_taxa_nf as taxa_nf,
+                        ae.descricao_problema as descricao,
+                        ae.id as numero,
+                        COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1), 0) as valor_pago
+                    FROM atendimentos_externos ae
+                    JOIN clientes c ON ae.cliente_id = c.id
+                    WHERE ae.ativo = 1 
+                    AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
+                    AND DATE(ae.created_at) <= ?
+                    HAVING valor_pago < valor_total OR valor_pago = 0
+                    ORDER BY ae.created_at DESC";
+        $stmtAtend = $db->prepare($sqlAtend);
+        $stmtAtend->execute([$dataFim]);
+        $result = array_merge($result, $stmtAtend->fetchAll() ?: []);
+
+        $totalPendente = 0;
+        $totalCustosPendente = 0;
+
+        foreach ($result as &$item) {
+            $item['custos'] = $this->getCustosPorOrigem($item['tipo'], $item['origem_id']);
+            $item['itens'] = $this->getItensPorOrigem($item['tipo'], $item['origem_id']);
+            $item['valor_pendente'] = $item['valor_total'] - $item['valor_pago'];
+            
+            $totalPendente += $item['valor_pendente'];
+            $totalCustosPendente += $item['custos'];
+        }
+
+        return [
+            'itens' => $result,
+            'totais' => [
+                'valor_total' => $totalPendente,
+                'custos' => $totalCustosPendente
+            ]
+        ];
+    }
+
+    private function getItensPorOrigem(string $tipo, int $origemId): array
+    {
+        $db = $this->osModel->getConnection();
+        $campoId = $tipo === 'OS' ? 'ordem_servico_id' : 'atendimento_externo_id';
+        
+        $sql = "SELECT descricao, tipo_item, quantidade 
+                FROM itens_ordem_servico 
+                WHERE $campoId = ? AND ativo = 1";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$origemId]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    private function getCustosPorOrigem(string $tipo, int $origemId): float
+    {
+        $db = $this->osModel->getConnection();
+        $campoId = $tipo === 'OS' ? 'ordem_servico_id' : 'atendimento_externo_id';
+        
+        $sql = "SELECT COALESCE(SUM(quantidade * COALESCE(NULLIF(valor_custo, 0), NULLIF(custo, 0), 0)), 0) 
+                FROM itens_ordem_servico 
+                WHERE $campoId = ? AND ativo = 1";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$origemId]);
+        return (float)($stmt->fetchColumn() ?: 0);
+    }
+
+    private function getValorPagoPorOrigem(string $tipo, int $origemId): float
+    {
+        $db = $this->osModel->getConnection();
+        $tipoOrigem = $tipo === 'OS' ? 'os' : 'atendimento';
+        
+        $sql = "SELECT COALESCE(SUM(valor_bruto), 0) 
+                FROM pagamentos_transacoes 
+                WHERE tipo_origem = ? AND origem_id = ? AND ativo = 1";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$tipoOrigem, $origemId]);
+        return (float)($stmt->fetchColumn() ?: 0);
+    }
+
+    private function getValoresPagosMes(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    pt.tipo_origem,
+                    pt.origem_id,
+                    pt.valor_bruto,
+                    pt.valor_liquido,
+                    pt.created_at,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
+                        ELSE ae.descricao_problema
+                    END as descricao,
+                    c.nome_completo as cliente
+                FROM pagamentos_transacoes pt
+                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
+                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
+                WHERE pt.ativo = 1 
+                AND DATE(pt.created_at) BETWEEN ? AND ?
+                ORDER BY pt.created_at DESC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$dataInicio, $dataFim]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    private function getValoresRecebidosMesAnterior(string $dataInicio): array
+    {
+        $db = $this->osModel->getConnection();
+        
+        $dataInicioMes = date('Y-m-01', strtotime($dataInicio));
+        $mesAnteriorFim = date('Y-m-t', strtotime('-1 month', strtotime($dataInicioMes)));
+        $mesAnteriorInicio = date('Y-m-01', strtotime('-1 month', strtotime($dataInicioMes)));
+        
+        $sql = "SELECT 
+                    pt.tipo_origem,
+                    pt.origem_id,
+                    pt.valor_bruto,
+                    pt.valor_liquido,
+                    pt.created_at,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
+                        ELSE ae.descricao_problema
+                    END as descricao,
+                    c.nome_completo as cliente
+                FROM pagamentos_transacoes pt
+                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
+                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
+                WHERE pt.ativo = 1 
+                AND DATE(pt.created_at) BETWEEN ? AND ?
+                ORDER BY pt.created_at DESC";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$mesAnteriorInicio, $mesAnteriorFim]);
+        return $stmt->fetchAll() ?: [];
+    }
+
+    private function getValoresAbertos(): array
+    {
+        $db = $this->osModel->getConnection();
+        
+        $result = [];
+        
+        $sqlOS = "SELECT 
+                    'OS' as tipo,
+                    os.id as origem_id,
+                    os.valor_total_os as valor_total,
+                    os.defeito_relatado as descricao,
+                    c.nome_completo as cliente,
+                    COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'os' AND origem_id = os.id AND ativo = 1), 0) as valor_pago
+                FROM ordens_servico os
+                JOIN clientes c ON os.cliente_id = c.id
+                WHERE os.ativo = 1 
+                AND os.status_atual_id IN (4, 5, 8, 10, 11, 12)
+                HAVING valor_pago < valor_total_os OR valor_pago = 0
+                ORDER BY os.created_at DESC";
+        $stmtOS = $db->prepare($sqlOS);
+        $stmtOS->execute();
+        $result = array_merge($result, $stmtOS->fetchAll() ?: []);
+        
+        $sqlAtend = "SELECT 
+                        'Atendimento' as tipo,
+                        ae.id as origem_id,
+                        (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
+                        ae.descricao_problema as descricao,
+                        c.nome_completo as cliente,
+                        COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1), 0) as valor_pago
+                    FROM atendimentos_externos ae
+                    JOIN clientes c ON ae.cliente_id = c.id
+                    WHERE ae.ativo = 1 
+                    AND ae.status = 'concluido'
+                    AND ae.pagamento IN ('não', 'parcial')
+                    HAVING valor_pago < valor_total OR valor_pago = 0
+                    ORDER BY ae.created_at DESC";
+        $stmtAtend = $db->prepare($sqlAtend);
+        $stmtAtend->execute();
+        $result = array_merge($result, $stmtAtend->fetchAll() ?: []);
+        
+        return $result;
+    }
 }

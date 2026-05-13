@@ -51,9 +51,14 @@
     </script>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h3 mb-0" style="color: var(--text-primary, #fff);"><i class="fas fa-chart-bar me-2"></i>Relatórios e Resumos</h2>
-        <a href="<?php echo BASE_URL; ?>relatorios/crm" class="btn btn-info">
-            <i class="fas fa-comments me-2"></i>Relatório de CRM
-        </a>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExportarFinanceiro">
+                <i class="fas fa-file-excel me-2"></i>Exportar Financeiro Excel
+            </button>
+            <a href="<?php echo BASE_URL; ?>relatorios/crm" class="btn btn-info">
+                <i class="fas fa-comments me-2"></i>Relatório de CRM
+            </a>
+        </div>
     </div>
 
     <!-- Filtros -->
@@ -641,6 +646,37 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Exportação Financeira -->
+<div class="modal fade" id="modalExportarFinanceiro" tabindex="-1" aria-labelledby="modalExportarFinanceiroLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--bg-secondary);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                <h5 class="modal-title" id="modalExportarFinanceiroLabel" style="color: var(--text-primary);">
+                    <i class="fas fa-file-excel me-2"></i>Exportar Relatório Financeiro
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3" style="color: var(--text-primary);">Escolha qual relatório deseja exportar:</p>
+                <div class="d-grid gap-2">
+                    <a href="<?php echo BASE_URL; ?>relatorios/exportar-producao?data_inicio=<?php echo $filtros['data_inicio'] ?? ''; ?>&data_fim=<?php echo $filtros['data_fim'] ?? ''; ?>" class="btn btn-success">
+                        <i class="fas fa-industry me-2"></i>1. Lista de Produção
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>relatorios/exportar-caixa?data_inicio=<?php echo $filtros['data_inicio'] ?? ''; ?>&data_fim=<?php echo $filtros['data_fim'] ?? ''; ?>" class="btn btn-info">
+                        <i class="fas fa-cash-register me-2"></i>2. Lista de Caixa
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>relatorios/exportar-pendencias?data_inicio=<?php echo $filtros['data_inicio'] ?? ''; ?>&data_fim=<?php echo $filtros['data_fim'] ?? ''; ?>" class="btn btn-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>3. Lista de Pendências
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
     </div>

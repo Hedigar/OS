@@ -96,7 +96,7 @@ class ClienteInteracao extends Model
      */
     public function getClientesFiltroCRM(array $filtros): array
     {
-        $sql = "SELECT c.id, c.nome_completo, c.telefone_principal, 
+        $sql = "SELECT c.id, c.nome_completo, c.telefone_principal, c.lista_negra,
                        MAX(os.created_at) as ultima_visita,
                        CASE 
                            WHEN MAX(os.created_at) IS NULL THEN 9999 -- Nunca veio
@@ -104,7 +104,7 @@ class ClienteInteracao extends Model
                        END as dias_sem_vir
                 FROM clientes c
                 LEFT JOIN ordens_servico os ON c.id = os.cliente_id AND os.ativo = 1
-                WHERE c.ativo = 1";
+                WHERE c.ativo = 1 AND c.lista_negra = 0";
         
         $params = [];
         $having = [];
@@ -151,6 +151,24 @@ class ClienteInteracao extends Model
             $stmt->bindValue($k, $v);
         }
         $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Busca clientes já contactados em uma campanha específica, com sua interação.
+     */
+    public function getClientesContactadosCampanha(int $campanhaId): array
+    {
+        $sql = "SELECT 
+                    c.id, c.nome_completo, c.telefone_principal, c.lista_negra,
+                    ci.id as interacao_id, ci.resposta_cliente, ci.created_at as data_envio
+                FROM clientes c
+                JOIN cliente_interacoes ci ON c.id = ci.cliente_id
+                WHERE ci.campanha_id = :campanha_id
+                ORDER BY ci.created_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['campanha_id' => $campanhaId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 }

@@ -198,6 +198,19 @@ require_once __DIR__ . '/../layout/main.php';
                         class="textarea-large"
                     ><?php echo $is_edit ? htmlspecialchars($cliente['observacoes'] ?? '') : ''; ?></textarea>
                 </div>
+
+                    <div class="form-group">
+                    <label class="checkbox-label">
+                        <input
+                            type="checkbox"
+                            id="lista_negra"
+                            name="lista_negra"
+                            value="1"
+                            <?php echo ($is_edit && ($cliente['lista_negra'] ?? 0) == 1) ? 'checked' : ''; ?>
+                        >
+                        🚫 Colocar na Lista Negra (não receberá campanhas CRM)
+                    </label>
+                </div>
             </div>
 
             <!-- AÇÕES -->

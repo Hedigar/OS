@@ -60,6 +60,9 @@ require_once __DIR__ . '/../layout/main.php';
                         <tr>
                             <td>
                                 <strong><?php echo htmlspecialchars($cliente['nome_completo']); ?></strong>
+                                <?php if (($cliente['lista_negra'] ?? 0) == 1): ?>
+                                    <span class="badge bg-danger text-white ms-1">🚫 LISTA NEGRA</span>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?php echo htmlspecialchars($cliente['documento'] ?? 'N/A'); ?>

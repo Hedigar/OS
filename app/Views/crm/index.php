@@ -107,6 +107,76 @@ require_once __DIR__ . '/../layout/main.php';
     </div>
 
     <!-- RESULTADOS -->
+    <!-- CLIENTES JÁ CONTACTADOS (AGORA NO TOPO!) -->
+    <?php if ($campanhaAtiva && !empty($clientesContactados)): ?>
+        <div class="card mb-4">
+            <div class="d-flex justify-between align-center mb-3">
+                <h3 class="card-title mb-0">✅ Clientes Já Contactados (<?php echo count($clientesContactados); ?>)</h3>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleContactados()">
+                    <span id="toggleLabel">Ocultar Lista</span>
+                </button>
+            </div>
+            
+            <div id="tabelaContactadosContainer">
+                <div class="table-responsive">
+                    <table class="table" id="tabelaContactados">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Telefone</th>
+                                <th>Data do Envio</th>
+                                <th>Resposta</th>
+                                <th>Lista Negra</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($clientesContactados as $c): ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($c['nome_completo']); ?></strong></td>
+                                    <td>
+                                        <?php 
+                                            $tel = preg_replace('/\D+/', '', $c['telefone_principal'] ?? '');
+                                            if ($tel):
+                                                $wa = "https://wa.me/55{$tel}";
+                                                echo '<a href="' . $wa . '" target="_blank">' . htmlspecialchars($c['telefone_principal']) . '</a>';
+                                            else:
+                                                echo 'N/A';
+                                            endif;
+                                        ?>
+                                    </td>
+                                    <td><?php echo date('d/m/Y H:i', strtotime($c['data_envio'])); ?></td>
+                                    <td><?php echo htmlspecialchars($c['resposta_cliente'] ?? '-'); ?></td>
+                                    <td>
+                                        <?php if ($c['lista_negra']): ?>
+                                            <span class="badge bg-danger">Sim</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-success">Não</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-warning btn-xs" onclick="abrirModalEditar(
+                                                <?php echo $c['interacao_id']; ?>, 
+                                                <?php echo $c['id']; ?>, 
+                                                '<?php echo addslashes($c['resposta_cliente'] ?? ''); ?>', 
+                                                <?php echo $c['lista_negra']; ?>,
+                                                <?php echo $campanhaAtiva['id']; ?>)">
+                                                ✏️ Editar
+                                            </button>
+                                            <a href="<?php echo BASE_URL; ?>clientes/view?id=<?php echo $c['id']; ?>" class="btn btn-primary btn-xs">Ver Jornada</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- CLIENTES SEGMENTADOS (AGORA ABAIXO!) -->
     <div class="card">
         <div class="d-flex justify-between align-center mb-3">
             <h3 class="card-title mb-0">👥 Clientes Segmentados (<?php echo count($clientes); ?>)</h3>
@@ -261,7 +331,7 @@ require_once __DIR__ . '/../layout/main.php';
 
 <!-- MODAL MENSAGEM CRM RÁPIDA -->
 <div id="modalMsgCRM" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
-    <div class="modal-content card" style="background:#fff; margin: 10% auto; padding: 20px; width: 500px; border-radius: 8px;">
+    <div class="modal-content card" style="background:#fff; margin:10% auto; padding:20px; width:500px; border-radius:8px;">
         <div class="d-flex justify-between mb-3">
             <h3>Enviar Mensagem / Promoção</h3>
             <span style="cursor:pointer; font-size:24px;" onclick="document.getElementById('modalMsgCRM').style.display='none'">&times;</span>
@@ -270,6 +340,7 @@ require_once __DIR__ . '/../layout/main.php';
             <input type="hidden" name="cliente_id" id="crm_cliente_id">
             <input type="hidden" name="tipo" value="campanha">
             <input type="hidden" name="canal" value="whatsapp">
+            <input type="hidden" name="campanha_id" id="crm_campanha_id" value="<?php echo $campanhaAtiva['id'] ?? ''; ?>">
             
             <div class="form-group mb-3">
                 <label>Assunto / Campanha</label>
@@ -285,6 +356,38 @@ require_once __DIR__ . '/../layout/main.php';
             <div class="d-flex justify-end gap-2">
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMsgCRM').style.display='none'">Cancelar</button>
                 <button type="button" class="btn btn-success" onclick="enviarWAeSalvar()">Enviar e Registrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR INTERAÇÃO E CLIENTE -->
+<div id="modalEditar" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+    <div class="modal-content card" style="background:#fff; margin:10% auto; padding:20px; width:500px; border-radius:8px;">
+        <div class="d-flex justify-between mb-3">
+            <h3>Editar Interação e Cliente</h3>
+            <span style="cursor:pointer; font-size:24px;" onclick="document.getElementById('modalEditar').style.display='none'">&times;</span>
+        </div>
+        <form action="<?php echo BASE_URL; ?>crm/atualizar-interacao-cliente" method="POST">
+            <input type="hidden" name="interacao_id" id="editar_interacao_id">
+            <input type="hidden" name="cliente_id" id="editar_cliente_id">
+            <input type="hidden" name="campanha_id" id="editar_campanha_id">
+            
+            <div class="form-group mb-3">
+                <label>Resposta do Cliente</label>
+                <textarea name="resposta_cliente" id="editar_resposta_cliente" class="form-control" rows="4" placeholder="O que o cliente respondeu..."></textarea>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="editar_lista_negra" name="lista_negra" value="1">
+                    🚫 Colocar na Lista Negra (não receberá mais campanhas)
+                </label>
+            </div>
+
+            <div class="d-flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalEditar').style.display='none'">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
             </div>
         </form>
     </div>
@@ -418,6 +521,27 @@ document.addEventListener('DOMContentLoaded', function() {
         abrirModalCampanha();
     <?php endif; ?>
 });
+
+function abrirModalEditar(interacaoId, clienteId, respostaCliente, listaNegra, campanhaId) {
+    document.getElementById('editar_interacao_id').value = interacaoId;
+    document.getElementById('editar_cliente_id').value = clienteId;
+    document.getElementById('editar_resposta_cliente').value = respostaCliente;
+    document.getElementById('editar_campanha_id').value = campanhaId;
+    document.getElementById('editar_lista_negra').checked = listaNegra == 1;
+    document.getElementById('modalEditar').style.display = 'block';
+}
+
+function toggleContactados() {
+    const container = document.getElementById('tabelaContactadosContainer');
+    const label = document.getElementById('toggleLabel');
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        label.textContent = 'Ocultar Lista';
+    } else {
+        container.style.display = 'none';
+        label.textContent = 'Exibir Lista';
+    }
+}
 </script>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

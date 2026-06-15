@@ -25,7 +25,7 @@ services:
     image: phpmyadmin/phpmyadmin
     container_name: os_phpmyadmin
     ports:
-      - "8081:80"
+      - "8083:80"
     environment:
       PMA_HOST: db
       PMA_USER: root

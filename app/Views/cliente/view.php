@@ -51,6 +51,9 @@ $cliente_documento = urlencode($cliente['documento'] ?? '');
                         ?>
                     </p>
                     <p><strong>Cidade:</strong> <?php echo htmlspecialchars($cliente['endereco_cidade'] ?? 'N/A'); ?></p>
+                    <?php if (($cliente['lista_negra'] ?? 0) == 1): ?>
+                        <p class="text-danger"><strong>🚫 LISTA NEGRA:</strong> Cliente não receberá campanhas CRM</p>
+                    <?php endif; ?>
                 </div>
             </div>
 

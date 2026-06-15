@@ -64,6 +64,7 @@ class ClienteService
             'endereco_bairro' => filter_var($post['endereco_bairro'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
             'endereco_cidade' => filter_var($post['endereco_cidade'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
             'observacoes' => filter_var($post['observacoes'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
+            'lista_negra' => isset($post['lista_negra']) ? 1 : 0,
         ];
     }
 

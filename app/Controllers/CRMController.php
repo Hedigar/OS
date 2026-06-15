@@ -33,11 +33,13 @@ class CRMController extends BaseController
     {
         $campanhaId = filter_input(INPUT_GET, 'campanha_id', FILTER_VALIDATE_INT);
         $campanhaAtiva = null;
+        $clientesContactados = [];
 
         if ($campanhaId) {
             $campanhaAtiva = $this->campanhaModel->findById($campanhaId);
             $filtros = $campanhaAtiva['filtros'] ?? [];
             $filtros['campanha_id'] = $campanhaId;
+            $clientesContactados = $this->interacaoModel->getClientesContactadosCampanha($campanhaId);
         } else {
             $filtros = [
                 'dias_min' => filter_input(INPUT_GET, 'dias_min', FILTER_VALIDATE_INT),
@@ -55,6 +57,7 @@ class CRMController extends BaseController
             'title' => 'CRM - Gestão de Clientes',
             'current_page' => 'crm',
             'clientes' => $clientes,
+            'clientesContactados' => $clientesContactados,
             'filtros' => $filtros,
             'servicosExistentes' => $servicosExistentes,
             'campanhasAbertas' => $campanhasAbertas,
@@ -177,7 +180,12 @@ class CRMController extends BaseController
             exit;
         }
 
-        $this->redirect("clientes/view?id={$clienteId}");
+        if ($campanhaId) {
+            $redirectUrl = "crm?campanha_id={$campanhaId}";
+            $this->redirect($redirectUrl);
+        } else {
+            $this->redirect("clientes/view?id={$clienteId}");
+        }
     }
 
     public function registrarCampanhaLote()
@@ -189,9 +197,11 @@ class CRMController extends BaseController
         $clienteIds = $_POST['cliente_ids'] ?? [];
         $assunto = filter_input(INPUT_POST, 'assunto', FILTER_SANITIZE_SPECIAL_CHARS);
         $mensagem = filter_input(INPUT_POST, 'mensagem', FILTER_SANITIZE_SPECIAL_CHARS);
+        $campanhaId = filter_input(INPUT_POST, 'campanha_id', FILTER_VALIDATE_INT);
 
         if (empty($clienteIds) || !$assunto) {
-            $this->redirect('crm');
+            $redirectUrl = $campanhaId ? "crm?campanha_id=" . $campanhaId : "crm";
+            $this->redirect($redirectUrl);
         }
 
         foreach ($clienteIds as $id) {
@@ -201,13 +211,48 @@ class CRMController extends BaseController
                 'tipo' => 'campanha',
                 'canal' => 'whatsapp',
                 'assunto' => $assunto,
-                'descricao' => $mensagem
+                'descricao' => $mensagem,
+                'campanha_id' => $campanhaId
             ]);
         }
 
         $log = new Log();
         $log->registrar(Auth::id(), "CRM: Campanha em Lote", count($clienteIds) . " clientes");
 
-        $this->redirect('crm');
+        $redirectUrl = $campanhaId ? "crm?campanha_id=" . $campanhaId : "crm";
+        $this->redirect($redirectUrl);
+    }
+
+    public function atualizarInteracaoCliente()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('crm');
+        }
+
+        $interacaoId = filter_input(INPUT_POST, 'interacao_id', FILTER_VALIDATE_INT);
+        $clienteId = filter_input(INPUT_POST, 'cliente_id', FILTER_VALIDATE_INT);
+        $respostaCliente = filter_input(INPUT_POST, 'resposta_cliente', FILTER_SANITIZE_SPECIAL_CHARS);
+        $listaNegra = isset($_POST['lista_negra']) ? 1 : 0;
+        $campanhaId = filter_input(INPUT_POST, 'campanha_id', FILTER_VALIDATE_INT);
+
+        if (!$interacaoId || !$clienteId) {
+            $this->redirect('crm');
+        }
+
+        // Atualizar a interação
+        $this->interacaoModel->update($interacaoId, [
+            'resposta_cliente' => $respostaCliente
+        ]);
+
+        // Atualizar o cliente (lista negra)
+        $clienteModel = new Cliente();
+        $clienteModel->update($clienteId, [
+            'lista_negra' => $listaNegra
+        ]);
+
+        $this->log("CRM: Atualizou interação e cliente", "Cliente #{$clienteId}, Interação #{$interacaoId}");
+
+        $redirectUrl = $campanhaId ? "crm?campanha_id=" . $campanhaId : "crm";
+        $this->redirect($redirectUrl);
     }
 }

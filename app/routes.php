@@ -60,6 +60,7 @@ $router->post('crm/registrar-campanha-lote', 'CRMController@registrarCampanhaLot
 $router->post('crm/salvar-campanha', 'CRMController@salvarCampanha');
 $router->post('crm/finalizar-campanha', 'CRMController@finalizarCampanha');
 $router->post('crm/salvar-configuracao', 'CRMController@salvarConfiguracao');
+$router->post('crm/atualizar-interacao-cliente', 'CRMController@atualizarInteracaoCliente');
 
 // Produtividade Pessoal
 $router->get('produtividade', 'ProdutividadeController@index');

@@ -202,11 +202,11 @@ $statuses = $statuses ?? [];
 </div>
 
 <!-- Modal de Confirmação -->
-<div id="confirm-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
-    <div class="modal-content" style="background: var(--dark-secondary); padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
-        <h3 style="margin-top: 0; color: var(--text-primary);">⚠️ Aviso Importante</h3>
-        <p style="color: var(--text-secondary); line-height: 1.6;">
-            Todos os campos devem ser preenchido, caso algum campo não exista ainda é sua responsabilidade adicionar no campo de observações. <strong>SUA RESPONSABILIDADE, SOMENTE SUA, UNICAMENTE SUA</strong>
+<div id="confirm-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: #1a1a2e; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%; border: 1px solid #2d2d44;">
+        <h3 style="margin-top: 0; color: var(--primary-red) !important; font-size: 2em; font-weight: bold;">⚠️ Aviso Importante</h3>
+        <p style="color: #cccccc; line-height: 1.6; font-size: 1.1em;">
+            Todos os campos devem ser preenchido, caso algum campo não exista ainda é sua responsabilidade adicionar no campo de observações. <strong style="color: var(--primary-red) !important; font-size: 1.2em;">SUA RESPONSABILIDADE, SOMENTE SUA, UNICAMENTE SUA</strong>
         </p>
         <div class="d-flex gap-3 mt-4 justify-content-end">
             <button type="button" id="btn-voltar" class="btn btn-secondary">Voltar e Preencher Observações</button>

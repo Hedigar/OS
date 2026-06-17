@@ -135,16 +135,17 @@ class OrdemServicoController extends BaseController
                     $equipamento_id = $existente['id'];
                 } else {
                     $equipamentoData = [
-                        'cliente_id' => $cliente_id,
-                        'tipo' => filter_input(INPUT_POST, 'tipo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'marca' => filter_input(INPUT_POST, 'marca_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'modelo' => filter_input(INPUT_POST, 'modelo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'serial' => $serial,
-                        'senha' => filter_input(INPUT_POST, 'senha_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                        'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
-                        'sn_fonte' => filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS),
-                    ];
+                    'cliente_id' => $cliente_id,
+                    'tipo' => filter_input(INPUT_POST, 'tipo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'marca' => filter_input(INPUT_POST, 'marca_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'modelo' => filter_input(INPUT_POST, 'modelo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'serial' => $serial,
+                    'senha' => filter_input(INPUT_POST, 'senha_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'voltagem' => filter_input(INPUT_POST, 'voltagem', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
+                    'sn_fonte' => filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS),
+                ];
                     $equipamento_id = $this->equipamentoModel->create($equipamentoData);
                 }
             }

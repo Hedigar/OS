@@ -24,6 +24,7 @@ class OrdemServico extends Model
                        e.modelo as equipamento_modelo,
                        e.serial as equipamento_serial,
                        e.senha as equipamento_senha,
+                       e.voltagem as voltagem,
                        e.acessorios as equipamento_acessorios,
                        e.possui_fonte as equipamento_fonte,
                        e.sn_fonte as equipamento_sn_fonte

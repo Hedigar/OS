@@ -114,13 +114,23 @@ $statuses = $statuses ?? [];
                             <input type="text" id="senha_equipamento" name="senha_equipamento" class="form-control" value="<?php echo $is_edit ? htmlspecialchars($ordem['equipamento_senha']) : ''; ?>">
                         </div>
 
-	                        <div class="form-group">
-	                            <label for="fonte_equipamento">Fonte de Alimentação</label>
-	                            <select id="fonte_equipamento" name="fonte_equipamento" class="form-select">
-	                                <option value="nao" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 0) ? 'selected' : ''; ?>>Não Deixou</option>
-	                                <option value="sim" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 1) ? 'selected' : ''; ?>>Deixou</option>
-	                            </select>
-	                        </div>
+                        <div class="form-group">
+                            <label for="voltagem">Voltagem *</label>
+                            <select id="voltagem" name="voltagem" class="form-select" required>
+                                <option value="">Selecione</option>
+                                <option value="bivolt" <?php echo ($is_edit && ($ordem['voltagem'] ?? '') == 'bivolt') ? 'selected' : ''; ?>>Bivolt</option>
+                                <option value="110" <?php echo ($is_edit && ($ordem['voltagem'] ?? '') == '110') ? 'selected' : ''; ?>>110V</option>
+                                <option value="220" <?php echo ($is_edit && ($ordem['voltagem'] ?? '') == '220') ? 'selected' : ''; ?>>220V</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fonte_equipamento">Fonte de Alimentação</label>
+                            <select id="fonte_equipamento" name="fonte_equipamento" class="form-select">
+                                <option value="nao" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 0) ? 'selected' : ''; ?>>Não Deixou</option>
+                                <option value="sim" <?php echo ($is_edit && $ordem['equipamento_fonte'] == 1) ? 'selected' : ''; ?>>Deixou</option>
+                            </select>
+                        </div>
 	
 	                        <div class="form-group">
 	                            <label for="sn_fonte">SN Fonte</label>
@@ -184,10 +194,24 @@ $statuses = $statuses ?? [];
             </div>
 
             <div class="d-flex gap-3 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">💾 Salvar Ordem de Serviço</button>
+                <button type="button" id="btn-salvar-modal" class="btn btn-primary btn-lg">💾 Salvar Ordem de Serviço</button>
                 <a href="<?php echo BASE_URL; ?>ordens" class="btn btn-secondary btn-lg">Cancelar</a>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div id="confirm-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: var(--dark-secondary); padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
+        <h3 style="margin-top: 0; color: var(--text-primary);">⚠️ Aviso Importante</h3>
+        <p style="color: var(--text-secondary); line-height: 1.6;">
+            Todos os campos devem ser preenchido, caso algum campo não exista ainda é sua responsabilidade adicionar no campo de observações. <strong>SUA RESPONSABILIDADE, SOMENTE SUA, UNICAMENTE SUA</strong>
+        </p>
+        <div class="d-flex gap-3 mt-4 justify-content-end">
+            <button type="button" id="btn-voltar" class="btn btn-secondary">Voltar e Preencher Observações</button>
+            <button type="button" id="btn-confirmar-salvar" class="btn btn-primary">Salvar OS</button>
+        </div>
     </div>
 </div>
 
@@ -203,6 +227,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const equipSelectDiv = document.getElementById('select_equipamento_div');
     const equipSelect = document.getElementById('equipamento_select');
     const removeClientBtn = document.getElementById('remove_client_btn');
+    const btnSalvarModal = document.getElementById('btn-salvar-modal');
+    const confirmModal = document.getElementById('confirm-modal');
+    const btnVoltar = document.getElementById('btn-voltar');
+    const btnConfirmarSalvar = document.getElementById('btn-confirmar-salvar');
+    const osForm = document.getElementById('os-form');
+
+    // Mostrar modal ao clicar em salvar
+    btnSalvarModal.addEventListener('click', () => {
+        confirmModal.style.display = 'flex';
+    });
+
+    // Fechar modal e voltar
+    btnVoltar.addEventListener('click', () => {
+        confirmModal.style.display = 'none';
+    });
+
+    // Confirmar e enviar o formulário
+    btnConfirmarSalvar.addEventListener('click', () => {
+        osForm.submit();
+    });
 
     function buscarCliente() {
         const termo = searchInput.value.trim();
@@ -365,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modelo_equipamento').value = data.modelo || '';
         document.getElementById('serial_equipamento').value = data.serial || '';
         document.getElementById('senha_equipamento').value = data.senha || '';
+        document.getElementById('voltagem').value = data.voltagem || '';
         document.getElementById('fonte_equipamento').value = (data.possui_fonte == 1 || data.equipamento_fonte == 1) ? 'sim' : 'nao';
         document.getElementById('sn_fonte').value = data.sn_fonte || '';
         document.getElementById('acessorios_equipamento').value = data.acessorios || '';
@@ -377,13 +422,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modelo_equipamento').value = '';
         document.getElementById('serial_equipamento').value = '';
         document.getElementById('senha_equipamento').value = '';
+        document.getElementById('voltagem').value = '';
         document.getElementById('fonte_equipamento').value = 'nao';
         document.getElementById('sn_fonte').value = '';
         document.getElementById('acessorios_equipamento').value = '';
     }
 
     function lockEquipFields(lock) {
-        const fields = ['tipo_equipamento', 'marca_equipamento', 'modelo_equipamento', 'serial_equipamento', 'senha_equipamento', 'fonte_equipamento', 'sn_fonte', 'acessorios_equipamento'];
+        const fields = ['tipo_equipamento', 'marca_equipamento', 'modelo_equipamento', 'serial_equipamento', 'senha_equipamento', 'voltagem', 'fonte_equipamento', 'sn_fonte', 'acessorios_equipamento'];
         fields.forEach(id => {
             const el = document.getElementById(id);
             if (lock) {

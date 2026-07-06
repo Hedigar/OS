@@ -107,4 +107,54 @@ class AtendimentoExterno extends Model
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Query Scope: Retorna atendimentos concluídos em um período.
+     */
+    public function concluidosNoPeriodo(string $dataInicio, string $dataFim): array
+    {
+        $sql = "SELECT 
+                    ae.id,
+                    (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
+                    ae.valor_taxa_nf,
+                    ae.descricao_problema,
+                    c.nome_completo as cliente,
+                    DATE(ae.updated_at) as data_finalizacao
+                FROM {$this->table} ae
+                JOIN clientes c ON ae.cliente_id = c.id
+                WHERE ae.ativo = 1 
+                AND ae.status = 'concluido'
+                AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
+                AND DATE(ae.updated_at) BETWEEN ? AND ?
+                ORDER BY ae.updated_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$dataInicio, $dataFim]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Query Scope: Retorna atendimentos com valores pendentes.
+     */
+    public function comPendencias(): array
+    {
+        $sql = "SELECT 
+                    ae.id,
+                    (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
+                    ae.valor_taxa_nf,
+                    ae.descricao_problema,
+                    DATE(ae.created_at) as data,
+                    c.nome_completo as cliente,
+                    COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1), 0) as valor_pago
+                FROM {$this->table} ae
+                JOIN clientes c ON ae.cliente_id = c.id
+                WHERE ae.ativo = 1 
+                AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
+                HAVING valor_pago < valor_total OR valor_pago = 0
+                ORDER BY ae.created_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
 }

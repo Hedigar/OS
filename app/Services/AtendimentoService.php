@@ -96,16 +96,36 @@ class AtendimentoService
         $maoDeObra = (float)($postData['valor_mao_de_obra'] ?? 0);
         $quantidade = (float)($postData['quantidade'] ?? 1);
         $desconto = (float)($postData['desconto'] ?? 0);
+        $custo = (float)($postData['custo'] ?? 0);
+        $atendimentoId = filter_var($postData['atendimento_externo_id'], FILTER_VALIDATE_INT);
 
         $itemData = [
             'quantidade' => $quantidade,
+            'custo' => $custo,
             'valor_unitario' => $venda,
             'valor_mao_de_obra' => $maoDeObra,
             'desconto' => $desconto,
             'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto
         ];
 
-        return $this->itemModel->update($itemId, $itemData);
+        $result = $this->itemModel->update($itemId, $itemData);
+        if ($result && $atendimentoId) {
+            // Atualizar custo no fluxo_caixa
+            $valorTotalCusto = $quantidade * $custo;
+            $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+            
+            // Primeiro remove o registro existente
+            $sqlDelete = "DELETE FROM fluxo_caixa WHERE referencia_tipo = 'item_atendimento' AND referencia_id = ?";
+            $stmtDelete = $fluxoCaixaModel->getConnection()->prepare($sqlDelete);
+            $stmtDelete->execute([$itemId]);
+            
+            // Adiciona o novo registro
+            if ($valorTotalCusto > 0) {
+                $fluxoCaixaModel->registrarCustoItemAtendimento($itemId, $atendimentoId, $valorTotalCusto);
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -118,6 +138,7 @@ class AtendimentoService
         $maoDeObra = (float)($postData['valor_mao_de_obra'] ?? 0);
         $quantidade = (float)($postData['quantidade'] ?? 1);
         $desconto = (float)($postData['desconto'] ?? 0);
+        $custo = (float)($postData['valor_custo'] ?? 0);
 
         $itemData = [
             'ordem_servico_id'      => null,
@@ -125,7 +146,7 @@ class AtendimentoService
             'tipo_item'             => $postData['tipo'] ?? 'servico',
             'descricao'             => $postData['descricao'] ?? '',
             'quantidade'            => $quantidade,
-            'custo'                 => (float)($postData['valor_custo'] ?? 0),
+            'custo'                 => $custo,
             'valor_unitario'        => $venda,
             'valor_mao_de_obra'     => $maoDeObra,
             'desconto'              => $desconto,
@@ -133,6 +154,16 @@ class AtendimentoService
             'ativo'                 => 1
         ];
 
-        return $this->itemModel->create($itemData);
+        $itemId = $this->itemModel->create($itemData);
+        if ($itemId) {
+            // Registrar custo no fluxo_caixa
+            $valorTotalCusto = $quantidade * $custo;
+            if ($valorTotalCusto > 0) {
+                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                $fluxoCaixaModel->registrarCustoItemAtendimento($itemId, $atendimentoId, $valorTotalCusto);
+            }
+        }
+
+        return $itemId;
     }
 }

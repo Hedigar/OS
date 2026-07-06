@@ -76,11 +76,11 @@ class OrdemServicoController extends BaseController
         ];
         
         // 4. Obter Total para Cálculo de Páginas
-        $totalRegistros = $this->osModel->countAllWithDetailsFiltered($search, $filters); 
+        $totalRegistros = $this->osModel->countAll($search, $filters); 
         $totalPaginas = ceil($totalRegistros / $itensPorPagina);
 
         // 5. Buscar apenas os dados da página atual
-        $ordens = $this->osModel->getAllWithDetailsPaginadoFiltered($search, $itensPorPagina, $offset, $filters);
+        $ordens = $this->osModel->getAllWithDetailsPaginado($search, $itensPorPagina, $offset, $filters);
         
         // 6. Status para o filtro
         $statuses = $this->statusModel->getAll();
@@ -462,7 +462,15 @@ class OrdemServicoController extends BaseController
                 'ativo' => 1
             ];
 
-            if ($this->itemModel->create($itemData)) {
+            $itemId = $this->itemModel->create($itemData);
+            if ($itemId) {
+                // Registrar custo no fluxo_caixa
+                $valorTotalCusto = $quantidade * $custo;
+                if ($valorTotalCusto > 0) {
+                    $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto);
+                }
+                
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
@@ -495,6 +503,20 @@ class OrdemServicoController extends BaseController
             ];
 
             if ($this->itemModel->update($itemId, $itemData)) {
+                // Atualizar custo no fluxo_caixa (remover antigo e adicionar novo, ou usar REPLACE)
+                $valorTotalCusto = $quantidade * $custo;
+                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                
+                // Primeiro remove o registro existente (se houver)
+                $sqlDelete = "DELETE FROM fluxo_caixa WHERE referencia_tipo = 'item_os' AND referencia_id = ?";
+                $stmtDelete = $fluxoCaixaModel->getConnection()->prepare($sqlDelete);
+                $stmtDelete->execute([$itemId]);
+                
+                // Adiciona o novo registro
+                if ($valorTotalCusto > 0) {
+                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto);
+                }
+                
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);

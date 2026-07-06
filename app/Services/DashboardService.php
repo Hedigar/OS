@@ -9,21 +9,35 @@ class DashboardService
 {
     private OrdemServico $osModel;
     private Log $logModel;
+    private FinanceReportService $financeService;
 
     public function __construct()
     {
         $this->osModel = new OrdemServico();
         $this->logModel = new Log();
+        $this->financeService = new FinanceReportService();
     }
 
     public function getStats(): array
     {
         $db = $this->osModel->getConnection();
+        $dataInicio = date('Y-m-01');
+        $dataFim = date('Y-m-t');
 
         $stmtAbertas = $db->query("SELECT COUNT(*) as total FROM ordens_servico WHERE status_atual_id NOT IN (5, 6) AND ativo = 1");
         $totalAbertas = (int)($stmtAbertas->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
 
-        $stmtFinalizadas = $db->query("SELECT COUNT(*) as total, SUM(valor_total_os) as valor_total FROM ordens_servico WHERE status_atual_id = 5 AND ativo = 1");
+        $stmtFinalizadas = $db->prepare("SELECT COUNT(*) as total, SUM(os.valor_total_os) as valor_total 
+                                        FROM ordens_servico os
+                                        LEFT JOIN (
+                                            SELECT ordem_servico_id, MAX(created_at) as created_at
+                                            FROM ordens_servico_status_historico
+                                            WHERE status_id = 5
+                                            GROUP BY ordem_servico_id
+                                        ) h ON os.id = h.ordem_servico_id
+                                        WHERE os.status_atual_id = 5 AND os.ativo = 1
+                                        AND DATE(COALESCE(h.created_at, os.updated_at)) BETWEEN ? AND ?");
+        $stmtFinalizadas->execute([$dataInicio, $dataFim]);
         $dadosFinalizadas = $stmtFinalizadas->fetch(\PDO::FETCH_ASSOC) ?: [];
         $totalFinalizadas = (int)($dadosFinalizadas['total'] ?? 0);
         $valorFinalizadas = (float)($dadosFinalizadas['valor_total'] ?? 0);
@@ -31,20 +45,8 @@ class DashboardService
         $stmtAtrasadas = $db->query("SELECT COUNT(*) as total FROM ordens_servico WHERE status_atual_id NOT IN (5, 6) AND ativo = 1 AND created_at < DATE_SUB(NOW(), INTERVAL 3 DAY)");
         $totalAtrasadas = (int)($stmtAtrasadas->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
 
-        $stmtLucro = $db->query("SELECT 
-                        SUM(os.valor_total_os) as total_bruto,
-                        (SELECT SUM(i.quantidade * COALESCE(i.valor_custo, i.custo, 0)) 
-                         FROM itens_ordem_servico i 
-                         JOIN ordens_servico o ON i.ordem_servico_id = o.id 
-                         WHERE o.status_atual_id = 5 AND o.ativo = 1 
-                         AND MONTH(i.created_at) = MONTH(CURRENT_DATE()) 
-                         AND YEAR(i.created_at) = YEAR(CURRENT_DATE())) as total_custo
-                      FROM ordens_servico os
-                      WHERE os.status_atual_id = 5 AND os.ativo = 1 
-                      AND MONTH(os.created_at) = MONTH(CURRENT_DATE()) 
-                      AND YEAR(os.created_at) = YEAR(CURRENT_DATE())");
-        $dadosLucro = $stmtLucro->fetch(\PDO::FETCH_ASSOC) ?: [];
-        $lucroMes = (float)($dadosLucro['total_bruto'] ?? 0) - (float)($dadosLucro['total_custo'] ?? 0);
+        $relatorio = $this->financeService->relatorioFinanceiroCompleto($dataInicio, $dataFim);
+        $lucroMes = $relatorio['produzido']['totais']['lucro_previsto'];
 
         return [
             'total_abertas' => $totalAbertas,

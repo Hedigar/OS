@@ -8,6 +8,10 @@ class OrdemServico extends Model
 {
     protected string $table = 'ordens_servico';
     
+    public const STATUS_FINALIZADA = 5;
+    public const STATUS_CANCELADA = 6;
+    public const STATUS_DIAGNOSTICO_FINALIZADO = 15;
+    
     /**
      * Retorna uma OS com dados do cliente, status e equipamento.
      */
@@ -40,117 +44,46 @@ class OrdemServico extends Model
     }
 
     /**
-     * Ajustado para ser compatível com App\Core\Model
+     * Busca paginada com detalhes e filtros opcionais.
      */
-    public function countAll(string $whereClause = '', array $params = []): int
-    {
-        // Se a chamada vier do nosso controller com a string de busca personalizada
-        if (empty($whereClause) && isset($params['custom_search'])) {
-            $search = $params['custom_search'];
-            $sql = "SELECT COUNT(*) as total 
-                    FROM {$this->table} os
-                    JOIN clientes c ON os.cliente_id = c.id
-                    WHERE os.ativo = 1";
-            
-            $execParams = [];
-            if (!empty($search)) {
-                if (is_numeric($search)) {
-                    $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
-                    $execParams['search_id'] = $search;
-                    $execParams['search_nome'] = "%{$search}%";
-                } else {
-                    $sql .= " AND c.nome_completo LIKE :search_nome";
-                    $execParams['search_nome'] = "%{$search}%";
-                }
-            }
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute($execParams);
-            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-            return (int)($result['total'] ?? 0);
-        }
-
-        // Caso contrário, usa o comportamento padrão da classe pai
-        return parent::countAll($whereClause, $params);
-    }
-
-    /**
-     * BUSCA PAGINADA COM DETALHES
-     */
-    public function getAllWithDetailsPaginado(string $search = '', int $limit = 10, int $offset = 0): array
-    {
-        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor,
-                       e.modelo as equipamento_modelo
-                FROM {$this->table} os
-                JOIN clientes c ON os.cliente_id = c.id
-                JOIN status_os s ON os.status_atual_id = s.id
-                LEFT JOIN equipamentos e ON os.equipamento_id = e.id
-                WHERE os.ativo = 1";
-        
-        $params = [];
-        if (!empty($search)) {
-            if (is_numeric($search)) {
-                $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
-                $params['search_id'] = $search;
-                $params['search_nome'] = "%{$search}%";
-            } else {
-                $sql .= " AND c.nome_completo LIKE :search_nome";
-                $params['search_nome'] = "%{$search}%";
-            }
-        }
-
+    public function getAllWithDetailsPaginado(
+        string $search = '',
+        int $limit = 10,
+        int $offset = 0,
+        array $filters = []
+    ): array {
+        $sql = $this->buildQueryWithDetails($search, $filters);
         $sql .= " ORDER BY os.id DESC LIMIT :limit OFFSET :offset";
         
         $stmt = $this->db->prepare($sql);
         
+        $params = $this->bindFilters($search, $filters);
+        
         foreach ($params as $key => $val) {
-            $stmt->bindValue(":{$key}", $val);
+            if (is_int($val)) {
+                $stmt->bindValue($key, $val, \PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $val);
+            }
         }
         
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         
         $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
-     * Versão com filtros adicionais para a listagem.
+     * Conta OS com detalhes e filtros opcionais.
      */
-    public function countAllWithDetailsFiltered(string $search = '', array $filters = []): int
+    public function countAll(string $search = '', array $filters = []): int
     {
-        $sql = "SELECT COUNT(*) as total
-                FROM {$this->table} os
-                JOIN clientes c ON os.cliente_id = c.id
-                JOIN status_os s ON os.status_atual_id = s.id
-                WHERE os.ativo = 1";
-        $params = [];
-        if (!empty($search)) {
-            if (is_numeric($search)) {
-                $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
-                $params[':search_id'] = $search;
-                $params[':search_nome'] = "%{$search}%";
-            } else {
-                $sql .= " AND c.nome_completo LIKE :search_nome";
-                $params[':search_nome'] = "%{$search}%";
-            }
-        }
-        if (!empty($filters['status_id'])) {
-            $sql .= " AND os.status_atual_id = :status_id";
-            $params[':status_id'] = (int)$filters['status_id'];
-        }
-        if (!empty($filters['status_pagamento'])) {
-            $sql .= " AND os.status_pagamento = :status_pagamento";
-            $params[':status_pagamento'] = $filters['status_pagamento'];
-        }
-        if (!empty($filters['status_entrega'])) {
-            $sql .= " AND os.status_entrega = :status_entrega";
-            $params[':status_entrega'] = $filters['status_entrega'];
-        }
-        if (!empty($filters['sem_atualizacao_dias'])) {
-            $sql .= " AND DATEDIFF(NOW(), COALESCE((SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id), os.created_at)) >= :sem_dias";
-            $params[':sem_dias'] = (int)$filters['sem_atualizacao_dias'];
-        }
+        $sql = $this->buildQueryWithDetails($search, $filters, true);
         $stmt = $this->db->prepare($sql);
+        
+        $params = $this->bindFilters($search, $filters);
+        
         foreach ($params as $k => $v) {
             if (is_int($v)) {
                 $stmt->bindValue($k, $v, \PDO::PARAM_INT);
@@ -158,64 +91,85 @@ class OrdemServico extends Model
                 $stmt->bindValue($k, $v);
             }
         }
+        
         $stmt->execute();
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
         return (int)($result['total'] ?? 0);
     }
 
-    public function getAllWithDetailsPaginadoFiltered(string $search = '', int $limit = 10, int $offset = 0, array $filters = []): array
-    {
-        $sql = "SELECT os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor,
-                       e.modelo as equipamento_modelo
+    /**
+     * Constrói query base com JOINs.
+     */
+    private function buildQueryWithDetails(
+        string $search = '',
+        array $filters = [],
+        bool $countOnly = false
+    ): string {
+        $select = $countOnly
+            ? "COUNT(*) as total"
+            : "os.*, c.nome_completo as cliente_nome, s.nome as status_nome, s.cor as status_cor, e.modelo as equipamento_modelo";
+
+        $sql = "SELECT $select
                 FROM {$this->table} os
                 JOIN clientes c ON os.cliente_id = c.id
                 JOIN status_os s ON os.status_atual_id = s.id
                 LEFT JOIN equipamentos e ON os.equipamento_id = e.id
                 WHERE os.ativo = 1";
-        $params = [];
+        
         if (!empty($search)) {
             if (is_numeric($search)) {
                 $sql .= " AND (os.id = :search_id OR c.nome_completo LIKE :search_nome)";
-                $params[':search_id'] = $search;
-                $params[':search_nome'] = "%{$search}%";
             } else {
                 $sql .= " AND c.nome_completo LIKE :search_nome";
-                $params[':search_nome'] = "%{$search}%";
             }
         }
+        
         if (!empty($filters['status_id'])) {
             $sql .= " AND os.status_atual_id = :status_id";
-            $params[':status_id'] = (int)$filters['status_id'];
         }
         if (!empty($filters['status_pagamento'])) {
             $sql .= " AND os.status_pagamento = :status_pagamento";
-            $params[':status_pagamento'] = $filters['status_pagamento'];
         }
         if (!empty($filters['status_entrega'])) {
             $sql .= " AND os.status_entrega = :status_entrega";
-            $params[':status_entrega'] = $filters['status_entrega'];
         }
         if (!empty($filters['sem_atualizacao_dias'])) {
             $sql .= " AND DATEDIFF(NOW(), COALESCE((SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id), os.created_at)) >= :sem_dias";
-            $params[':sem_dias'] = (int)$filters['sem_atualizacao_dias'];
         }
-        $sql .= " ORDER BY os.id DESC LIMIT :limit OFFSET :offset";
-        $stmt = $this->db->prepare($sql);
-        foreach ($params as $k => $v) {
-            if (is_int($v)) {
-                $stmt->bindValue($k, $v, \PDO::PARAM_INT);
+        
+        return $sql;
+    }
+
+    /**
+     * Prepara parâmetros para bind.
+     */
+    private function bindFilters(string $search, array $filters): array
+    {
+        $params = [];
+        
+        if (!empty($search)) {
+            if (is_numeric($search)) {
+                $params[':search_id'] = $search;
+                $params[':search_nome'] = "%{$search}%";
             } else {
-                $stmt->bindValue($k, $v);
+                $params[':search_nome'] = "%{$search}%";
             }
         }
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
-    }
-    public function getAllWithDetails(string $search = ''): array
-    {
-        return $this->getAllWithDetailsPaginado($search, 999999, 0);
+        
+        if (!empty($filters['status_id'])) {
+            $params[':status_id'] = (int)$filters['status_id'];
+        }
+        if (!empty($filters['status_pagamento'])) {
+            $params[':status_pagamento'] = $filters['status_pagamento'];
+        }
+        if (!empty($filters['status_entrega'])) {
+            $params[':status_entrega'] = $filters['status_entrega'];
+        }
+        if (!empty($filters['sem_atualizacao_dias'])) {
+            $params[':sem_dias'] = (int)$filters['sem_atualizacao_dias'];
+        }
+        
+        return $params;
     }
 
     public function updateTotals(int $osId, array $itens): bool
@@ -236,7 +190,6 @@ class OrdemServico extends Model
 
         $totalOS = $totalProdutos + $totalServicos;
 
-        // Buscar se deve emitir NF para calcular a taxa
         $stmtNF = $this->db->prepare("SELECT emitir_nf FROM {$this->table} WHERE id = :id");
         $stmtNF->execute(['id' => $osId]);
         $osNF = $stmtNF->fetch();
@@ -270,27 +223,18 @@ class OrdemServico extends Model
         ]);
     }
 
-    public function findByClienteId(int $clienteId): array
+    /**
+     * Busca OS por campo específico.
+     */
+    public function findBy(string $campo, int $valor): array
     {
         $sql = "SELECT os.*, s.nome as status_nome, s.cor as status_cor
                 FROM {$this->table} os
                 JOIN status_os s ON os.status_atual_id = s.id
-                WHERE os.cliente_id = :cliente_id AND os.ativo = 1
+                WHERE os.{$campo} = :valor AND os.ativo = 1
                 ORDER BY os.id DESC";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['cliente_id' => $clienteId]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-    }
-
-    public function findByEquipamentoId(int $equipamentoId): array
-    {
-        $sql = "SELECT os.*, s.nome as status_nome, s.cor as status_cor
-                FROM {$this->table} os
-                JOIN status_os s ON os.status_atual_id = s.id
-                WHERE os.equipamento_id = :equipamento_id AND os.ativo = 1
-                ORDER BY os.id DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['equipamento_id' => $equipamentoId]);
+        $stmt->execute(['valor' => $valor]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
@@ -351,10 +295,8 @@ class OrdemServico extends Model
             $clienteNome = $row['cliente_nome'] ?? '';
             $clienteTelefone = $row['cliente_telefone'] ?? '';
 
-            if ($statusId === 5) {
+            if ($statusId === self::STATUS_FINALIZADA) {
                 if ($statusPagamento === 'pago' && $statusEntrega === 'entregue') {
-                    // Pós-venda: apenas se ainda não foi realizado (pos_venda_status = 0)
-                    // e se já se passaram pelo menos 7 dias da entrega (sem trava de 10 dias)
                     $posVendaStatus = (int)($row['pos_venda_status'] ?? 0);
                     $diasEntrega = $diasDesdeUltimaAtualizacao;
 
@@ -421,7 +363,7 @@ class OrdemServico extends Model
                 continue;
             }
 
-            if ($statusId === 6) {
+            if ($statusId === self::STATUS_CANCELADA) {
                 continue;
             }
 
@@ -457,5 +399,105 @@ class OrdemServico extends Model
         }
 
         return $alertas;
+    }
+
+    /**
+     * Busca OS por status em um período.
+     */
+    private function findByStatusNoPeriodo(int $statusId, string $dataInicio, string $dataFim): array
+    {
+        $sql = "SELECT 
+                    os.id,
+                    os.valor_total_os,
+                    os.valor_taxa_nf,
+                    os.defeito_relatado,
+                    c.nome_completo as cliente,
+                    DATE(COALESCE(h.created_at, os.updated_at)) as data_finalizacao
+                FROM {$this->table} os
+                JOIN clientes c ON os.cliente_id = c.id
+                LEFT JOIN (
+                    SELECT ordem_servico_id, MAX(created_at) as created_at
+                    FROM ordens_servico_status_historico
+                    WHERE status_id = ?
+                    GROUP BY ordem_servico_id
+                ) h ON os.id = h.ordem_servico_id
+                WHERE os.ativo = 1 
+                AND os.status_atual_id = ?
+                AND DATE(COALESCE(h.created_at, os.updated_at)) BETWEEN ? AND ?
+                ORDER BY h.created_at DESC, os.updated_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$statusId, $statusId, $dataInicio, $dataFim]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Query Scope: Retorna OS finalizadas em um período.
+     */
+    public function finalizadasNoPeriodo(string $dataInicio, string $dataFim): array
+    {
+        return $this->findByStatusNoPeriodo(self::STATUS_FINALIZADA, $dataInicio, $dataFim);
+    }
+
+    /**
+     * Query Scope: Retorna OS com status Diagnóstico Finalizado em um período.
+     */
+    public function diagnosticoFinalizadoNoPeriodo(string $dataInicio, string $dataFim): array
+    {
+        return $this->findByStatusNoPeriodo(self::STATUS_DIAGNOSTICO_FINALIZADO, $dataInicio, $dataFim);
+    }
+
+    /**
+     * Query Scope: Retorna todas OS com valores pendentes.
+     */
+    public function comPendencias(): array
+    {
+        $statusCancelado = self::STATUS_CANCELADA;
+        
+        $sql = "SELECT 
+                    os.id,
+                    os.valor_total_os,
+                    os.valor_taxa_nf,
+                    os.defeito_relatado,
+                    DATE(os.created_at) as data,
+                    c.nome_completo as cliente,
+                    COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'os' AND origem_id = os.id AND ativo = 1), 0) as valor_pago
+                FROM {$this->table} os
+                JOIN clientes c ON os.cliente_id = c.id
+                WHERE os.ativo = 1 
+                AND os.valor_total_os > 0
+                AND os.status_atual_id NOT IN ($statusCancelado)
+                HAVING valor_pago < valor_total_os OR valor_pago = 0
+                ORDER BY os.created_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    // Métodos de compatibilidade - deprecated
+    public function getAllWithDetailsPaginadoFiltered(string $search = '', int $limit = 10, int $offset = 0, array $filters = []): array
+    {
+        return $this->getAllWithDetailsPaginado($search, $limit, $offset, $filters);
+    }
+    
+    public function countAllWithDetailsFiltered(string $search = '', array $filters = []): int
+    {
+        return $this->countAll($search, $filters);
+    }
+    
+    public function findByClienteId(int $clienteId): array
+    {
+        return $this->findBy('cliente_id', $clienteId);
+    }
+    
+    public function findByEquipamentoId(int $equipamentoId): array
+    {
+        return $this->findBy('equipamento_id', $equipamentoId);
+    }
+    
+    public function getAllWithDetails(string $search = ''): array
+    {
+        return $this->getAllWithDetailsPaginado($search, 999999, 0);
     }
 }

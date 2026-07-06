@@ -99,4 +99,46 @@ class PagamentoTransacao extends Model
         $stmt = $this->db->prepare($sql);
         return $stmt->execute(['usuario_id' => $usuarioId, 'id' => $id]);
     }
+
+    /**
+     * Query Scope: Retorna todas entradas (pagamentos) em um período.
+     */
+    public function entradasNoPeriodo(string $dataInicio, string $dataFim): array
+    {
+        $sql = "SELECT 
+                    pt.id,
+                    pt.tipo_origem,
+                    pt.origem_id,
+                    pt.valor_bruto,
+                    pt.valor_liquido,
+                    pt.valor_taxa as taxa_cartao,
+                    pt.created_at,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
+                        WHEN pt.tipo_origem = 'atendimento' THEN ae.descricao_problema
+                        ELSE pt.tipo_origem
+                    END as descricao,
+                    c.nome_completo as cliente,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.valor_total_os
+                        WHEN pt.tipo_origem = 'atendimento' THEN (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0))
+                        ELSE 0
+                    END as valor_total_origem,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.valor_taxa_nf
+                        WHEN pt.tipo_origem = 'atendimento' THEN ae.valor_taxa_nf
+                        ELSE 0
+                    END as taxa_nf
+                FROM {$this->table} pt
+                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
+                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
+                WHERE pt.ativo = 1 
+                AND DATE(pt.created_at) BETWEEN ? AND ?
+                ORDER BY pt.created_at DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$dataInicio, $dataFim]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
 }

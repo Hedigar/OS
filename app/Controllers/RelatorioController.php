@@ -141,7 +141,7 @@ class RelatorioController extends BaseController
         $sheet->getStyle('A' . $linha . ':I' . $linha)->getFont()->setBold(true);
         $linha++;
 
-        foreach ($dados['producao']['itens'] as $item) {
+        foreach ($dados['produzido']['itens'] as $item) {
             $itens = array_map(function($i) { return $i['descricao']; }, $item['itens']);
             $descricaoCompleta = $item['descricao'] . (count($itens) > 0 ? ' | ' . implode(', ', $itens) : '');
             
@@ -158,10 +158,10 @@ class RelatorioController extends BaseController
         }
 
         $sheet->setCellValue('E' . $linha, 'TOTAL:');
-        $sheet->setCellValue('F' . $linha, $dados['producao']['totais']['custos']);
-        $sheet->setCellValue('G' . $linha, $dados['producao']['totais']['taxas']);
-        $sheet->setCellValue('H' . $linha, $dados['producao']['totais']['valor_total']);
-        $sheet->setCellValue('I' . $linha, $dados['producao']['totais']['lucro_previsto']);
+        $sheet->setCellValue('F' . $linha, $dados['produzido']['totais']['custos']);
+        $sheet->setCellValue('G' . $linha, $dados['produzido']['totais']['taxas']);
+        $sheet->setCellValue('H' . $linha, $dados['produzido']['totais']['valor_total']);
+        $sheet->setCellValue('I' . $linha, $dados['produzido']['totais']['lucro_previsto']);
         $sheet->getStyle('E' . $linha . ':I' . $linha)->getFont()->setBold(true);
 
         foreach(range('A', 'I') as $col) {
@@ -210,7 +210,7 @@ class RelatorioController extends BaseController
         $sheet->getStyle('A' . $linha . ':J' . $linha)->getFont()->setBold(true);
         $linha++;
 
-        foreach ($dados['caixa']['itens'] as $item) {
+        foreach ($dados['entradas']['itens'] as $item) {
             $sheet->setCellValue('A' . $linha, date('Y-m-d', strtotime($item['created_at'])));
             $sheet->setCellValue('B' . $linha, $item['cliente'] ?? '');
             $sheet->setCellValue('C' . $linha, strtoupper($item['tipo_origem']) . ' #' . $item['origem_id']);
@@ -225,11 +225,11 @@ class RelatorioController extends BaseController
         }
 
         $sheet->setCellValue('D' . $linha, 'TOTAL:');
-        $sheet->setCellValue('E' . $linha, $dados['caixa']['totais']['custos']);
-        $sheet->setCellValue('F' . $linha, $dados['caixa']['totais']['taxas_nf']);
-        $sheet->setCellValue('G' . $linha, $dados['caixa']['totais']['taxas_cartao']);
-        $sheet->setCellValue('H' . $linha, $dados['caixa']['totais']['valor_bruto']);
-        $sheet->setCellValue('J' . $linha, $dados['caixa']['totais']['lucro']);
+        $sheet->setCellValue('E' . $linha, $dados['entradas']['totais']['custos']);
+        $sheet->setCellValue('F' . $linha, $dados['entradas']['totais']['taxas_nf']);
+        $sheet->setCellValue('G' . $linha, $dados['entradas']['totais']['taxas_cartao']);
+        $sheet->setCellValue('H' . $linha, $dados['entradas']['totais']['valor_bruto']);
+        $sheet->setCellValue('J' . $linha, $dados['entradas']['totais']['lucro']);
         $sheet->getStyle('D' . $linha . ':J' . $linha)->getFont()->setBold(true);
 
         foreach(range('A', 'J') as $col) {
@@ -277,7 +277,7 @@ class RelatorioController extends BaseController
         $sheet->getStyle('A' . $linha . ':I' . $linha)->getFont()->setBold(true);
         $linha++;
 
-        foreach ($dados['pendencias']['itens'] as $item) {
+        foreach ($dados['contas_a_receber']['itens'] as $item) {
             $itens = array_map(function($i) { return $i['descricao']; }, $item['itens']);
             $descricaoCompleta = $item['descricao'] . (count($itens) > 0 ? ' | ' . implode(', ', $itens) : '');
             
@@ -294,8 +294,8 @@ class RelatorioController extends BaseController
         }
 
         $sheet->setCellValue('E' . $linha, 'TOTAL:');
-        $sheet->setCellValue('F' . $linha, $dados['pendencias']['totais']['custos']);
-        $sheet->setCellValue('I' . $linha, $dados['pendencias']['totais']['valor_total']);
+        $sheet->setCellValue('F' . $linha, $dados['contas_a_receber']['totais']['custos']);
+        $sheet->setCellValue('I' . $linha, $dados['contas_a_receber']['totais']['valor_total']);
         $sheet->getStyle('E' . $linha . ':I' . $linha)->getFont()->setBold(true);
 
         foreach(range('A', 'I') as $col) {

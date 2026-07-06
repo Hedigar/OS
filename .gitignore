@@ -28,3 +28,17 @@ Thumbs.db
 # Docker arquivos opcionais (se não usados no servidor)
 docker-compose.override.yml
 .env.*
+
+# Arquivos SQL temporários, backups e dumps
+*.sql
+*.sql.backup
+*.sql.*
+
+# Scripts de debug e auditoria temporários
+debug_*.php
+relatorio_*.php
+verificar_*.php
+audit_*.php
+*_backfill*.php
+limpar_e_rebackfill.php
+auditoria_custos.php

@@ -167,6 +167,10 @@ class PagamentoController extends BaseController
             $this->json(['error' => 'Falha ao registrar pagamento'], 500);
         }
 
+        // Registrar entrada no fluxo_caixa
+        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+        $fluxoCaixaModel->registrarEntradaPagamento($id, $tipo, $origemId, $valorBruto);
+
         $this->atualizarStatusPagamento($tipo, $origemId);
 
         $this->json([

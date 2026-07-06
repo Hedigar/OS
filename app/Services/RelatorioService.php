@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\OrdemServico;
+use App\Services\FinanceReportService;
 
 class RelatorioService
 {
@@ -15,81 +16,17 @@ class RelatorioService
 
     public function resumoFinanceiro(string $dataInicio, string $dataFim): array
     {
-        $db = $this->osModel->getConnection();
+        $financeService = new FinanceReportService();
+        $relatorio = $financeService->relatorioFinanceiroCompleto($dataInicio, $dataFim);
         
-        // 1. Total Bruto, Produtos, Serviços, Taxa NF das OS
-        $sqlOS = "SELECT 
-                    COALESCE(SUM(valor_total_os), 0) as total_bruto_os,
-                    COALESCE(SUM(valor_total_produtos), 0) as total_produtos_os,
-                    COALESCE(SUM(valor_total_servicos), 0) as total_servicos_os,
-                    COALESCE(SUM(valor_taxa_nf), 0) as total_taxa_nf_os
-                FROM ordens_servico 
-                WHERE status_atual_id IN (4, 5, 8, 10, 11, 12) AND ativo = 1 
-                AND DATE(created_at) BETWEEN ? AND ?";
-        $stmtOS = $db->prepare($sqlOS);
-        $stmtOS->execute([$dataInicio, $dataFim]);
-        $dadosOS = $stmtOS->fetch() ?: [];
-        
-        // 2. Custo das Peças das OS
-        $sqlCustoOS = "SELECT COALESCE(SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)), 0) as total_custo_os
-                     FROM itens_ordem_servico i 
-                     JOIN ordens_servico o ON i.ordem_servico_id = o.id 
-                     WHERE o.status_atual_id IN (4, 5, 8, 10, 11, 12) AND o.ativo = 1 AND i.ativo = 1
-                     AND DATE(i.created_at) BETWEEN ? AND ?";
-        $stmtCustoOS = $db->prepare($sqlCustoOS);
-        $stmtCustoOS->execute([$dataInicio, $dataFim]);
-        $custoOS = $stmtCustoOS->fetchColumn() ?: 0;
-        
-        // 3. Total Bruto e Taxa NF dos Atendimentos
-        $sqlAtend = "SELECT 
-                    COALESCE(SUM(COALESCE(a.valor_total, 0) + COALESCE(a.valor_deslocamento, 0)), 0) as total_bruto_atend,
-                    COALESCE(SUM(a.valor_taxa_nf), 0) as total_taxa_nf_atend
-                FROM atendimentos_externos a
-                WHERE a.status = 'concluido' AND a.ativo = 1 
-                AND DATE(a.created_at) BETWEEN ? AND ?";
-        $stmtAtend = $db->prepare($sqlAtend);
-        $stmtAtend->execute([$dataInicio, $dataFim]);
-        $dadosAtend = $stmtAtend->fetch() ?: [];
-        
-        // 4. Total Produtos dos Atendimentos
-        $sqlProdAtend = "SELECT COALESCE(SUM(i.quantidade * COALESCE(i.valor_unitario, 0)), 0) as total_produtos_atend
-                     FROM itens_ordem_servico i 
-                     JOIN atendimentos_externos ae ON i.atendimento_externo_id = ae.id
-                     WHERE ae.status = 'concluido' AND ae.ativo = 1 AND i.ativo = 1
-                     AND DATE(ae.created_at) BETWEEN ? AND ?";
-        $stmtProdAtend = $db->prepare($sqlProdAtend);
-        $stmtProdAtend->execute([$dataInicio, $dataFim]);
-        $prodAtend = $stmtProdAtend->fetchColumn() ?: 0;
-        
-        // 5. Total Serviços dos Atendimentos
-        $sqlServAtend = "SELECT COALESCE(SUM(i.quantidade * COALESCE(i.valor_mao_de_obra, 0)), 0) as total_servicos_atend
-                     FROM itens_ordem_servico i 
-                     JOIN atendimentos_externos ae ON i.atendimento_externo_id = ae.id
-                     WHERE ae.status = 'concluido' AND ae.ativo = 1 AND i.ativo = 1
-                     AND DATE(ae.created_at) BETWEEN ? AND ?";
-        $stmtServAtend = $db->prepare($sqlServAtend);
-        $stmtServAtend->execute([$dataInicio, $dataFim]);
-        $servAtend = $stmtServAtend->fetchColumn() ?: 0;
-        
-        // 6. Custo das Peças dos Atendimentos
-        $sqlCustoAtend = "SELECT COALESCE(SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)), 0) as total_custo_atend
-                     FROM itens_ordem_servico i 
-                     JOIN atendimentos_externos ae ON i.atendimento_externo_id = ae.id 
-                     WHERE ae.status = 'concluido' AND ae.ativo = 1 AND i.ativo = 1
-                     AND DATE(i.created_at) BETWEEN ? AND ?";
-        $stmtCustoAtend = $db->prepare($sqlCustoAtend);
-        $stmtCustoAtend->execute([$dataInicio, $dataFim]);
-        $custoAtend = $stmtCustoAtend->fetchColumn() ?: 0;
-        
-        // Somar os valores
         return [
-            'total_bruto' => ($dadosOS['total_bruto_os'] ?? 0) + ($dadosAtend['total_bruto_atend'] ?? 0),
-            'total_produtos' => ($dadosOS['total_produtos_os'] ?? 0) + $prodAtend,
-            'total_servicos' => ($dadosOS['total_servicos_os'] ?? 0) + $servAtend,
-            'total_taxa_nf' => ($dadosOS['total_taxa_nf_os'] ?? 0) + ($dadosAtend['total_taxa_nf_atend'] ?? 0),
-            'total_custo' => $custoOS + $custoAtend,
-            'total_bruto_os' => $dadosOS['total_bruto_os'] ?? 0,
-            'total_bruto_atend' => $dadosAtend['total_bruto_atend'] ?? 0
+            'total_bruto' => $relatorio['produzido']['totais']['valor_total'],
+            'total_produtos' => 0, // Manter para compatibilidade, se precisar
+            'total_servicos' => 0, // Manter para compatibilidade, se precisar
+            'total_taxa_nf' => $relatorio['produzido']['totais']['taxas'],
+            'total_custos' => $relatorio['produzido']['totais']['custos'],
+            'total_bruto_os' => 0, // Manter para compatibilidade
+            'total_bruto_atend' => 0, // Manter para compatibilidade
         ];
     }
 
@@ -281,80 +218,70 @@ class RelatorioService
 
     public function custosPorOS(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosOS($dataInicio, $dataFim, 'updated_at');
+        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+        $fluxoItens = $fluxoCaixaModel->getRelatorioPorPeriodo($dataInicio, $dataFim);
+        
+        $result = [];
+        foreach ($fluxoItens as $item) {
+            if ($item['tipo'] === 'custo' && $item['os_id']) {
+                if (!isset($result[$item['os_id']])) {
+                    $result[$item['os_id']] = [
+                        'os_id' => $item['os_id'],
+                        'cliente_nome' => $item['cliente_nome'] ?? '',
+                        'custo_total' => 0,
+                        'itens' => []
+                    ];
+                }
+                $result[$item['os_id']]['custo_total'] += $item['valor'];
+                $result[$item['os_id']]['itens'][] = [
+                    'descricao' => $item['descricao_origem'] ?? 'Custo',
+                    'tipo_item' => 'produto',
+                    'quantidade' => 1,
+                    'valor_custo' => $item['valor']
+                ];
+            }
+        }
+        
+        return array_values($result);
     }
 
     public function custosPorOSCaixa(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosOS($dataInicio, $dataFim, 'updated_at');
-    }
-
-    private function obterCustosOS(string $dataInicio, string $dataFim, string $tipoData): array
-    {
-        $db = $this->osModel->getConnection();
-        
-        $whereData = "DATE(i.created_at) BETWEEN :start AND :end";
-
-        $sql = "SELECT 
-                    os.id as os_id,
-                    c.nome_completo as cliente_nome,
-                    SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) as custo_total
-                FROM ordens_servico os
-                JOIN clientes c ON c.id = os.cliente_id
-                JOIN itens_ordem_servico i ON i.ordem_servico_id = os.id AND i.ativo = 1
-                WHERE os.status_atual_id = 5 
-                  AND os.ativo = 1 
-                  AND $whereData
-                GROUP BY os.id, c.nome_completo
-                HAVING custo_total > 0
-                ORDER BY os.id DESC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
-        $lista = $stmt->fetchAll() ?: [];
-
-        if (empty($lista)) return [];
-
-        $ids = array_map(static fn($r) => (int)$r['os_id'], $lista);
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sqlItens = "SELECT ordem_servico_id, descricao, tipo_item, quantidade, COALESCE(NULLIF(valor_custo, 0), NULLIF(custo, 0), 0) as valor_custo
-                     FROM itens_ordem_servico
-                     WHERE ativo = 1 AND ordem_servico_id IN ($placeholders)
-                     ORDER BY ordem_servico_id ASC, id ASC";
-        $stmtItens = $db->prepare($sqlItens);
-        foreach ($ids as $idx => $val) {
-            $stmtItens->bindValue($idx + 1, $val, \PDO::PARAM_INT);
-        }
-        $stmtItens->execute();
-        $itens = $stmtItens->fetchAll() ?: [];
-
-        $map = [];
-        foreach ($lista as $row) {
-            $row['custo_total'] = (float)($row['custo_total'] ?? 0);
-            $row['itens'] = [];
-            $map[(int)$row['os_id']] = $row;
-        }
-        foreach ($itens as $it) {
-            $osId = (int)$it['ordem_servico_id'];
-            if (isset($map[$osId])) {
-                $map[$osId]['itens'][] = [
-                    'descricao' => $it['descricao'],
-                    'tipo_item' => $it['tipo_item'],
-                    'quantidade' => (float)$it['quantidade'],
-                    'valor_custo' => (float)$it['valor_custo'],
-                ];
-            }
-        }
-        return array_values($map);
+        return $this->custosPorOS($dataInicio, $dataFim);
     }
 
     public function custosPorAtendimento(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosAtendimento($dataInicio, $dataFim, 'updated_at');
+        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+        $fluxoItens = $fluxoCaixaModel->getRelatorioPorPeriodo($dataInicio, $dataFim);
+        
+        $result = [];
+        foreach ($fluxoItens as $item) {
+            if ($item['tipo'] === 'custo' && $item['atendimento_externo_id']) {
+                if (!isset($result[$item['atendimento_externo_id']])) {
+                    $result[$item['atendimento_externo_id']] = [
+                        'atendimento_id' => $item['atendimento_externo_id'],
+                        'cliente_nome' => $item['cliente_nome'] ?? '',
+                        'custo_total' => 0,
+                        'itens' => []
+                    ];
+                }
+                $result[$item['atendimento_externo_id']]['custo_total'] += $item['valor'];
+                $result[$item['atendimento_externo_id']]['itens'][] = [
+                    'descricao' => $item['descricao_origem'] ?? 'Custo',
+                    'tipo_item' => 'produto',
+                    'quantidade' => 1,
+                    'valor_custo' => $item['valor']
+                ];
+            }
+        }
+        
+        return array_values($result);
     }
 
     public function custosPorAtendimentoCaixa(string $dataInicio, string $dataFim): array
     {
-        return $this->obterCustosAtendimento($dataInicio, $dataFim, 'updated_at');
+        return $this->custosPorAtendimento($dataInicio, $dataFim);
     }
 
     public function nfsPorOSCaixa(string $dataInicio, string $dataFim): array
@@ -399,63 +326,6 @@ class RelatorioService
         return $stmt->fetchAll() ?: [];
     }
 
-    private function obterCustosAtendimento(string $dataInicio, string $dataFim, string $tipoData): array
-    {
-        $db = $this->osModel->getConnection();
-
-        $whereData = "DATE(i.created_at) BETWEEN :start AND :end";
-
-        $sql = "SELECT 
-                    a.id as atendimento_id,
-                    c.nome_completo as cliente_nome,
-                    SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0)) as custo_total
-                FROM atendimentos_externos a
-                JOIN clientes c ON c.id = a.cliente_id
-                JOIN itens_ordem_servico i ON i.atendimento_externo_id = a.id AND i.ativo = 1
-                WHERE a.ativo = 1 AND a.status = 'concluido'
-                  AND $whereData
-                GROUP BY a.id, c.nome_completo
-                HAVING custo_total > 0
-                ORDER BY a.id DESC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute(['start' => $dataInicio, 'end' => $dataFim]);
-        $lista = $stmt->fetchAll() ?: [];
-
-        if (empty($lista)) return [];
-
-        $ids = array_map(static fn($r) => (int)$r['atendimento_id'], $lista);
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sqlItens = "SELECT atendimento_externo_id, descricao, tipo_item, quantidade, COALESCE(NULLIF(valor_custo, 0), NULLIF(custo, 0), 0) as valor_custo
-                     FROM itens_ordem_servico
-                     WHERE ativo = 1 AND atendimento_externo_id IN ($placeholders)
-                     ORDER BY atendimento_externo_id ASC, id ASC";
-        $stmtItens = $db->prepare($sqlItens);
-        foreach ($ids as $idx => $val) {
-            $stmtItens->bindValue($idx + 1, $val, \PDO::PARAM_INT);
-        }
-        $stmtItens->execute();
-        $itens = $stmtItens->fetchAll() ?: [];
-
-        $map = [];
-        foreach ($lista as $row) {
-            $row['custo_total'] = (float)($row['custo_total'] ?? 0);
-            $row['itens'] = [];
-            $map[(int)$row['atendimento_id']] = $row;
-        }
-        foreach ($itens as $it) {
-            $atId = (int)$it['atendimento_externo_id'];
-            if (isset($map[$atId])) {
-                $map[$atId]['itens'][] = [
-                    'descricao' => $it['descricao'],
-                    'tipo_item' => $it['tipo_item'],
-                    'quantidade' => (float)$it['quantidade'],
-                    'valor_custo' => (float)$it['valor_custo'],
-                ];
-            }
-        }
-        return array_values($map);
-    }
-
     public function itensVendidos(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();
@@ -479,42 +349,11 @@ class RelatorioService
 
     public function lucroReal(string $dataInicio, string $dataFim): array
     {
-        $db = $this->osModel->getConnection();
-        
-        // 1. Receita Liquida (Pagamentos Reais - Taxas de Maquina)
-        $sqlReceita = "SELECT SUM(valor_liquido) as total_liquido 
-                       FROM pagamentos_transacoes 
-                       WHERE ativo = 1 
-                       AND DATE(created_at) BETWEEN :start AND :end";
-        $stmtReceita = $db->prepare($sqlReceita);
-        $stmtReceita->execute(['start' => $dataInicio, 'end' => $dataFim]);
-        $receitaLiquida = (float)($stmtReceita->fetchColumn() ?: 0);
-
-        // 2. Custos de OS (Pecas) - Baseado na data de criacao do ITEM para OSs finalizadas
-        $sqlCustosOS = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
-                        FROM itens_ordem_servico i
-                        JOIN ordens_servico o ON i.ordem_servico_id = o.id
-                        WHERE i.ativo = 1
-                          AND o.status_atual_id = 5 
-                          AND o.ativo = 1
-                          AND DATE(i.created_at) BETWEEN :start1 AND :end1";
-        $stmtOS = $db->prepare($sqlCustosOS);
-        $stmtOS->execute(['start1' => $dataInicio, 'end1' => $dataFim]);
-        $custoOS = (float)($stmtOS->fetchColumn() ?: 0);
-
-        // 3. Custos de Atendimentos (Pecas)
-        $sqlCustosAt = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
-                        FROM itens_ordem_servico i
-                        JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
-                        WHERE i.ativo = 1
-                          AND a.status = 'concluido'
-                          AND a.ativo = 1
-                          AND DATE(i.created_at) BETWEEN :start2 AND :end2";
-        $stmtAt = $db->prepare($sqlCustosAt);
-        $stmtAt->execute(['start2' => $dataInicio, 'end2' => $dataFim]);
-        $custoAt = (float)($stmtAt->fetchColumn() ?: 0);
+        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+        $totais = $fluxoCaixaModel->getTotaisPorPeriodo($dataInicio, $dataFim);
 
         // 4. Custos de Impostos (Nota Fiscal)
+        $db = $this->osModel->getConnection();
         $sqlTaxaNF = "SELECT 
                         (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM ordens_servico WHERE ativo = 1 AND status_atual_id = 5 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s1 AND :e1) +
                         (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE ativo = 1 AND status = 'concluido' AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
@@ -526,17 +365,16 @@ class RelatorioService
         ]);
         $custoNF = (float)($stmtNF->fetchColumn() ?: 0);
 
-        $custoPecas = $custoOS + $custoAt;
-        $totalDescontos = $custoPecas + $custoNF;
+        $totalDescontos = $totais['custo'] + $custoNF;
 
         return [
-            'receita_liquida' => $receitaLiquida,
-            'custo_os' => $custoOS,
-            'custo_atendimentos' => $custoAt,
-            'custo_pecas' => $custoPecas,
+            'receita_liquida' => $totais['entrada'],
+            'custo_os' => $totais['custo'],
+            'custo_atendimentos' => 0,
+            'custo_pecas' => $totais['custo'],
             'custo_nf' => $custoNF,
             'total_descontos' => $totalDescontos,
-            'lucro_real' => $receitaLiquida - $totalDescontos
+            'lucro_real' => $totais['entrada'] - $totalDescontos
         ];
     }
 
@@ -660,359 +498,9 @@ class RelatorioService
 
     public function relatorioFinanceiroDetalhado(string $dataInicio, string $dataFim): array
     {
-        $db = $this->osModel->getConnection();
-
-        $producao = $this->getListaProducao($db, $dataInicio, $dataFim);
-        $caixa = $this->getListaCaixa($db, $dataInicio, $dataFim);
-        $pendencias = $this->getListaPendencias($db, $dataFim);
-
-        return [
-            'producao' => $producao,
-            'caixa' => $caixa,
-            'pendencias' => $pendencias
-        ];
+        $financeService = new FinanceReportService();
+        return $financeService->relatorioFinanceiroCompleto($dataInicio, $dataFim);
     }
 
-    private function getListaProducao($db, string $dataInicio, string $dataFim): array
-    {
-        $sql = "SELECT 
-                    'OS' as tipo,
-                    os.id as origem_id,
-                    DATE(os.created_at) as data,
-                    c.nome_completo as cliente,
-                    os.valor_total_os as valor_total,
-                    os.valor_taxa_nf as taxa_nf,
-                    os.defeito_relatado as descricao,
-                    os.id as numero
-                FROM ordens_servico os
-                JOIN clientes c ON os.cliente_id = c.id
-                WHERE os.ativo = 1 
-                AND DATE(os.created_at) BETWEEN ? AND ?
-                AND os.valor_total_os > 0
-                AND os.status_atual_id NOT IN (3, 9)
 
-                UNION ALL
-
-                SELECT 
-                    'Atendimento' as tipo,
-                    ae.id as origem_id,
-                    DATE(ae.created_at) as data,
-                    c.nome_completo as cliente,
-                    (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
-                    ae.valor_taxa_nf as taxa_nf,
-                    ae.descricao_problema as descricao,
-                    ae.id as numero
-                FROM atendimentos_externos ae
-                JOIN clientes c ON ae.cliente_id = c.id
-                WHERE ae.ativo = 1 
-                AND DATE(ae.created_at) BETWEEN ? AND ?
-                AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
-
-                ORDER BY data DESC";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$dataInicio, $dataFim, $dataInicio, $dataFim]);
-        $itens = $stmt->fetchAll() ?: [];
-
-        $totalProducao = 0;
-        $totalCustos = 0;
-        $totalTaxas = 0;
-        $totalLucro = 0;
-
-        foreach ($itens as &$item) {
-            $item['custos'] = $this->getCustosPorOrigem($item['tipo'], $item['origem_id']);
-            $item['itens'] = $this->getItensPorOrigem($item['tipo'], $item['origem_id']);
-            $item['lucro_previsto'] = $item['valor_total'] - $item['custos'] - ($item['taxa_nf'] ?? 0);
-            
-            $totalProducao += $item['valor_total'];
-            $totalCustos += $item['custos'];
-            $totalTaxas += ($item['taxa_nf'] ?? 0);
-            $totalLucro += $item['lucro_previsto'];
-        }
-
-        return [
-            'itens' => $itens,
-            'totais' => [
-                'valor_total' => $totalProducao,
-                'custos' => $totalCustos,
-                'taxas' => $totalTaxas,
-                'lucro_previsto' => $totalLucro
-            ]
-        ];
-    }
-
-    private function getListaCaixa($db, string $dataInicio, string $dataFim): array
-    {
-        $sql = "SELECT 
-                    pt.id,
-                    pt.tipo_origem,
-                    pt.origem_id,
-                    pt.valor_bruto,
-                    pt.valor_liquido,
-                    pt.valor_taxa as taxa_cartao,
-                    pt.created_at,
-                    CASE 
-                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
-                        WHEN pt.tipo_origem = 'atendimento' THEN ae.descricao_problema
-                        ELSE pt.tipo_origem
-                    END as descricao,
-                    c.nome_completo as cliente,
-                    CASE 
-                        WHEN pt.tipo_origem = 'os' THEN os.valor_total_os
-                        WHEN pt.tipo_origem = 'atendimento' THEN (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0))
-                        ELSE 0
-                    END as valor_total_origem,
-                    CASE 
-                        WHEN pt.tipo_origem = 'os' THEN os.valor_taxa_nf
-                        WHEN pt.tipo_origem = 'atendimento' THEN ae.valor_taxa_nf
-                        ELSE 0
-                    END as taxa_nf
-                FROM pagamentos_transacoes pt
-                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
-                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
-                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
-                WHERE pt.ativo = 1 
-                AND DATE(pt.created_at) BETWEEN ? AND ?
-                ORDER BY pt.created_at DESC";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$dataInicio, $dataFim]);
-        $itens = $stmt->fetchAll() ?: [];
-
-        $totalCaixa = 0;
-        $totalCustosCaixa = 0;
-        $totalTaxasNF = 0;
-        $totalTaxasCartao = 0;
-        $totalLucroCaixa = 0;
-
-        foreach ($itens as &$item) {
-            $item['custos'] = $this->getCustosPorOrigem($item['tipo_origem'] === 'os' ? 'OS' : 'Atendimento', $item['origem_id']);
-            $item['lucro'] = $item['valor_bruto'] - $item['custos'] - ($item['taxa_nf'] ?? 0) - ($item['taxa_cartao'] ?? 0);
-            
-            $totalCaixa += $item['valor_bruto'];
-            $totalCustosCaixa += $item['custos'];
-            $totalTaxasNF += ($item['taxa_nf'] ?? 0);
-            $totalTaxasCartao += ($item['taxa_cartao'] ?? 0);
-            $totalLucroCaixa += $item['lucro'];
-        }
-
-        return [
-            'itens' => $itens,
-            'totais' => [
-                'valor_bruto' => $totalCaixa,
-                'custos' => $totalCustosCaixa,
-                'taxas_nf' => $totalTaxasNF,
-                'taxas_cartao' => $totalTaxasCartao,
-                'lucro' => $totalLucroCaixa
-            ]
-        ];
-    }
-
-    private function getListaPendencias($db, string $dataFim): array
-    {
-        $result = [];
-
-        $sqlOS = "SELECT 
-                    'OS' as tipo,
-                    os.id as origem_id,
-                    DATE(os.created_at) as data,
-                    c.nome_completo as cliente,
-                    os.valor_total_os as valor_total,
-                    os.valor_taxa_nf as taxa_nf,
-                    os.defeito_relatado as descricao,
-                    os.id as numero,
-                    COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'os' AND origem_id = os.id AND ativo = 1), 0) as valor_pago
-                FROM ordens_servico os
-                JOIN clientes c ON os.cliente_id = c.id
-                WHERE os.ativo = 1 
-                AND os.valor_total_os > 0
-                AND os.status_atual_id NOT IN (3, 9)
-                AND DATE(os.created_at) <= ?
-                HAVING valor_pago < valor_total_os OR valor_pago = 0
-                ORDER BY os.created_at DESC";
-        $stmtOS = $db->prepare($sqlOS);
-        $stmtOS->execute([$dataFim]);
-        $result = array_merge($result, $stmtOS->fetchAll() ?: []);
-
-        $sqlAtend = "SELECT 
-                        'Atendimento' as tipo,
-                        ae.id as origem_id,
-                        DATE(ae.created_at) as data,
-                        c.nome_completo as cliente,
-                        (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
-                        ae.valor_taxa_nf as taxa_nf,
-                        ae.descricao_problema as descricao,
-                        ae.id as numero,
-                        COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1), 0) as valor_pago
-                    FROM atendimentos_externos ae
-                    JOIN clientes c ON ae.cliente_id = c.id
-                    WHERE ae.ativo = 1 
-                    AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
-                    AND DATE(ae.created_at) <= ?
-                    HAVING valor_pago < valor_total OR valor_pago = 0
-                    ORDER BY ae.created_at DESC";
-        $stmtAtend = $db->prepare($sqlAtend);
-        $stmtAtend->execute([$dataFim]);
-        $result = array_merge($result, $stmtAtend->fetchAll() ?: []);
-
-        $totalPendente = 0;
-        $totalCustosPendente = 0;
-
-        foreach ($result as &$item) {
-            $item['custos'] = $this->getCustosPorOrigem($item['tipo'], $item['origem_id']);
-            $item['itens'] = $this->getItensPorOrigem($item['tipo'], $item['origem_id']);
-            $item['valor_pendente'] = $item['valor_total'] - $item['valor_pago'];
-            
-            $totalPendente += $item['valor_pendente'];
-            $totalCustosPendente += $item['custos'];
-        }
-
-        return [
-            'itens' => $result,
-            'totais' => [
-                'valor_total' => $totalPendente,
-                'custos' => $totalCustosPendente
-            ]
-        ];
-    }
-
-    private function getItensPorOrigem(string $tipo, int $origemId): array
-    {
-        $db = $this->osModel->getConnection();
-        $campoId = $tipo === 'OS' ? 'ordem_servico_id' : 'atendimento_externo_id';
-        
-        $sql = "SELECT descricao, tipo_item, quantidade 
-                FROM itens_ordem_servico 
-                WHERE $campoId = ? AND ativo = 1";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$origemId]);
-        return $stmt->fetchAll() ?: [];
-    }
-
-    private function getCustosPorOrigem(string $tipo, int $origemId): float
-    {
-        $db = $this->osModel->getConnection();
-        $campoId = $tipo === 'OS' ? 'ordem_servico_id' : 'atendimento_externo_id';
-        
-        $sql = "SELECT COALESCE(SUM(quantidade * COALESCE(NULLIF(valor_custo, 0), NULLIF(custo, 0), 0)), 0) 
-                FROM itens_ordem_servico 
-                WHERE $campoId = ? AND ativo = 1";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$origemId]);
-        return (float)($stmt->fetchColumn() ?: 0);
-    }
-
-    private function getValorPagoPorOrigem(string $tipo, int $origemId): float
-    {
-        $db = $this->osModel->getConnection();
-        $tipoOrigem = $tipo === 'OS' ? 'os' : 'atendimento';
-        
-        $sql = "SELECT COALESCE(SUM(valor_bruto), 0) 
-                FROM pagamentos_transacoes 
-                WHERE tipo_origem = ? AND origem_id = ? AND ativo = 1";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$tipoOrigem, $origemId]);
-        return (float)($stmt->fetchColumn() ?: 0);
-    }
-
-    private function getValoresPagosMes(string $dataInicio, string $dataFim): array
-    {
-        $db = $this->osModel->getConnection();
-        $sql = "SELECT 
-                    pt.tipo_origem,
-                    pt.origem_id,
-                    pt.valor_bruto,
-                    pt.valor_liquido,
-                    pt.created_at,
-                    CASE 
-                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
-                        ELSE ae.descricao_problema
-                    END as descricao,
-                    c.nome_completo as cliente
-                FROM pagamentos_transacoes pt
-                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
-                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
-                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
-                WHERE pt.ativo = 1 
-                AND DATE(pt.created_at) BETWEEN ? AND ?
-                ORDER BY pt.created_at DESC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$dataInicio, $dataFim]);
-        return $stmt->fetchAll() ?: [];
-    }
-
-    private function getValoresRecebidosMesAnterior(string $dataInicio): array
-    {
-        $db = $this->osModel->getConnection();
-        
-        $dataInicioMes = date('Y-m-01', strtotime($dataInicio));
-        $mesAnteriorFim = date('Y-m-t', strtotime('-1 month', strtotime($dataInicioMes)));
-        $mesAnteriorInicio = date('Y-m-01', strtotime('-1 month', strtotime($dataInicioMes)));
-        
-        $sql = "SELECT 
-                    pt.tipo_origem,
-                    pt.origem_id,
-                    pt.valor_bruto,
-                    pt.valor_liquido,
-                    pt.created_at,
-                    CASE 
-                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
-                        ELSE ae.descricao_problema
-                    END as descricao,
-                    c.nome_completo as cliente
-                FROM pagamentos_transacoes pt
-                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
-                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
-                LEFT JOIN clientes c ON (pt.tipo_origem = 'os' AND os.cliente_id = c.id) OR (pt.tipo_origem = 'atendimento' AND ae.cliente_id = c.id)
-                WHERE pt.ativo = 1 
-                AND DATE(pt.created_at) BETWEEN ? AND ?
-                ORDER BY pt.created_at DESC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$mesAnteriorInicio, $mesAnteriorFim]);
-        return $stmt->fetchAll() ?: [];
-    }
-
-    private function getValoresAbertos(): array
-    {
-        $db = $this->osModel->getConnection();
-        
-        $result = [];
-        
-        $sqlOS = "SELECT 
-                    'OS' as tipo,
-                    os.id as origem_id,
-                    os.valor_total_os as valor_total,
-                    os.defeito_relatado as descricao,
-                    c.nome_completo as cliente,
-                    COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'os' AND origem_id = os.id AND ativo = 1), 0) as valor_pago
-                FROM ordens_servico os
-                JOIN clientes c ON os.cliente_id = c.id
-                WHERE os.ativo = 1 
-                AND os.status_atual_id IN (4, 5, 8, 10, 11, 12)
-                HAVING valor_pago < valor_total_os OR valor_pago = 0
-                ORDER BY os.created_at DESC";
-        $stmtOS = $db->prepare($sqlOS);
-        $stmtOS->execute();
-        $result = array_merge($result, $stmtOS->fetchAll() ?: []);
-        
-        $sqlAtend = "SELECT 
-                        'Atendimento' as tipo,
-                        ae.id as origem_id,
-                        (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total,
-                        ae.descricao_problema as descricao,
-                        c.nome_completo as cliente,
-                        COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1), 0) as valor_pago
-                    FROM atendimentos_externos ae
-                    JOIN clientes c ON ae.cliente_id = c.id
-                    WHERE ae.ativo = 1 
-                    AND ae.status = 'concluido'
-                    AND ae.pagamento IN ('não', 'parcial')
-                    HAVING valor_pago < valor_total OR valor_pago = 0
-                    ORDER BY ae.created_at DESC";
-        $stmtAtend = $db->prepare($sqlAtend);
-        $stmtAtend->execute();
-        $result = array_merge($result, $stmtAtend->fetchAll() ?: []);
-        
-        return $result;
-    }
 }

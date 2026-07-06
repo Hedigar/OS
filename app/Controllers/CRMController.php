@@ -34,12 +34,14 @@ class CRMController extends BaseController
         $campanhaId = filter_input(INPUT_GET, 'campanha_id', FILTER_VALIDATE_INT);
         $campanhaAtiva = null;
         $clientesContactados = [];
+        $totalContactados = 0;
 
         if ($campanhaId) {
             $campanhaAtiva = $this->campanhaModel->findById($campanhaId);
             $filtros = $campanhaAtiva['filtros'] ?? [];
             $filtros['campanha_id'] = $campanhaId;
-            $clientesContactados = $this->interacaoModel->getClientesContactadosCampanha($campanhaId);
+            $clientesContactados = $this->interacaoModel->getClientesContactadosCampanha($campanhaId, 1, 10);
+            $totalContactados = $this->interacaoModel->countClientesContactadosCampanha($campanhaId);
         } else {
             $filtros = [
                 'dias_min' => filter_input(INPUT_GET, 'dias_min', FILTER_VALIDATE_INT),
@@ -47,7 +49,8 @@ class CRMController extends BaseController
             ];
         }
 
-        $clientes = $this->interacaoModel->getClientesFiltroCRM($filtros);
+        $clientes = $this->interacaoModel->getClientesFiltroCRM($filtros, 1, 10);
+        $totalSegmentados = $this->interacaoModel->countClientesFiltroCRM($filtros);
         $servicosExistentes = $this->produtoServicoModel->getDescricoesUsadas();
         $campanhasAbertas = $this->campanhaModel->getAtivas();
         $mensagemPadrao = $this->configModel->getValor('crm_mensagem_padrao') ?? 'Olá {nome}! Notamos que você fez um serviço conosco e gostaríamos de oferecer...';
@@ -57,7 +60,9 @@ class CRMController extends BaseController
             'title' => 'CRM - Gestão de Clientes',
             'current_page' => 'crm',
             'clientes' => $clientes,
+            'totalSegmentados' => $totalSegmentados,
             'clientesContactados' => $clientesContactados,
+            'totalContactados' => $totalContactados,
             'filtros' => $filtros,
             'servicosExistentes' => $servicosExistentes,
             'campanhasAbertas' => $campanhasAbertas,
@@ -65,6 +70,155 @@ class CRMController extends BaseController
             'mensagemPadrao' => $mensagemPadrao,
             'posVendaMensagemPadrao' => $posVendaMensagemPadrao
         ]);
+    }
+
+    /**
+     * Lista clientes segmentados via AJAX com paginação
+     */
+    public function listarSegmentadosAjax()
+    {
+        header('Content-Type: application/json');
+        
+        $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
+        $perPage = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT) ?: 10;
+        $campanhaId = filter_input(INPUT_GET, 'campanha_id', FILTER_VALIDATE_INT);
+        
+        $filtros = [
+            'dias_min' => filter_input(INPUT_GET, 'dias_min', FILTER_VALIDATE_INT),
+            'termo_servico' => filter_input(INPUT_GET, 'termo_servico', FILTER_SANITIZE_SPECIAL_CHARS)
+        ];
+        
+        if ($campanhaId) {
+            $filtros['campanha_id'] = $campanhaId;
+        }
+        
+        $clientes = $this->interacaoModel->getClientesFiltroCRM($filtros, $page, $perPage);
+        $total = $this->interacaoModel->countClientesFiltroCRM($filtros);
+        
+        // Gerar HTML parcial
+        ob_start();
+        if (empty($clientes)) {
+            echo '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente encontrado com estes filtros.</td></tr>';
+        } else {
+            foreach ($clientes as $c) {
+                $tel = preg_replace('/\D+/', '', $c['telefone_principal'] ?? '');
+                $ultimaVisita = $c['ultima_visita'] ? date('d/m/Y', strtotime($c['ultima_visita'])) : 'Nunca';
+                $badgeClass = $c['dias_sem_vir'] > 180 ? 'bg-danger' : ($c['dias_sem_vir'] > 90 ? 'bg-warning' : 'bg-info');
+                ?>
+                <tr class="cliente-row" 
+                    data-id="<?= $c['id'] ?>" 
+                    data-nome="<?= htmlspecialchars($c['nome_completo']) ?>" 
+                    data-tel="<?= $tel ?>">
+                    <td><strong><?= htmlspecialchars($c['nome_completo']) ?></strong></td>
+                    <td>
+                        <?php if ($tel): ?>
+                            <a href="https://wa.me/55<?= $tel ?>" target="_blank"><?= htmlspecialchars($c['telefone_principal']) ?></a>
+                        <?php else: ?>
+                            N/A
+                        <?php endif; ?>
+                    </td>
+                    <td><?= $ultimaVisita ?></td>
+                    <td>
+                        <?php if ($c['dias_sem_vir'] !== null): ?>
+                            <span class="badge <?= $badgeClass ?>"><?= (int)$c['dias_sem_vir'] ?> dias</span>
+                        <?php else: ?>
+                            --
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="<?= BASE_URL ?>clientes/view?id=<?= $c['id'] ?>" class="btn btn-primary btn-xs">Ver Jornada</a>
+                            <?php if ($tel): ?>
+                                <button class="btn btn-success btn-xs" onclick="abrirMensagemCRM(<?= $c['id'] ?>, '<?= addslashes($c['nome_completo']) ?>', '<?= $tel ?>')">WhatsApp</button>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+                <?php
+            }
+        }
+        $html = ob_get_clean();
+        
+        echo json_encode([
+            'success' => true,
+            'html' => $html,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => ceil($total / $perPage)
+        ]);
+        exit;
+    }
+
+    /**
+     * Lista clientes contactados via AJAX com paginação
+     */
+    public function listarContactadosAjax()
+    {
+        header('Content-Type: application/json');
+        
+        $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
+        $perPage = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT) ?: 10;
+        $campanhaId = filter_input(INPUT_GET, 'campanha_id', FILTER_VALIDATE_INT);
+        
+        if (!$campanhaId) {
+            echo json_encode(['success' => false, 'message' => 'Campanha não informada']);
+            exit;
+        }
+        
+        $clientes = $this->interacaoModel->getClientesContactadosCampanha($campanhaId, $page, $perPage);
+        $total = $this->interacaoModel->countClientesContactadosCampanha($campanhaId);
+        
+        // Gerar HTML parcial
+        ob_start();
+        foreach ($clientes as $c) {
+            $tel = preg_replace('/\D+/', '', $c['telefone_principal'] ?? '');
+            ?>
+            <tr data-interacao-id="<?= $c['interacao_id'] ?>" data-cliente-id="<?= $c['id'] ?>">
+                <td><strong><?= htmlspecialchars($c['nome_completo']) ?></strong></td>
+                <td>
+                    <?php if ($tel): ?>
+                        <a href="https://wa.me/55<?= $tel ?>" target="_blank"><?= htmlspecialchars($c['telefone_principal']) ?></a>
+                    <?php else: ?>
+                        N/A
+                    <?php endif; ?>
+                </td>
+                <td><?= date('d/m/Y H:i', strtotime($c['data_envio'])) ?></td>
+                <td class="resposta-cliente"><?= htmlspecialchars($c['resposta_cliente'] ?? '-') ?></td>
+                <td class="lista-negra">
+                    <?php if ($c['lista_negra']): ?>
+                        <span class="badge bg-danger">Sim</span>
+                    <?php else: ?>
+                        <span class="badge bg-success">Não</span>
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-warning btn-xs" onclick="abrirModalEditar(
+                            <?= $c['interacao_id'] ?>, 
+                            <?= $c['id'] ?>, 
+                            '<?= addslashes($c['resposta_cliente'] ?? '') ?>', 
+                            <?= $c['lista_negra'] ?>,
+                            <?= $campanhaId ?>)">
+                            ✏️ Editar
+                        </button>
+                        <a href="<?= BASE_URL ?>clientes/view?id=<?= $c['id'] ?>" class="btn btn-primary btn-xs">Ver Jornada</a>
+                    </div>
+                </td>
+            </tr>
+            <?php
+        }
+        $html = ob_get_clean();
+        
+        echo json_encode([
+            'success' => true,
+            'html' => $html,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => ceil($total / $perPage)
+        ]);
+        exit;
     }
 
     public function salvarConfiguracao()
@@ -234,8 +388,14 @@ class CRMController extends BaseController
         $respostaCliente = filter_input(INPUT_POST, 'resposta_cliente', FILTER_SANITIZE_SPECIAL_CHARS);
         $listaNegra = isset($_POST['lista_negra']) ? 1 : 0;
         $campanhaId = filter_input(INPUT_POST, 'campanha_id', FILTER_VALIDATE_INT);
+        $isAjax = isset($_POST['ajax']);
 
         if (!$interacaoId || !$clienteId) {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Dados inválidos']);
+                exit;
+            }
             $this->redirect('crm');
         }
 
@@ -251,6 +411,16 @@ class CRMController extends BaseController
         ]);
 
         $this->log("CRM: Atualizou interação e cliente", "Cliente #{$clienteId}, Interação #{$interacaoId}");
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'resposta_cliente' => $respostaCliente,
+                'lista_negra' => $listaNegra
+            ]);
+            exit;
+        }
 
         $redirectUrl = $campanhaId ? "crm?campanha_id=" . $campanhaId : "crm";
         $this->redirect($redirectUrl);

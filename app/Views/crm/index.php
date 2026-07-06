@@ -108,10 +108,10 @@ require_once __DIR__ . '/../layout/main.php';
 
     <!-- RESULTADOS -->
     <!-- CLIENTES JÁ CONTACTADOS (AGORA NO TOPO!) -->
-    <?php if ($campanhaAtiva && !empty($clientesContactados)): ?>
+    <?php if ($campanhaAtiva): ?>
         <div class="card mb-4">
             <div class="d-flex justify-between align-center mb-3">
-                <h3 class="card-title mb-0">✅ Clientes Já Contactados (<?php echo count($clientesContactados); ?>)</h3>
+                <h3 class="card-title mb-0">✅ Clientes Já Contactados (<span id="totalContactados"><?php echo $totalContactados; ?></span>)</h3>
                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleContactados()">
                     <span id="toggleLabel">Ocultar Lista</span>
                 </button>
@@ -130,9 +130,9 @@ require_once __DIR__ . '/../layout/main.php';
                                 <th>Ações</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tbodyContactados">
                             <?php foreach ($clientesContactados as $c): ?>
-                                <tr>
+                                <tr data-interacao-id="<?php echo $c['interacao_id']; ?>" data-cliente-id="<?php echo $c['id']; ?>">
                                     <td><strong><?php echo htmlspecialchars($c['nome_completo']); ?></strong></td>
                                     <td>
                                         <?php 
@@ -146,8 +146,8 @@ require_once __DIR__ . '/../layout/main.php';
                                         ?>
                                     </td>
                                     <td><?php echo date('d/m/Y H:i', strtotime($c['data_envio'])); ?></td>
-                                    <td><?php echo htmlspecialchars($c['resposta_cliente'] ?? '-'); ?></td>
-                                    <td>
+                                    <td class="resposta-cliente"><?php echo htmlspecialchars($c['resposta_cliente'] ?? '-'); ?></td>
+                                    <td class="lista-negra">
                                         <?php if ($c['lista_negra']): ?>
                                             <span class="badge bg-danger">Sim</span>
                                         <?php else: ?>
@@ -172,6 +172,19 @@ require_once __DIR__ . '/../layout/main.php';
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Paginação Contactados -->
+                <div class="d-flex justify-between align-center mt-3" id="paginationContactados">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="carregarContactados(crmState.pageContactados - 1)" id="btnPrevContactados" disabled>
+                        ← Anterior
+                    </button>
+                    <span class="text-muted small">
+                        Página <span id="pageContactados">1</span> de <span id="totalPagesContactados"><?php echo ceil($totalContactados / 10); ?></span>
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="carregarContactados(crmState.pageContactados + 1)" id="btnNextContactados" <?php echo $totalContactados <= 10 ? 'disabled' : '' ?>>
+                        Próximo →
+                    </button>
+                </div>
             </div>
         </div>
     <?php endif; ?>
@@ -179,10 +192,8 @@ require_once __DIR__ . '/../layout/main.php';
     <!-- CLIENTES SEGMENTADOS (AGORA ABAIXO!) -->
     <div class="card">
         <div class="d-flex justify-between align-center mb-3">
-            <h3 class="card-title mb-0">👥 Clientes Segmentados (<?php echo count($clientes); ?>)</h3>
-            <?php if (!empty($clientes)): ?>
-                <button class="btn btn-success btn-sm" onclick="abrirModalCampanha()">📢 Criar Campanha para esta Lista</button>
-            <?php endif; ?>
+            <h3 class="card-title mb-0">👥 Clientes Segmentados (<span id="totalSegmentados"><?php echo $totalSegmentados; ?></span>)</h3>
+            <button class="btn btn-success btn-sm" onclick="abrirModalCampanha()" id="btnCampanha" style="display: <?php echo empty($clientes) ? 'none' : 'block'; ?>">📢 Criar Campanha para esta Lista</button>
         </div>
 
         <div class="table-responsive">
@@ -196,7 +207,7 @@ require_once __DIR__ . '/../layout/main.php';
                         <th>Ações</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tbodySegmentados">
                     <?php if (empty($clientes)): ?>
                         <tr>
                             <td colspan="5" class="text-center text-muted">Nenhum cliente encontrado com estes filtros.</td>
@@ -242,6 +253,19 @@ require_once __DIR__ . '/../layout/main.php';
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Paginação Segmentados -->
+        <div class="d-flex justify-between align-center mt-3" id="paginationSegmentados">
+            <button class="btn btn-sm btn-outline-secondary" onclick="carregarSegmentados(crmState.pageSegmentados - 1)" id="btnPrevSegmentados" disabled>
+                ← Anterior
+            </button>
+            <span class="text-muted small">
+                Página <span id="pageSegmentados">1</span> de <span id="totalPagesSegmentados"><?php echo ceil($totalSegmentados / 10); ?></span>
+            </span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="carregarSegmentados(crmState.pageSegmentados + 1)" id="btnNextSegmentados" <?php echo $totalSegmentados <= 10 ? 'disabled' : '' ?>>
+                Próximo →
+            </button>
         </div>
     </div>
 </div>
@@ -394,8 +418,94 @@ require_once __DIR__ . '/../layout/main.php';
 </div>
 
 <script>
+// Estado global do CRM
+const crmState = {
+    pageSegmentados: 1,
+    pageContactados: 1,
+    perPage: 10,
+    campanhaId: <?php echo $campanhaAtiva['id'] ?? 'null'; ?>,
+    filtros: {
+        dias_min: <?php echo $filtros['dias_min'] ?? 'null'; ?>,
+        termo_servico: <?php echo isset($filtros['termo_servico']) ? "'" . addslashes($filtros['termo_servico']) . "'" : 'null'; ?>
+    }
+};
+
 let listaClientesLote = [];
 let indexAtualLote = 0;
+
+// Função para carregar clientes segmentados via AJAX
+async function carregarSegmentados(page) {
+    if (page < 1) return;
+    
+    crmState.pageSegmentados = page;
+    
+    const params = new URLSearchParams({
+        page: page,
+        per_page: crmState.perPage
+    });
+    
+    if (crmState.campanhaId) params.append('campanha_id', crmState.campanhaId);
+    if (crmState.filtros.dias_min) params.append('dias_min', crmState.filtros.dias_min);
+    if (crmState.filtros.termo_servico) params.append('termo_servico', crmState.filtros.termo_servico);
+    
+    try {
+        const response = await fetch('<?php echo BASE_URL; ?>crm/listar-segmentados-ajax?' + params);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Atualiza o tbody
+            document.getElementById('tbodySegmentados').innerHTML = data.html;
+            
+            // Atualiza os controles de paginação
+            document.getElementById('pageSegmentados').textContent = data.page;
+            document.getElementById('totalPagesSegmentados').textContent = data.total_pages;
+            document.getElementById('totalSegmentados').textContent = data.total;
+            
+            // Habilita/desabilita botões
+            document.getElementById('btnPrevSegmentados').disabled = page <= 1;
+            document.getElementById('btnNextSegmentados').disabled = page >= data.total_pages;
+            
+            // Mostra/oculta botão de campanha
+            document.getElementById('btnCampanha').style.display = data.total > 0 ? 'block' : 'none';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar clientes segmentados:', error);
+    }
+}
+
+// Função para carregar clientes contactados via AJAX
+async function carregarContactados(page) {
+    if (page < 1 || !crmState.campanhaId) return;
+    
+    crmState.pageContactados = page;
+    
+    const params = new URLSearchParams({
+        page: page,
+        per_page: crmState.perPage,
+        campanha_id: crmState.campanhaId
+    });
+    
+    try {
+        const response = await fetch('<?php echo BASE_URL; ?>crm/listar-contactados-ajax?' + params);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Atualiza o tbody
+            document.getElementById('tbodyContactados').innerHTML = data.html;
+            
+            // Atualiza os controles de paginação
+            document.getElementById('pageContactados').textContent = data.page;
+            document.getElementById('totalPagesContactados').textContent = data.total_pages;
+            document.getElementById('totalContactados').textContent = data.total;
+            
+            // Habilita/desabilita botões
+            document.getElementById('btnPrevContactados').disabled = page <= 1;
+            document.getElementById('btnNextContactados').disabled = page >= data.total_pages;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar clientes contactados:', error);
+    }
+}
 
 function abrirModalCampanha() {
     listaClientesLote = [];
@@ -457,11 +567,11 @@ function pularCliente() {
     avancarLote();
 }
 
-function enviarWAAtual() {
+async function enviarWAAtual() {
     const cliente = listaClientesLote[indexAtualLote];
     const msg = encodeURIComponent(document.getElementById('lote_preview_msg').innerText);
     const assunto = document.getElementById('lote_assunto').value;
-    const campanhaId = '<?php echo $campanhaAtiva['id'] ?? ''; ?>';
+    const campanhaId = crmState.campanhaId;
 
     // Registrar no banco via AJAX
     const formData = new FormData();
@@ -473,14 +583,26 @@ function enviarWAAtual() {
     if (campanhaId) formData.append('campanha_id', campanhaId);
     formData.append('ajax', '1');
 
-    fetch('<?php echo BASE_URL; ?>crm/registrar-interacao', {
-        method: 'POST',
-        body: formData
-    }).then(() => {
+    try {
+        await fetch('<?php echo BASE_URL; ?>crm/registrar-interacao', {
+            method: 'POST',
+            body: formData
+        });
+        
         // Abre WhatsApp
         window.open(`https://wa.me/55${cliente.tel}?text=${msg}`, '_blank');
+        
+        // Atualiza as listas após enviar
+        if (crmState.campanhaId) {
+            await carregarSegmentados(1);
+            await carregarContactados(1);
+        }
+        
         avancarLote();
-    });
+    } catch (error) {
+        console.error('Erro ao registrar interação:', error);
+        alert('Erro ao registrar interação. Tente novamente.');
+    }
 }
 
 function avancarLote() {
@@ -504,15 +626,37 @@ function abrirMensagemCRM(id, nome, tel) {
     window.currentTel = tel;
 }
 
-function enviarWAeSalvar() {
+async function enviarWAeSalvar() {
     const msg = encodeURIComponent(document.getElementById('crm_mensagem').value);
     const tel = window.currentTel;
+    const form = document.getElementById('formMsgCRM');
     
-    // Abre o WhatsApp
-    window.open(`https://wa.me/55${tel}?text=${msg}`, '_blank');
+    // Registrar via AJAX primeiro
+    const formData = new FormData(form);
+    formData.append('ajax', '1');
     
-    // Submete o formulário para registrar no banco
-    document.getElementById('formMsgCRM').submit();
+    try {
+        await fetch('<?php echo BASE_URL; ?>crm/registrar-interacao', {
+            method: 'POST',
+            body: formData
+        });
+        
+        // Abre o WhatsApp
+        window.open(`https://wa.me/55${tel}?text=${msg}`, '_blank');
+        
+        // Fecha o modal
+        document.getElementById('modalMsgCRM').style.display = 'none';
+        
+        // Atualiza a lista se houver campanha
+        if (crmState.campanhaId) {
+            await carregarSegmentados(1);
+            await carregarContactados(1);
+        }
+    } catch (error) {
+        console.error('Erro ao registrar interação:', error);
+        // Fallback para submit normal
+        form.submit();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -520,6 +664,60 @@ document.addEventListener('DOMContentLoaded', function() {
     <?php if ($campanhaAtiva): ?>
         abrirModalCampanha();
     <?php endif; ?>
+    
+    // Modifica o formulário de edição para usar AJAX
+    const formEditar = document.querySelector('#modalEditar form');
+    if (formEditar) {
+        formEditar.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            formData.append('ajax', '1');
+            const interacaoId = formData.get('interacao_id');
+            
+            try {
+                const response = await fetch('<?php echo BASE_URL; ?>crm/atualizar-interacao-cliente', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Atualiza a linha na tabela in-place
+                    const row = document.querySelector(`tr[data-interacao-id="${interacaoId}"]`);
+                    if (row) {
+                        // Atualiza resposta do cliente
+                        const respostaCell = row.querySelector('.resposta-cliente');
+                        if (respostaCell) {
+                            respostaCell.textContent = data.resposta_cliente || '-';
+                        }
+                        
+                        // Atualiza lista negra
+                        const listaNegraCell = row.querySelector('.lista-negra');
+                        if (listaNegraCell) {
+                            if (data.lista_negra) {
+                                listaNegraCell.innerHTML = '<span class="badge bg-danger">Sim</span>';
+                            } else {
+                                listaNegraCell.innerHTML = '<span class="badge bg-success">Não</span>';
+                            }
+                        }
+                        
+                        // Atualiza o botão editar
+                        const btnEditar = row.querySelector('.btn-warning');
+                        if (btnEditar) {
+                            btnEditar.setAttribute('onclick', `abrirModalEditar(${interacaoId}, ${formData.get('cliente_id')}, '${data.resposta_cliente || ''}', ${data.lista_negra}, ${crmState.campanhaId})`);
+                        }
+                    }
+                    
+                    // Fecha o modal
+                    document.getElementById('modalEditar').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar interação:', error);
+                alert('Erro ao salvar alterações. Tente novamente.');
+            }
+        });
+    }
 });
 
 function abrirModalEditar(interacaoId, clienteId, respostaCliente, listaNegra, campanhaId) {

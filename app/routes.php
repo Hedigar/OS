@@ -55,6 +55,8 @@ $router->post('pos-venda/registrar-resposta', 'PosVendaController@registrarRespo
 
 // CRM Avançado
 $router->get('crm', 'CRMController@index');
+$router->get('crm/listar-segmentados-ajax', 'CRMController@listarSegmentadosAjax');
+$router->get('crm/listar-contactados-ajax', 'CRMController@listarContactadosAjax');
 $router->post('crm/registrar-interacao', 'CRMController@registrarInteracao');
 $router->post('crm/registrar-campanha-lote', 'CRMController@registrarCampanhaLote');
 $router->post('crm/salvar-campanha', 'CRMController@salvarCampanha');

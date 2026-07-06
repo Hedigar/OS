@@ -1,10 +1,5 @@
--- Migration to add blacklist support for CRM
--- Run this in your database
+-- Adiciona a coluna lista_negra na tabela clientes
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS lista_negra TINYINT(1) DEFAULT 0 COMMENT '1 se o cliente está na lista negra, 0 caso contrário';
 
--- Add lista_negra column to clientes table
-ALTER TABLE clientes 
-ADD COLUMN lista_negra TINYINT(1) NOT NULL DEFAULT 0 
-COMMENT '1 = Cliente na lista negra, não receberá campanhas CRM; 0 = Normal';
-
--- Optional: Add index for faster filtering
-CREATE INDEX idx_lista_negra ON clientes(lista_negra);
+-- Adiciona um índice para melhorar o desempenho das consultas
+CREATE INDEX IF NOT EXISTS idx_lista_negra ON clientes(lista_negra);

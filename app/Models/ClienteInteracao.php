@@ -92,10 +92,72 @@ class ClienteInteracao extends Model
     }
 
     /**
-     * Busca clientes por critérios avançados de CRM (churn e tipos de serviço).
+     * Conta total de clientes por critérios avançados de CRM.
      */
-    public function getClientesFiltroCRM(array $filtros): array
+    public function countClientesFiltroCRM(array $filtros): int
     {
+        // Primeiro calculamos a subquery com os campos necessários
+        $subSql = "SELECT c.id,
+                    CASE 
+                        WHEN MAX(os.created_at) IS NULL THEN 9999
+                        ELSE DATEDIFF(NOW(), MAX(os.created_at)) 
+                    END as dias_sem_vir
+                FROM clientes c
+                LEFT JOIN ordens_servico os ON c.id = os.cliente_id AND os.ativo = 1
+                WHERE c.ativo = 1 AND c.lista_negra = 0";
+        
+        $params = [];
+        $having = [];
+
+        if (!empty($filtros['dias_min'])) {
+            $having[] = "dias_sem_vir >= :dias_min";
+            $params[':dias_min'] = (int)$filtros['dias_min'];
+        }
+
+        if (!empty($filtros['termo_servico'])) {
+            $subSql .= " AND EXISTS (
+                SELECT 1 FROM itens_ordem_servico ios 
+                JOIN ordens_servico os2 ON ios.ordem_servico_id = os2.id
+                WHERE os2.cliente_id = c.id 
+                AND ios.ativo = 1 
+                AND ios.descricao LIKE :termo_servico
+            )";
+            $params[':termo_servico'] = "%" . $filtros['termo_servico'] . "%";
+        }
+
+        if (!empty($filtros['campanha_id'])) {
+            $subSql .= " AND NOT EXISTS (
+                SELECT 1 FROM cliente_interacoes ci 
+                WHERE ci.cliente_id = c.id 
+                AND ci.campanha_id = :campanha_id
+            )";
+            $params[':campanha_id'] = (int)$filtros['campanha_id'];
+        }
+
+        $subSql .= " GROUP BY c.id";
+
+        if (!empty($having)) {
+            $subSql .= " HAVING " . implode(" AND ", $having);
+        }
+
+        $sql = "SELECT COUNT(*) as total FROM ($subSql) as sub";
+
+        $stmt = $this->db->prepare($sql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+        $stmt->execute();
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($result['total'] ?? 0);
+    }
+
+    /**
+     * Busca clientes por critérios avançados de CRM (churn e tipos de serviço) com paginação.
+     */
+    public function getClientesFiltroCRM(array $filtros, int $page = 1, int $perPage = 10): array
+    {
+        $offset = ($page - 1) * $perPage;
+        
         $sql = "SELECT c.id, c.nome_completo, c.telefone_principal, c.lista_negra,
                        MAX(os.created_at) as ultima_visita,
                        CASE 
@@ -109,14 +171,11 @@ class ClienteInteracao extends Model
         $params = [];
         $having = [];
 
-        // Filtro por período sem visita (Churn)
-        // Se dias_min for informado, filtramos quem está há mais tempo que isso
         if (!empty($filtros['dias_min'])) {
             $having[] = "dias_sem_vir >= :dias_min";
             $params[':dias_min'] = (int)$filtros['dias_min'];
         }
 
-        // Filtro por tipo de serviço/produto realizado
         if (!empty($filtros['termo_servico'])) {
             $sql .= " AND EXISTS (
                 SELECT 1 FROM itens_ordem_servico ios 
@@ -128,7 +187,6 @@ class ClienteInteracao extends Model
             $params[':termo_servico'] = "%" . $filtros['termo_servico'] . "%";
         }
 
-        // Excluir clientes que já foram contactados NESTA campanha específica
         if (!empty($filtros['campanha_id'])) {
             $sql .= " AND NOT EXISTS (
                 SELECT 1 FROM cliente_interacoes ci 
@@ -145,30 +203,55 @@ class ClienteInteracao extends Model
         }
 
         $sql .= " ORDER BY dias_sem_vir DESC, c.nome_completo ASC";
+        $sql .= " LIMIT :limit OFFSET :offset";
 
         $stmt = $this->db->prepare($sql);
         foreach ($params as $k => $v) {
             $stmt->bindValue($k, $v);
         }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
-     * Busca clientes já contactados em uma campanha específica, com sua interação.
+     * Conta total de clientes já contactados em uma campanha específica.
      */
-    public function getClientesContactadosCampanha(int $campanhaId): array
+    public function countClientesContactadosCampanha(int $campanhaId): int
     {
+        $sql = "SELECT COUNT(*) as total
+                FROM clientes c
+                JOIN cliente_interacoes ci ON c.id = ci.cliente_id
+                WHERE ci.campanha_id = :campanha_id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['campanha_id' => $campanhaId]);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($result['total'] ?? 0);
+    }
+
+    /**
+     * Busca clientes já contactados em uma campanha específica, com sua interação e paginação.
+     */
+    public function getClientesContactadosCampanha(int $campanhaId, int $page = 1, int $perPage = 10): array
+    {
+        $offset = ($page - 1) * $perPage;
+        
         $sql = "SELECT 
                     c.id, c.nome_completo, c.telefone_principal, c.lista_negra,
                     ci.id as interacao_id, ci.resposta_cliente, ci.created_at as data_envio
                 FROM clientes c
                 JOIN cliente_interacoes ci ON c.id = ci.cliente_id
                 WHERE ci.campanha_id = :campanha_id
-                ORDER BY ci.created_at DESC";
+                ORDER BY ci.created_at DESC
+                LIMIT :limit OFFSET :offset";
         
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(['campanha_id' => $campanhaId]);
+        $stmt->bindValue(':campanha_id', $campanhaId, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 }

@@ -1053,3 +1053,20 @@ tr:hover td {
     .header span { font-size: 1rem; }
     .card { padding: 1rem; }
 }
+
+/* Preservar quebras de linha em textos exibidos */
+.resposta-cliente,
+.defeito-relatado,
+.laudo-tecnico,
+.textarea-content,
+.card-content p,
+td.text-wrap {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Aplicar a todos os elementos que podem exibir textos com quebras de linha */
+.text-pre-wrap {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

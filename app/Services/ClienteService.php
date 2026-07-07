@@ -52,18 +52,18 @@ class ClienteService
     public function normalizePostData(array $post): array
     {
         return [
-            'nome_completo' => filter_var($post['nome_completo'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'telefone_principal' => filter_var($post['telefone_principal'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'telefone_secundario' => filter_var($post['telefone_secundario'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
+            'nome_completo' => htmlspecialchars(trim($post['nome_completo'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'telefone_principal' => htmlspecialchars(trim($post['telefone_principal'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'telefone_secundario' => htmlspecialchars(trim($post['telefone_secundario'] ?? ''), ENT_QUOTES, 'UTF-8'),
             'email' => filter_var($post['email'] ?? '', FILTER_VALIDATE_EMAIL),
-            'documento' => filter_var($post['documento'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'tipo_pessoa' => filter_var($post['tipo_pessoa'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'data_nascimento' => filter_var($post['data_nascimento'] ?? null, FILTER_SANITIZE_SPECIAL_CHARS) ?: null,
-            'endereco_logradouro' => filter_var($post['endereco_logradouro'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'endereco_numero' => filter_var($post['endereco_numero'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'endereco_bairro' => filter_var($post['endereco_bairro'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'endereco_cidade' => filter_var($post['endereco_cidade'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
-            'observacoes' => filter_var($post['observacoes'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS),
+            'documento' => htmlspecialchars(trim($post['documento'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'tipo_pessoa' => htmlspecialchars(trim($post['tipo_pessoa'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'data_nascimento' => htmlspecialchars(trim($post['data_nascimento'] ?? ''), ENT_QUOTES, 'UTF-8') ?: null,
+            'endereco_logradouro' => htmlspecialchars(trim($post['endereco_logradouro'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'endereco_numero' => htmlspecialchars(trim($post['endereco_numero'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'endereco_bairro' => htmlspecialchars(trim($post['endereco_bairro'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'endereco_cidade' => htmlspecialchars(trim($post['endereco_cidade'] ?? ''), ENT_QUOTES, 'UTF-8'),
+            'observacoes' => htmlspecialchars(trim($post['observacoes'] ?? ''), ENT_QUOTES, 'UTF-8'),
             'lista_negra' => isset($post['lista_negra']) ? 1 : 0,
         ];
     }

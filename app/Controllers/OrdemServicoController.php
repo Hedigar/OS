@@ -128,7 +128,8 @@ class OrdemServicoController extends BaseController
             }
 
             if (!$equipamento_id) {
-                $serial = filter_input(INPUT_POST, 'serial_equipamento', FILTER_SANITIZE_SPECIAL_CHARS);
+                $serialRaw = filter_input(INPUT_POST, 'serial_equipamento', FILTER_UNSAFE_RAW);
+                $serial = htmlspecialchars(trim($serialRaw), ENT_QUOTES, 'UTF-8');
                 $existente = $this->equipamentoModel->findBySerial($cliente_id, $serial);
                 
                 if ($existente) {
@@ -136,15 +137,15 @@ class OrdemServicoController extends BaseController
                 } else {
                     $equipamentoData = [
                     'cliente_id' => $cliente_id,
-                    'tipo' => filter_input(INPUT_POST, 'tipo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                    'marca' => filter_input(INPUT_POST, 'marca_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                    'modelo' => filter_input(INPUT_POST, 'modelo_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'tipo' => htmlspecialchars(trim(filter_input(INPUT_POST, 'tipo_equipamento', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
+                    'marca' => htmlspecialchars(trim(filter_input(INPUT_POST, 'marca_equipamento', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
+                    'modelo' => htmlspecialchars(trim(filter_input(INPUT_POST, 'modelo_equipamento', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
                     'serial' => $serial,
-                    'senha' => filter_input(INPUT_POST, 'senha_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                    'voltagem' => filter_input(INPUT_POST, 'voltagem', FILTER_SANITIZE_SPECIAL_CHARS),
-                    'acessorios' => filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_SANITIZE_SPECIAL_CHARS),
-                    'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_SANITIZE_SPECIAL_CHARS) === 'sim' ? 1 : 0,
-                    'sn_fonte' => filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS),
+                    'senha' => htmlspecialchars(trim(filter_input(INPUT_POST, 'senha_equipamento', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
+                    'voltagem' => htmlspecialchars(trim(filter_input(INPUT_POST, 'voltagem', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
+                    'acessorios' => htmlspecialchars(trim(filter_input(INPUT_POST, 'acessorios_equipamento', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
+                    'possui_fonte' => filter_input(INPUT_POST, 'fonte_equipamento', FILTER_UNSAFE_RAW) === 'sim' ? 1 : 0,
+                    'sn_fonte' => htmlspecialchars(trim(filter_input(INPUT_POST, 'sn_fonte', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
                 ];
                     $equipamento_id = $this->equipamentoModel->create($equipamentoData);
                 }
@@ -153,11 +154,11 @@ class OrdemServicoController extends BaseController
             $osData = [
                 'cliente_id' => $cliente_id,
                 'equipamento_id' => $equipamento_id,
-                'defeito_relatado' => filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS),
-                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
+                'defeito_relatado' => htmlspecialchars(trim(filter_input(INPUT_POST, 'defeito', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
+                'laudo_tecnico' => htmlspecialchars(trim(filter_input(INPUT_POST, 'laudo_tecnico', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
                 'status_atual_id' => filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT) ?: 1,
-                'status_pagamento' => filter_input(INPUT_POST, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'pendente',
-                'status_entrega' => filter_input(INPUT_POST, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS) ?: 'nao_entregue',
+                'status_pagamento' => htmlspecialchars(trim(filter_input(INPUT_POST, 'status_pagamento', FILTER_UNSAFE_RAW) ?? 'pendente'), ENT_QUOTES, 'UTF-8'),
+                'status_entrega' => htmlspecialchars(trim(filter_input(INPUT_POST, 'status_entrega', FILTER_UNSAFE_RAW) ?? 'nao_entregue'), ENT_QUOTES, 'UTF-8'),
             ];
 
             $osId = $this->osModel->create($osData);
@@ -178,9 +179,12 @@ class OrdemServicoController extends BaseController
             if (!$id) $this->redirect('ordens');
 
             $status_id = filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT);
-            $status_pagamento = filter_input(INPUT_POST, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS);
-            $status_entrega = filter_input(INPUT_POST, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS);
-            $observacao = filter_input(INPUT_POST, 'status_observacao', FILTER_SANITIZE_SPECIAL_CHARS);
+            $status_pagamentoRaw = filter_input(INPUT_POST, 'status_pagamento', FILTER_UNSAFE_RAW);
+            $status_pagamento = htmlspecialchars(trim($status_pagamentoRaw), ENT_QUOTES, 'UTF-8');
+            $status_entregaRaw = filter_input(INPUT_POST, 'status_entrega', FILTER_UNSAFE_RAW);
+            $status_entrega = htmlspecialchars(trim($status_entregaRaw), ENT_QUOTES, 'UTF-8');
+            $observacaoRaw = filter_input(INPUT_POST, 'status_observacao', FILTER_UNSAFE_RAW);
+            $observacao = htmlspecialchars(trim($observacaoRaw), ENT_QUOTES, 'UTF-8');
             
             $osAntiga = $this->osModel->find($id);
 
@@ -188,10 +192,11 @@ class OrdemServicoController extends BaseController
                 'status_atual_id' => $status_id,
                 'status_pagamento' => $status_pagamento,
                 'status_entrega' => $status_entrega,
-                'laudo_tecnico' => filter_input(INPUT_POST, 'laudo_tecnico', FILTER_SANITIZE_SPECIAL_CHARS),
+                'laudo_tecnico' => htmlspecialchars(trim(filter_input(INPUT_POST, 'laudo_tecnico', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8'),
             ];
 
-            $sn_fonte = filter_input(INPUT_POST, 'sn_fonte', FILTER_SANITIZE_SPECIAL_CHARS);
+            $sn_fonteRaw = filter_input(INPUT_POST, 'sn_fonte', FILTER_UNSAFE_RAW);
+            $sn_fonte = htmlspecialchars(trim($sn_fonteRaw), ENT_QUOTES, 'UTF-8');
             if ($sn_fonte !== null) {
                 $ordem_atual = $this->osModel->find($id);
                 if ($ordem_atual && $ordem_atual['equipamento_id']) {
@@ -200,7 +205,7 @@ class OrdemServicoController extends BaseController
             }
 
             if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
-                $osData['defeito_relatado'] = filter_input(INPUT_POST, 'defeito', FILTER_SANITIZE_SPECIAL_CHARS);
+                $osData['defeito_relatado'] = htmlspecialchars(trim(filter_input(INPUT_POST, 'defeito', FILTER_UNSAFE_RAW) ?? ''), ENT_QUOTES, 'UTF-8');
             }
 
             if ($this->osModel->update($id, $osData)) {

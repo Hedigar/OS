@@ -156,12 +156,12 @@ require_once __DIR__ . '/../layout/main.php';
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <button class="btn btn-warning btn-xs" onclick="abrirModalEditar(
-                                                <?php echo $c['interacao_id']; ?>, 
-                                                <?php echo $c['id']; ?>, 
-                                                '<?php echo addslashes($c['resposta_cliente'] ?? ''); ?>', 
-                                                <?php echo $c['lista_negra']; ?>,
-                                                <?php echo $campanhaAtiva['id']; ?>)">
+                                            <button class="btn btn-warning btn-xs btn-editar-interacao"
+                                                data-interacao-id="<?php echo $c['interacao_id']; ?>"
+                                                data-cliente-id="<?php echo $c['id']; ?>"
+                                                data-resposta-cliente='<?php echo json_encode($c['resposta_cliente'] ?? '', JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_TAG); ?>'
+                                                data-lista-negra="<?php echo $c['lista_negra']; ?>"
+                                                data-campanha-id="<?php echo $campanhaAtiva['id']; ?>">
                                                 ✏️ Editar
                                             </button>
                                             <a href="<?php echo BASE_URL; ?>clientes/view?id=<?php echo $c['id']; ?>" class="btn btn-primary btn-xs">Ver Jornada</a>
@@ -244,7 +244,7 @@ require_once __DIR__ . '/../layout/main.php';
                                     <div class="d-flex gap-1">
                                         <a href="<?php echo BASE_URL; ?>clientes/view?id=<?php echo $c['id']; ?>" class="btn btn-primary btn-xs">Ver Jornada</a>
                                         <?php if ($tel): ?>
-                                            <button class="btn btn-success btn-xs" onclick="abrirMensagemCRM(<?php echo $c['id']; ?>, '<?php echo addslashes($c['nome_completo']); ?>', '<?php echo $tel; ?>')">WhatsApp</button>
+                                            <button class="btn btn-success btn-xs" onclick="abrirMensagemCRM(<?php echo $c['id']; ?>, <?php echo json_encode($c['nome_completo']); ?>, '<?php echo $tel; ?>')">WhatsApp</button>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -426,7 +426,7 @@ const crmState = {
     campanhaId: <?php echo $campanhaAtiva['id'] ?? 'null'; ?>,
     filtros: {
         dias_min: <?php echo $filtros['dias_min'] ?? 'null'; ?>,
-        termo_servico: <?php echo isset($filtros['termo_servico']) ? "'" . addslashes($filtros['termo_servico']) . "'" : 'null'; ?>
+        termo_servico: <?php echo isset($filtros['termo_servico']) ? json_encode($filtros['termo_servico']) : 'null'; ?>
     }
 };
 
@@ -618,7 +618,7 @@ function avancarLote() {
 function abrirMensagemCRM(id, nome, tel) {
     document.getElementById('crm_cliente_id').value = id;
     const primeiroNome = nome.split(' ')[0];
-    const template = `<?php echo str_replace(["\r", "\n"], ['\r', '\n'], addslashes($mensagemPadrao)); ?>`;
+    const template = <?php echo json_encode($mensagemPadrao); ?>;
     const msg = template.replace('{nome}', primeiroNome);
     document.getElementById('crm_mensagem').value = msg;
     document.getElementById('crm_assunto').value = 'Promoção Reativação';
@@ -665,6 +665,19 @@ document.addEventListener('DOMContentLoaded', function() {
         abrirModalCampanha();
     <?php endif; ?>
     
+    // Event listener para botões de editar
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-editar-interacao')) {
+            const btn = e.target.closest('.btn-editar-interacao');
+            const interacaoId = btn.dataset.interacaoId;
+            const clienteId = btn.dataset.clienteId;
+            const respostaCliente = JSON.parse(btn.dataset.respostaCliente || '""');
+            const listaNegra = btn.dataset.listaNegra;
+            const campanhaId = btn.dataset.campanhaId;
+            abrirModalEditar(interacaoId, clienteId, respostaCliente, listaNegra, campanhaId);
+        }
+    });
+    
     // Modifica o formulário de edição para usar AJAX
     const formEditar = document.querySelector('#modalEditar form');
     if (formEditar) {
@@ -703,9 +716,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         
                         // Atualiza o botão editar
-                        const btnEditar = row.querySelector('.btn-warning');
+                        const btnEditar = row.querySelector('.btn-editar-interacao');
                         if (btnEditar) {
-                            btnEditar.setAttribute('onclick', `abrirModalEditar(${interacaoId}, ${formData.get('cliente_id')}, '${data.resposta_cliente || ''}', ${data.lista_negra}, ${crmState.campanhaId})`);
+                            btnEditar.dataset.respostaCliente = JSON.stringify(data.resposta_cliente || '');
+                            btnEditar.dataset.listaNegra = data.lista_negra;
                         }
                     }
                     

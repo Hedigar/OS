@@ -129,7 +129,7 @@ class CRMController extends BaseController
                         <div class="d-flex gap-1">
                             <a href="<?= BASE_URL ?>clientes/view?id=<?= $c['id'] ?>" class="btn btn-primary btn-xs">Ver Jornada</a>
                             <?php if ($tel): ?>
-                                <button class="btn btn-success btn-xs" onclick="abrirMensagemCRM(<?= $c['id'] ?>, '<?= addslashes($c['nome_completo']) ?>', '<?= $tel ?>')">WhatsApp</button>
+                                <button class="btn btn-success btn-xs" onclick="abrirMensagemCRM(<?= $c['id'] ?>, <?= json_encode($c['nome_completo']) ?>, '<?= $tel ?>')">WhatsApp</button>
                             <?php endif; ?>
                         </div>
                     </td>
@@ -194,12 +194,12 @@ class CRMController extends BaseController
                 </td>
                 <td>
                     <div class="d-flex gap-1">
-                        <button class="btn btn-warning btn-xs" onclick="abrirModalEditar(
-                            <?= $c['interacao_id'] ?>, 
-                            <?= $c['id'] ?>, 
-                            '<?= addslashes($c['resposta_cliente'] ?? '') ?>', 
-                            <?= $c['lista_negra'] ?>,
-                            <?= $campanhaId ?>)">
+                        <button class="btn btn-warning btn-xs btn-editar-interacao"
+                            data-interacao-id="<?= $c['interacao_id'] ?>"
+                            data-cliente-id="<?= $c['id'] ?>"
+                            data-resposta-cliente='<?= json_encode($c['resposta_cliente'] ?? '', JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_HEX_TAG) ?>'
+                            data-lista-negra="<?= $c['lista_negra'] ?>"
+                            data-campanha-id="<?= $campanhaId ?>">
                             ✏️ Editar
                         </button>
                         <a href="<?= BASE_URL ?>clientes/view?id=<?= $c['id'] ?>" class="btn btn-primary btn-xs">Ver Jornada</a>

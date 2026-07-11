@@ -228,9 +228,9 @@ class CRMController extends BaseController
         }
 
         $mensagem = filter_input(INPUT_POST, 'crm_mensagem_padrao', FILTER_UNSAFE_RAW);
-        $mensagem = htmlspecialchars(trim($mensagem), ENT_QUOTES, 'UTF-8');
+        $mensagem = htmlspecialchars(trim($mensagem ?? ''), ENT_QUOTES, 'UTF-8');
         $posVendaMensagem = filter_input(INPUT_POST, 'pos_venda_mensagem_padrao', FILTER_UNSAFE_RAW);
-        $posVendaMensagem = htmlspecialchars(trim($posVendaMensagem), ENT_QUOTES, 'UTF-8');
+        $posVendaMensagem = htmlspecialchars(trim($posVendaMensagem ?? ''), ENT_QUOTES, 'UTF-8');
         
         if ($mensagem) {
             $this->configModel->setValor('crm_mensagem_padrao', $mensagem, 'Mensagem padrão sugerida no CRM');
@@ -252,14 +252,14 @@ class CRMController extends BaseController
         }
 
         $nome = filter_input(INPUT_POST, 'nome', FILTER_UNSAFE_RAW);
-        $nome = htmlspecialchars(trim($nome), ENT_QUOTES, 'UTF-8');
+        $nome = htmlspecialchars(trim($nome ?? ''), ENT_QUOTES, 'UTF-8');
         $mensagem = filter_input(INPUT_POST, 'mensagem_padrao', FILTER_UNSAFE_RAW);
-        $mensagem = htmlspecialchars(trim($mensagem), ENT_QUOTES, 'UTF-8');
+        $mensagem = htmlspecialchars(trim($mensagem ?? ''), ENT_QUOTES, 'UTF-8');
         $filtros = [
             'dias_min' => filter_input(INPUT_POST, 'dias_min', FILTER_VALIDATE_INT),
             'termo_servico' => filter_input(INPUT_POST, 'termo_servico', FILTER_UNSAFE_RAW)
         ];
-        $filtros['termo_servico'] = htmlspecialchars($filtros['termo_servico'], ENT_QUOTES, 'UTF-8');
+        $filtros['termo_servico'] = htmlspecialchars($filtros['termo_servico'] ?? '', ENT_QUOTES, 'UTF-8');
 
         if (!$nome) {
             $this->redirect('crm');
@@ -295,15 +295,15 @@ class CRMController extends BaseController
 
         $clienteId = filter_input(INPUT_POST, 'cliente_id', FILTER_VALIDATE_INT);
         $tipo = filter_input(INPUT_POST, 'tipo', FILTER_UNSAFE_RAW);
-        $tipo = htmlspecialchars(trim($tipo), ENT_QUOTES, 'UTF-8');
+        $tipo = htmlspecialchars(trim($tipo ?? ''), ENT_QUOTES, 'UTF-8');
         $canal = filter_input(INPUT_POST, 'canal', FILTER_UNSAFE_RAW);
-        $canal = htmlspecialchars(trim($canal), ENT_QUOTES, 'UTF-8');
+        $canal = htmlspecialchars(trim($canal ?? ''), ENT_QUOTES, 'UTF-8');
         $assunto = filter_input(INPUT_POST, 'assunto', FILTER_UNSAFE_RAW);
-        $assunto = htmlspecialchars(trim($assunto), ENT_QUOTES, 'UTF-8');
+        $assunto = htmlspecialchars(trim($assunto ?? ''), ENT_QUOTES, 'UTF-8');
         $descricao = filter_input(INPUT_POST, 'descricao', FILTER_UNSAFE_RAW);
-        $descricao = htmlspecialchars(trim($descricao), ENT_QUOTES, 'UTF-8');
+        $descricao = htmlspecialchars(trim($descricao ?? ''), ENT_QUOTES, 'UTF-8');
         $resposta = filter_input(INPUT_POST, 'resposta_cliente', FILTER_UNSAFE_RAW);
-        $resposta = htmlspecialchars(trim($resposta), ENT_QUOTES, 'UTF-8');
+        $resposta = htmlspecialchars(trim($resposta ?? ''), ENT_QUOTES, 'UTF-8');
         $nota = filter_input(INPUT_POST, 'nota_satisfacao', FILTER_VALIDATE_INT);
         $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT) ?: null;
         $campanhaId = filter_input(INPUT_POST, 'campanha_id', FILTER_VALIDATE_INT) ?: null;
@@ -360,9 +360,9 @@ class CRMController extends BaseController
 
         $clienteIds = $_POST['cliente_ids'] ?? [];
         $assunto = filter_input(INPUT_POST, 'assunto', FILTER_UNSAFE_RAW);
-        $assunto = htmlspecialchars(trim($assunto), ENT_QUOTES, 'UTF-8');
+        $assunto = htmlspecialchars(trim($assunto ?? ''), ENT_QUOTES, 'UTF-8');
         $mensagem = filter_input(INPUT_POST, 'mensagem', FILTER_UNSAFE_RAW);
-        $mensagem = htmlspecialchars(trim($mensagem), ENT_QUOTES, 'UTF-8');
+        $mensagem = htmlspecialchars(trim($mensagem ?? ''), ENT_QUOTES, 'UTF-8');
         $campanhaId = filter_input(INPUT_POST, 'campanha_id', FILTER_VALIDATE_INT);
 
         if (empty($clienteIds) || !$assunto) {
@@ -398,7 +398,7 @@ class CRMController extends BaseController
         $interacaoId = filter_input(INPUT_POST, 'interacao_id', FILTER_VALIDATE_INT);
         $clienteId = filter_input(INPUT_POST, 'cliente_id', FILTER_VALIDATE_INT);
         $respostaCliente = filter_input(INPUT_POST, 'resposta_cliente', FILTER_UNSAFE_RAW);
-        $respostaCliente = htmlspecialchars(trim($respostaCliente), ENT_QUOTES, 'UTF-8');
+        $respostaCliente = htmlspecialchars(trim($respostaCliente ?? ''), ENT_QUOTES, 'UTF-8');
         $listaNegra = isset($_POST['lista_negra']) ? 1 : 0;
         $campanhaId = filter_input(INPUT_POST, 'campanha_id', FILTER_VALIDATE_INT);
         $isAjax = isset($_POST['ajax']);

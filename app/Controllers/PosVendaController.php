@@ -36,7 +36,7 @@ class PosVendaController extends BaseController
 
         $osId = filter_input(INPUT_POST, 'os_id', FILTER_VALIDATE_INT);
         $resumoRaw = filter_input(INPUT_POST, 'resumo', FILTER_UNSAFE_RAW);
-        $resumo = htmlspecialchars(trim($resumoRaw), ENT_QUOTES, 'UTF-8');
+        $resumo = htmlspecialchars(trim($resumoRaw ?? ''), ENT_QUOTES, 'UTF-8');
         $nota = filter_input(INPUT_POST, 'nota', FILTER_VALIDATE_INT);
 
         if (!$osId || $resumo === '' || !$nota || $nota < 1 || $nota > 5) {

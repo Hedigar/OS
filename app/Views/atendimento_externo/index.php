@@ -65,7 +65,7 @@
 	                                            <?php echo ucfirst($atendimento['pagamento'] ?? 'não'); ?>
 	                                        </span>
 	                                    </td>
-	                                    <td>R$ <?php echo number_format($atendimento['valor_deslocamento'], 2, ',', '.'); ?></td>
+	                                    <td>R$ <?php echo number_format(($atendimento['valor_total'] ?? 0) + ($atendimento['valor_deslocamento'] ?? 0), 2, ',', '.'); ?></td>
                                     <td>
                                         <div class="d-flex gap-1">
                                             <a href="<?php echo BASE_URL; ?>atendimentos-externos/print?id=<?php echo $atendimento['id']; ?>" class="btn btn-sm btn-secondary" target="_blank" title="Imprimir Folha">

@@ -10,10 +10,10 @@
  * Data: 2026-07-06
  */
 
-// Força as credenciais do Docker para o banco de dados
-$_ENV['DB_HOST'] = 'db';
-$_ENV['DB_USERNAME'] = 'os_user';
-$_ENV['DB_PASSWORD'] = 'os_pass';
+// Força as credenciais para o banco de dados (funciona dentro e fora do container)
+$_ENV['DB_HOST'] = '127.0.0.1';
+$_ENV['DB_USERNAME'] = 'root';
+$_ENV['DB_PASSWORD'] = 'root';
 $_ENV['DB_DATABASE'] = 'os';
 
 // 1. Carrega o Autoloader

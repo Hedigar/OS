@@ -42,6 +42,11 @@ $router->post('despesas/deletar', 'DespesasController@destroy');
 
 // Relatórios
 $router->get('relatorios', 'RelatorioController@index');
+$router->get('relatorios/competencia', 'RelatorioController@competencia');
+$router->get('relatorios/caixa', 'RelatorioController@caixa');
+$router->get('relatorios/analitica', 'RelatorioController@analitica');
+$router->get('relatorios/orfas', 'RelatorioController@orfas');
+$router->get('relatorios/auditar', 'RelatorioController@auditar');
 $router->get('relatorios/crm', 'RelatorioController@crm');
 $router->get('relatorios/exportar-producao', 'RelatorioController@exportarProducao');
 $router->get('relatorios/exportar-caixa', 'RelatorioController@exportarCaixa');

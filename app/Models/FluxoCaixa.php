@@ -111,6 +111,16 @@ class FluxoCaixa extends Model
     }
 
     /**
+     * Remove entrada de pagamento da tabela fluxo_caixa (quando pagamento é deletado)
+     */
+    public function removerEntradaPagamento(int $pagamentoId): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE referencia_tipo = 'pagamento' AND referencia_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$pagamentoId]);
+    }
+
+    /**
      * Obtém totais por período
      */
     public function getTotaisPorPeriodo(string $dataInicio, string $dataFim): array

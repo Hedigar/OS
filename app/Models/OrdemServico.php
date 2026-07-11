@@ -409,6 +409,7 @@ class OrdemServico extends Model
         $sql = "SELECT 
                     os.id,
                     os.valor_total_os,
+                    os.valor_desconto,
                     os.valor_taxa_nf,
                     os.defeito_relatado,
                     c.nome_completo as cliente,
@@ -423,11 +424,12 @@ class OrdemServico extends Model
                 ) h ON os.id = h.ordem_servico_id
                 WHERE os.ativo = 1 
                 AND os.status_atual_id = ?
+                AND os.status_atual_id != ?
                 AND DATE(COALESCE(h.created_at, os.updated_at)) BETWEEN ? AND ?
                 ORDER BY h.created_at DESC, os.updated_at DESC";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$statusId, $statusId, $dataInicio, $dataFim]);
+        $stmt->execute([$statusId, $statusId, self::STATUS_CANCELADA, $dataInicio, $dataFim]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -457,6 +459,7 @@ class OrdemServico extends Model
         $sql = "SELECT 
                     os.id,
                     os.valor_total_os,
+                    os.valor_desconto,
                     os.valor_taxa_nf,
                     os.defeito_relatado,
                     DATE(os.created_at) as data,
@@ -466,12 +469,12 @@ class OrdemServico extends Model
                 JOIN clientes c ON os.cliente_id = c.id
                 WHERE os.ativo = 1 
                 AND os.valor_total_os > 0
-                AND os.status_atual_id NOT IN ($statusCancelado)
-                HAVING valor_pago < valor_total_os OR valor_pago = 0
+                AND os.status_atual_id != ?
+                HAVING valor_pago < (os.valor_total_os - COALESCE(os.valor_desconto, 0)) OR valor_pago = 0
                 ORDER BY os.created_at DESC";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute();
+        $stmt->execute([$statusCancelado]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
     

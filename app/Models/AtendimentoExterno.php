@@ -27,6 +27,16 @@ class AtendimentoExterno extends Model
     }
 
     /**
+     * Sobrescreve find() pois esta tabela não tem coluna 'ativo'.
+     */
+    public function find(int $id): mixed
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Sobrescreve o find para incluir dados relacionados.
      */
     public function findWithDetails(int $id): ?array
@@ -119,14 +129,16 @@ class AtendimentoExterno extends Model
                     ae.valor_taxa_nf,
                     ae.descricao_problema,
                     c.nome_completo as cliente,
-                    DATE(ae.updated_at) as data_finalizacao
+                    DATE(COALESCE(MAX(pt.created_at), ae.created_at)) as data_finalizacao
                 FROM {$this->table} ae
                 JOIN clientes c ON ae.cliente_id = c.id
+                LEFT JOIN pagamentos_transacoes pt ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
                 WHERE ae.ativo = 1 
                 AND ae.status = 'concluido'
                 AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
-                AND DATE(ae.updated_at) BETWEEN ? AND ?
-                ORDER BY ae.updated_at DESC";
+                GROUP BY ae.id, ae.created_at, ae.valor_total, ae.valor_deslocamento, ae.valor_taxa_nf, ae.descricao_problema, c.nome_completo
+                HAVING DATE(COALESCE(MAX(pt.created_at), ae.created_at)) BETWEEN ? AND ?
+                ORDER BY data_finalizacao DESC";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$dataInicio, $dataFim]);
@@ -156,5 +168,62 @@ class AtendimentoExterno extends Model
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
+    public function updateTotals(int $atendimentoId, array $itens): bool
+    {
+        $totalProdutos = 0.00;
+        $totalServicos = 0.00;
+
+        if (!empty($itens)) {
+            foreach ($itens as $item) {
+                $tipo = $item['tipo_item'] ?? $item['tipo'] ?? 'servico';
+                $valorItem = ($item['quantidade'] * ($item['valor_unitario'] + ($item['valor_mao_de_obra'] ?? 0)));
+                $descontoItem = (float)($item['desconto'] ?? 0);
+                
+                if ($tipo === 'produto') {
+                    $totalProdutos += ($valorItem - $descontoItem);
+                } else {
+                    $totalServicos += ($valorItem - $descontoItem);
+                }
+            }
+        }
+
+        // Busca diretamente via SQL para evitar quaisquer problemas
+        $sqlBusca = "SELECT valor_deslocamento, emitir_nf FROM {$this->table} WHERE id = :id";
+        $stmtBusca = $this->db->prepare($sqlBusca);
+        $stmtBusca->execute(['id' => $atendimentoId]);
+        $atendimento = $stmtBusca->fetch(\PDO::FETCH_ASSOC);
+        
+        if (!$atendimento) {
+            return false;
+        }
+        
+        $valorDeslocamento = (float)($atendimento['valor_deslocamento'] ?? 0);
+        $emitirNF = (int)($atendimento['emitir_nf'] ?? 0);
+        $valorTotal = $totalProdutos + $totalServicos;
+
+        // Cálculo da Taxa NF
+        $valorTaxaNF = 0.00;
+        if ($emitirNF) {
+            $configModel = new \App\Models\ConfiguracaoGeral();
+            $percProdutos = (float)$configModel->getValor('nf_porcentagem_produtos') ?: 3;
+            $percServicos = (float)$configModel->getValor('nf_porcentagem_servicos') ?: 6;
+            
+            $valorTaxaNF = ($totalProdutos * ($percProdutos / 100)) + (($totalServicos + $valorDeslocamento) * ($percServicos / 100));
+        }
+
+        // Atualização diretamente via SQL
+        $sqlUpdate = "UPDATE {$this->table} SET
+                valor_total = :valor_total,
+                valor_taxa_nf = :valor_taxa_nf
+                WHERE id = :id";
+
+        $stmtUpdate = $this->db->prepare($sqlUpdate);
+        return $stmtUpdate->execute([
+            'valor_total' => $valorTotal,
+            'valor_taxa_nf' => $valorTaxaNF,
+            'id' => $atendimentoId
+        ]);
     }
 }

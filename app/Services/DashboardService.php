@@ -45,8 +45,8 @@ class DashboardService
         $stmtAtrasadas = $db->query("SELECT COUNT(*) as total FROM ordens_servico WHERE status_atual_id NOT IN (5, 6) AND ativo = 1 AND created_at < DATE_SUB(NOW(), INTERVAL 3 DAY)");
         $totalAtrasadas = (int)($stmtAtrasadas->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
 
-        $relatorio = $this->financeService->relatorioFinanceiroCompleto($dataInicio, $dataFim);
-        $lucroMes = $relatorio['produzido']['totais']['lucro_previsto'];
+        $relatorio = $this->financeService->calcularProduzido($dataInicio, $dataFim);
+        $lucroMes = $relatorio['totais']['lucro_previsto'];
 
         return [
             'total_abertas' => $totalAbertas,

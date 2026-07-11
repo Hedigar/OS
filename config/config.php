@@ -11,7 +11,23 @@ date_default_timezone_set($timezone);
  */
 
 // 1. Configurações do Banco de Dados (Vindas do .env)
-define('DB_HOST', $_ENV['DB_HOST'] ?? 'localhost');
+// Detecta se está dentro do container Docker e usa o host correto
+function isInsideDockerContainer() {
+    // Primeiro verifica se existe o arquivo .dockerenv (mais confiável)
+    if (file_exists('/.dockerenv')) {
+        return true;
+    }
+    // Se não, verifica o /proc/1/cgroup
+    $cgroupFile = '/proc/1/cgroup';
+    if (file_exists($cgroupFile)) {
+        $content = file_get_contents($cgroupFile);
+        return strpos($content, 'docker') !== false || strpos($content, 'kubepods') !== false;
+    }
+    return false;
+}
+
+$dbHost = isInsideDockerContainer() ? 'db' : ($_ENV['DB_HOST'] ?? '127.0.0.1');
+define('DB_HOST', $dbHost);
 define('DB_USER', $_ENV['DB_USERNAME'] ?? 'root');
 define('DB_PASS', $_ENV['DB_PASSWORD'] ?? '');
 define('DB_NAME', $_ENV['DB_DATABASE'] ?? 'os');

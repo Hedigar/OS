@@ -60,8 +60,8 @@ class AtendimentoService
             $valorTaxaNF = ($totalProdutos * ($percProdutos / 100)) + (($totalServicos + $valorDeslocamento) * ($percServicos / 100));
         }
 
-        // Salvar o valor calculado da taxa no banco para relatórios
-        $this->atendimentoModel->update($id, ['valor_taxa_nf' => $valorTaxaNF]);
+        // Atualiza todos os totals no banco
+        $this->atendimentoModel->updateTotals($id, $itens);
         
         return [
             'atendimento' => $atendimento,
@@ -87,7 +87,14 @@ class AtendimentoService
              $data['descricao_problema'] = $atual['descricao_problema'];
         }
 
-        return $this->atendimentoModel->update($id, $data);
+        $result = $this->atendimentoModel->update($id, $data);
+        if ($result) {
+            // Recalcula totals caso valor_deslocamento tenha sido alterado
+            $itens = $this->atendimentoModel->listarItens($id);
+            $this->atendimentoModel->updateTotals($id, $itens);
+        }
+
+        return $result;
     }
 
     public function atualizarItem($itemId, $postData)
@@ -120,9 +127,14 @@ class AtendimentoService
             $stmtDelete->execute([$itemId]);
             
             // Adiciona o novo registro
+            $dataCusto = date('Y-m-d');
             if ($valorTotalCusto > 0) {
-                $fluxoCaixaModel->registrarCustoItemAtendimento($itemId, $atendimentoId, $valorTotalCusto);
+                $fluxoCaixaModel->registrarCustoItemAtendimento($itemId, $atendimentoId, $valorTotalCusto, $dataCusto);
             }
+
+            // Recalcula totals do atendimento
+            $itens = $this->atendimentoModel->listarItens($atendimentoId);
+            $this->atendimentoModel->updateTotals($atendimentoId, $itens);
         }
 
         return $result;
@@ -158,10 +170,15 @@ class AtendimentoService
         if ($itemId) {
             // Registrar custo no fluxo_caixa
             $valorTotalCusto = $quantidade * $custo;
+            $dataCusto = date('Y-m-d');
             if ($valorTotalCusto > 0) {
                 $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                $fluxoCaixaModel->registrarCustoItemAtendimento($itemId, $atendimentoId, $valorTotalCusto);
+                $fluxoCaixaModel->registrarCustoItemAtendimento($itemId, $atendimentoId, $valorTotalCusto, $dataCusto);
             }
+
+            // Recalcula totals do atendimento
+            $itens = $this->atendimentoModel->listarItens($atendimentoId);
+            $this->atendimentoModel->updateTotals($atendimentoId, $itens);
         }
 
         return $itemId;

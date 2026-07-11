@@ -177,6 +177,11 @@ class AtendimentoExternoController extends BaseController
 
             $itemModel = new \App\Models\ItemOS();
             if ($itemModel->delete($itemId)) {
+                // Recalcula totals do atendimento
+                $atendimentoModel = new \App\Models\AtendimentoExterno();
+                $itens = $atendimentoModel->listarItens($atendimentoId);
+                $atendimentoModel->updateTotals($atendimentoId, $itens);
+                
                 $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
             }
         }

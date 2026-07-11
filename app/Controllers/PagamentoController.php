@@ -148,6 +148,7 @@ class PagamentoController extends BaseController
         $valorTaxa = round(($valorBruto * ($taxaPercentual / 100)), 2);
         $valorLiquido = round(($valorBruto - $valorTaxa), 2);
 
+        $dataCriacao = date('Y-m-d H:i:s');
         $data = [
             'tipo_origem'   => $tipo,
             'origem_id'     => $origemId,
@@ -159,7 +160,8 @@ class PagamentoController extends BaseController
             'valor_bruto'   => $valorBruto,
             'valor_taxa'    => $valorTaxa,
             'valor_liquido' => $valorLiquido,
-            'usuario_id'    => Auth::id()
+            'usuario_id'    => Auth::id(),
+            'created_at'    => $dataCriacao
         ];
 
         $id = $this->transacaoModel->create($data);
@@ -167,9 +169,10 @@ class PagamentoController extends BaseController
             $this->json(['error' => 'Falha ao registrar pagamento'], 500);
         }
 
-        // Registrar entrada no fluxo_caixa
+        // Registrar entrada no fluxo_caixa com a data do pagamento
         $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-        $fluxoCaixaModel->registrarEntradaPagamento($id, $tipo, $origemId, $valorBruto);
+        $dataFluxo = date('Y-m-d', strtotime($dataCriacao));
+        $fluxoCaixaModel->registrarEntradaPagamento($id, $tipo, $origemId, $valorBruto, $dataFluxo);
 
         $this->atualizarStatusPagamento($tipo, $origemId);
 
@@ -259,6 +262,9 @@ class PagamentoController extends BaseController
         if (!$ok) {
             $this->json(['error' => 'Falha ao excluir transação'], 500);
         }
+        // Remove entrada do fluxo_caixa para manter coerência
+        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+        $fluxoCaixaModel->removerEntradaPagamento($id);
         $this->logModel->registrar(Auth::id(), 'Excluiu transação de pagamento', "Transação #{$id}", $tx, ['ativo' => 0]);
         $tipo = $tx['tipo_origem'] ?? '';
         $origemId = (int)($tx['origem_id'] ?? 0);

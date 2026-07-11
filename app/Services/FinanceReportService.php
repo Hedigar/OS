@@ -5,18 +5,24 @@ namespace App\Services;
 use App\Models\OrdemServico;
 use App\Models\AtendimentoExterno;
 use App\Models\PagamentoTransacao;
+use App\Models\FluxoCaixa;
+use App\Models\Despesa;
 
 class FinanceReportService
 {
     private OrdemServico $osModel;
     private AtendimentoExterno $atendimentoModel;
     private PagamentoTransacao $pagamentoModel;
+    private FluxoCaixa $fluxoCaixaModel;
+    private Despesa $despesaModel;
 
     public function __construct()
     {
         $this->osModel = new OrdemServico();
         $this->atendimentoModel = new AtendimentoExterno();
         $this->pagamentoModel = new PagamentoTransacao();
+        $this->fluxoCaixaModel = new FluxoCaixa();
+        $this->despesaModel = new Despesa();
     }
 
     /**
@@ -35,7 +41,143 @@ class FinanceReportService
     }
 
     /**
-     * Retorna o custo total de um atendimento (soma dos custos dos itens)
+     * Retorna o custo total de taxas de uma OS (taxa NF)
+     */
+    private function getTotalTaxasByOs(int $osId): float
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT COALESCE(valor_taxa_nf, 0) FROM ordens_servico WHERE id = ? AND ativo = 1";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$osId]);
+        return (float)($stmt->fetchColumn() ?: 0);
+    }
+
+    /**
+     * Retorna o total pago para uma OS (soma dos pagamentos)
+     */
+    private function getTotalPagoByOs(int $osId): float
+    {
+        return $this->pagamentoModel->sumByOrigem('os', $osId);
+    }
+
+    /**
+     * ======================================
+     * VISÃO 1: Competência (Produção)
+     * Objetivo: Saber quanto a empresa produziu de riqueza no período
+     * ======================================
+     */
+    public function getVisaoCompetencia(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        // Fetch OS finalizadas
+        $sqlOs = "SELECT 
+                    os.id,
+                    os.valor_total_os,
+                    os.valor_desconto,
+                    os.valor_taxa_nf,
+                    os.defeito_relatado,
+                    c.nome_completo as cliente,
+                    DATE(COALESCE(h.created_at, os.updated_at)) as data_finalizacao
+                FROM ordens_servico os
+                JOIN clientes c ON os.cliente_id = c.id
+                LEFT JOIN (
+                    SELECT ordem_servico_id, MAX(created_at) as created_at
+                    FROM ordens_servico_status_historico
+                    WHERE status_id = ?
+                    GROUP BY ordem_servico_id
+                ) h ON os.id = h.ordem_servico_id
+                WHERE os.ativo = 1 
+                AND os.status_atual_id = ?
+                AND DATE(COALESCE(h.created_at, os.updated_at)) BETWEEN ? AND ?
+                ORDER BY h.created_at DESC, os.updated_at DESC";
+        
+        $stmtOs = $db->prepare($sqlOs);
+        $stmtOs->execute([OrdemServico::STATUS_FINALIZADA, OrdemServico::STATUS_FINALIZADA, $dataInicio, $dataFim]);
+        $osFinalizadas = $stmtOs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        // Fetch atendimentos externos concluídos
+        $sqlAtendimentos = "SELECT 
+                    ae.id,
+                    (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) as valor_total_os,
+                    0 as valor_desconto,
+                    ae.valor_taxa_nf,
+                    ae.descricao_problema as defeito_relatado,
+                    c.nome_completo as cliente,
+                    DATE(COALESCE(MAX(pt.created_at), ae.created_at)) as data_finalizacao
+                FROM atendimentos_externos ae
+                JOIN clientes c ON ae.cliente_id = c.id
+                LEFT JOIN pagamentos_transacoes pt ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                WHERE ae.ativo = 1 
+                AND ae.status = ?
+                GROUP BY ae.id, ae.created_at, ae.valor_total, ae.valor_deslocamento, ae.valor_taxa_nf, ae.descricao_problema, c.nome_completo
+                HAVING DATE(COALESCE(MAX(pt.created_at), ae.created_at)) BETWEEN ? AND ?
+                ORDER BY data_finalizacao DESC";
+        
+        $stmtAtendimentos = $db->prepare($sqlAtendimentos);
+        $stmtAtendimentos->execute(['concluido', $dataInicio, $dataFim]);
+        $atendimentosConcluidos = $stmtAtendimentos->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $itens = [];
+        $totalOs = 0;
+        $totalAtendimentos = 0;
+
+        foreach ($osFinalizadas as $os) {
+            $valorFaturado = (float)($os['valor_total_os'] ?? 0) - (float)($os['valor_desconto'] ?? 0);
+            $custosPecas = $this->getTotalCustoByOs($os['id']);
+            $custosTaxas = $this->getTotalTaxasByOs($os['id']);
+            $lucroPrejuizo = $valorFaturado - $custosPecas - $custosTaxas;
+
+            $itens[] = [
+                'tipo' => 'os',
+                'id' => $os['id'],
+                'data_finalizacao' => $os['data_finalizacao'],
+                'cliente' => $os['cliente'],
+                'defeito_relatado' => $os['defeito_relatado'],
+                'valor_faturado' => $valorFaturado,
+                'custos_pecas' => $custosPecas,
+                'custos_taxas' => $custosTaxas,
+                'lucro_prejuizo' => $lucroPrejuizo
+            ];
+
+            $totalOs += $valorFaturado;
+        }
+
+        foreach ($atendimentosConcluidos as $atendimento) {
+            $valorFaturado = (float)($atendimento['valor_total_os'] ?? 0) - (float)($atendimento['valor_desconto'] ?? 0);
+            $custosPecas = $this->getTotalCustoByAtendimento($atendimento['id']);
+            $custosTaxas = (float)($atendimento['valor_taxa_nf'] ?? 0);
+            $lucroPrejuizo = $valorFaturado - $custosPecas - $custosTaxas;
+
+            $itens[] = [
+                'tipo' => 'atendimento',
+                'id' => $atendimento['id'],
+                'data_finalizacao' => $atendimento['data_finalizacao'],
+                'cliente' => $atendimento['cliente'],
+                'defeito_relatado' => $atendimento['defeito_relatado'],
+                'valor_faturado' => $valorFaturado,
+                'custos_pecas' => $custosPecas,
+                'custos_taxas' => $custosTaxas,
+                'lucro_prejuizo' => $lucroPrejuizo
+            ];
+
+            $totalAtendimentos += $valorFaturado;
+        }
+
+        // Sort items by date descending
+        usort($itens, function($a, $b) {
+            return strtotime($b['data_finalizacao']) - strtotime($a['data_finalizacao']);
+        });
+
+        return [
+            'itens' => $itens,
+            'total_os' => $totalOs,
+            'total_atendimentos' => $totalAtendimentos,
+            'total' => $totalOs + $totalAtendimentos
+        ];
+    }
+
+    /**
+     * Retorna o custo total de um atendimento externo
      */
     private function getTotalCustoByAtendimento(int $atendimentoId): float
     {
@@ -50,385 +192,336 @@ class FinanceReportService
     }
 
     /**
-     * Retorna o total pago para uma OS (soma dos pagamentos)
+     * ======================================
+     * VISÃO 2: Caixa (Fluxo Financeiro Real)
+     * Objetivo: Bater com o saldo do banco
+     * ======================================
      */
-    private function getTotalPagoByOs(int $osId): float
-    {
-        return $this->pagamentoModel->sumByOrigem('os', $osId);
-    }
-
-    /**
-     * Retorna o total pago para um atendimento (soma dos pagamentos)
-     */
-    private function getTotalPagoByAtendimento(int $atendimentoId): float
-    {
-        return $this->pagamentoModel->sumByOrigem('atendimento', $atendimentoId);
-    }
-
-    /**
-     * Retorna os itens de uma OS ou atendimento
-     */
-    private function getItensPorOrigem(string $tipo, int $origemId): array
+    public function getVisaoCaixa(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();
-        $campoId = $tipo === 'OS' ? 'ordem_servico_id' : 'atendimento_externo_id';
-
-        $sql = "SELECT descricao, tipo_item, quantidade 
-                FROM itens_ordem_servico 
-                WHERE $campoId = ? AND ativo = 1";
         
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$origemId]);
-        return $stmt->fetchAll() ?: [];
+        // Entradas (pagamentos ativos)
+        $sqlEntradas = "SELECT 
+                            pt.id,
+                            pt.tipo_origem,
+                            pt.origem_id,
+                            pt.valor_bruto,
+                            pt.valor_liquido,
+                            pt.valor_taxa as taxa_cartao,
+                            pt.created_at as data_transacao,
+                            CASE 
+                                WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
+                                WHEN pt.tipo_origem = 'atendimento' THEN ae.descricao_problema
+                                ELSE 'Entrada'
+                            END as descricao,
+                            CASE 
+                                WHEN pt.tipo_origem = 'os' THEN c.nome_completo
+                                WHEN pt.tipo_origem = 'atendimento' THEN c_at.nome_completo
+                                ELSE ''
+                            END as cliente
+                        FROM pagamentos_transacoes pt
+                        LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
+                        LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                        LEFT JOIN clientes c ON os.cliente_id = c.id
+                        LEFT JOIN clientes c_at ON ae.cliente_id = c_at.id
+                        WHERE pt.ativo = 1 
+                        AND DATE(pt.created_at) BETWEEN ? AND ?
+                        ORDER BY pt.created_at DESC";
+        
+        $stmtEntradas = $db->prepare($sqlEntradas);
+        $stmtEntradas->execute([$dataInicio, $dataFim]);
+        $entradas = $stmtEntradas->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        
+        // Saídas (despesas, custos, etc.)
+        $sqlSaidas = "SELECT 
+                        d.id,
+                        'despesa' as tipo_origem,
+                        d.id as origem_id,
+                        d.valor,
+                        d.descricao,
+                        d.data_despesa as data_transacao,
+                        dc.nome as categoria
+                    FROM despesas d
+                    JOIN despesas_categorias dc ON d.categoria_id = dc.id
+                    WHERE d.ativo = 1 
+                    AND DATE(d.data_despesa) BETWEEN ? AND ?
+                    UNION ALL
+                    SELECT 
+                        fc.id,
+                        fc.referencia_tipo as tipo_origem,
+                        fc.referencia_id as origem_id,
+                        fc.valor,
+                        CASE 
+                            WHEN fc.referencia_tipo = 'item_os' THEN 'Custo de Item OS'
+                            WHEN fc.referencia_tipo = 'item_atendimento' THEN 'Custo de Item Atendimento'
+                            ELSE 'Saída'
+                        END as descricao,
+                        fc.data as data_transacao,
+                        '' as categoria
+                    FROM fluxo_caixa fc
+                    WHERE fc.tipo = 'custo'
+                    AND DATE(fc.data) BETWEEN ? AND ?
+                    ORDER BY data_transacao DESC";
+        
+        $stmtSaidas = $db->prepare($sqlSaidas);
+        $stmtSaidas->execute([$dataInicio, $dataFim, $dataInicio, $dataFim]);
+        $saidas = $stmtSaidas->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        // Calculate DRE values
+        $entradaBruta = array_sum(array_column($entradas, 'valor_bruto'));
+        $deducoesVenda = array_sum(array_column($entradas, 'taxa_cartao'));
+        $receitaLiquida = $entradaBruta - $deducoesVenda;
+        $custosDiretos = array_sum(array_column($saidas, 'valor'));
+        $resultadoFinal = $receitaLiquida - $custosDiretos;
+
+        return [
+            'entradas' => $entradas,
+            'saidas' => $saidas,
+            'entrada_bruta' => $entradaBruta,
+            'deducoes_venda' => $deducoesVenda,
+            'receita_liquida' => $receitaLiquida,
+            'custos_diretos' => $custosDiretos,
+            'resultado_final' => $resultadoFinal
+        ];
     }
 
     /**
-     * Calcula o total PRODUZIDO (competência) em um período.
-     * Somente OS Finalizadas (status_id=5) e Atendimentos Concluídos.
+     * ======================================
+     * VISÃO 3: Analítica de OS (Individual e por Range)
+     * Objetivo: Avaliar a rentabilidade de um conjunto de ordens
+     * ======================================
+     */
+    public function getVisaoAnaliticaOs(int $osIdInicio, int $osIdFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    os.id,
+                    os.valor_total_os,
+                    os.valor_desconto,
+                    os.valor_taxa_nf,
+                    os.defeito_relatado,
+                    os.status_atual_id,
+                    c.nome_completo as cliente
+                FROM ordens_servico os
+                JOIN clientes c ON os.cliente_id = c.id
+                WHERE os.ativo = 1 
+                AND os.id BETWEEN ? AND ?
+                ORDER BY os.id ASC";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$osIdInicio, $osIdFim]);
+        $osList = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $itens = [];
+        $totalFaturamento = 0;
+        $totalCustos = 0;
+        $totalLucro = 0;
+        $ordensPrejuizo = [];
+
+        foreach ($osList as $os) {
+            $faturamento = (float)($os['valor_total_os'] ?? 0) - (float)($os['valor_desconto'] ?? 0);
+            $custosPecas = $this->getTotalCustoByOs($os['id']);
+            $custosTaxas = $this->getTotalTaxasByOs($os['id']);
+            $custosTotal = $custosPecas + $custosTaxas;
+            $lucro = $faturamento - $custosTotal;
+
+            $itens[] = [
+                'os_id' => $os['id'],
+                'cliente' => $os['cliente'],
+                'defeito_relatado' => $os['defeito_relatado'],
+                'faturamento' => $faturamento,
+                'custos_pecas' => $custosPecas,
+                'custos_taxas' => $custosTaxas,
+                'custos_total' => $custosTotal,
+                'lucro' => $lucro,
+                'status' => $os['status_atual_id']
+            ];
+
+            $totalFaturamento += $faturamento;
+            $totalCustos += $custosTotal;
+            $totalLucro += $lucro;
+
+            if ($lucro < 0) {
+                $ordensPrejuizo[] = $os['id'];
+            }
+        }
+
+        $mediaLucro = count($itens) > 0 ? $totalLucro / count($itens) : 0;
+
+        return [
+            'itens' => $itens,
+            'total_faturamento' => $totalFaturamento,
+            'total_custos' => $totalCustos,
+            'total_lucro' => $totalLucro,
+            'media_lucro' => $mediaLucro,
+            'ordens_prejuizo' => $ordensPrejuizo
+        ];
+    }
+
+    /**
+     * ======================================
+     * VISÃO 4: Entradas Órfãs (Gestão de Adiantamentos)
+     * Objetivo: Identificar dinheiro que entrou no Caixa mas não foi faturado
+     * ======================================
+     */
+    public function getVisaoEntradasOrfas(): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    pt.id as pagamento_id,
+                    pt.tipo_origem,
+                    pt.origem_id,
+                    pt.valor_bruto,
+                    pt.valor_liquido,
+                    pt.created_at as data_pagamento,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN c.nome_completo
+                        WHEN pt.tipo_origem = 'atendimento' THEN c_at.nome_completo
+                        ELSE ''
+                    END as cliente,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado
+                        WHEN pt.tipo_origem = 'atendimento' THEN ae.descricao_problema
+                        ELSE ''
+                    END as descricao,
+                    CASE 
+                        WHEN pt.tipo_origem = 'os' THEN os.status_atual_id
+                        WHEN pt.tipo_origem = 'atendimento' THEN ae.status
+                        ELSE NULL
+                    END as status_origem
+                FROM pagamentos_transacoes pt
+                LEFT JOIN ordens_servico os ON pt.tipo_origem = 'os' AND pt.origem_id = os.id
+                LEFT JOIN atendimentos_externos ae ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
+                LEFT JOIN clientes c ON os.cliente_id = c.id
+                LEFT JOIN clientes c_at ON ae.cliente_id = c_at.id
+                WHERE pt.ativo = 1
+                AND (
+                    (pt.tipo_origem = 'os' AND os.status_atual_id != ?)
+                    OR (pt.tipo_origem = 'atendimento' AND ae.status != ?)
+                    OR (pt.tipo_origem NOT IN ('os', 'atendimento'))
+                )
+                ORDER BY pt.created_at DESC";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([OrdemServico::STATUS_FINALIZADA, 'concluido']); 
+        $entradasOrfas = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $totalOrfao = array_sum(array_column($entradasOrfas, 'valor_bruto'));
+
+        return [
+            'itens' => $entradasOrfas,
+            'total' => $totalOrfao
+        ];
+    }
+
+    /**
+     * ======================================
+     * AUDITORIA: Compara (Entradas - Saídas) com o saldo esperado
+     * ======================================
+     */
+    public function auditarSaldo(string $dataInicio, string $dataFim): array
+    {
+        $visaoCaixa = $this->getVisaoCaixa($dataInicio, $dataFim);
+        
+        // Verificar se há divergências
+        $divergencias = [];
+        
+        // Verificar pagamentos inativos que ainda estão no fluxo de caixa
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT fc.id, fc.referencia_id 
+                FROM fluxo_caixa fc
+                LEFT JOIN pagamentos_transacoes pt ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
+                WHERE fc.referencia_tipo = 'pagamento'
+                AND DATE(fc.data) BETWEEN ? AND ?
+                AND (pt.id IS NULL OR pt.ativo = 0)";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$dataInicio, $dataFim]);
+        $entradasInvalidas = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        
+        if (!empty($entradasInvalidas)) {
+            $divergencias[] = [
+                'tipo' => 'Entradas Inválidas',
+                'descricao' => 'Há pagamentos inativos ou inexistentes no fluxo de caixa',
+                'quantidade' => count($entradasInvalidas)
+            ];
+        }
+
+        return [
+            'saldo_calculado' => $visaoCaixa['resultado_final'],
+            'divergencias' => $divergencias,
+            'status' => empty($divergencias) ? 'OK' : 'DIVERGÊNCIAS ENCONTRADAS'
+        ];
+    }
+
+    /**
+     * ======================================
+     * Métodos legados mantidos para compatibilidade
+     * ======================================
      */
     public function calcularProduzido(string $dataInicio, string $dataFim): array
     {
-        $osFinalizadas = $this->osModel->finalizadasNoPeriodo($dataInicio, $dataFim);
-        $atendimentosConcluidos = $this->atendimentoModel->concluidosNoPeriodo($dataInicio, $dataFim);
-
-        $itens = [];
-        $totalProduzido = 0;
-        $totalCustos = 0;
-        $totalTaxas = 0;
-        $totalLucroPrevisto = 0;
-
-        // Processar OS finalizadas
-        foreach ($osFinalizadas as $os) {
-            $item = $this->processarItemProducaoOS($os);
-            $itens[] = $item;
-            $totalProduzido += $item['valor_total'];
-            $totalCustos += $item['custos'];
-            $totalTaxas += $item['taxa_nf'];
-            $totalLucroPrevisto += $item['lucro_previsto'];
-        }
-
-        // Processar atendimentos concluídos
-        foreach ($atendimentosConcluidos as $atendimento) {
-            $item = $this->processarItemProducaoAtendimento($atendimento);
-            $itens[] = $item;
-            $totalProduzido += $item['valor_total'];
-            $totalCustos += $item['custos'];
-            $totalTaxas += $item['taxa_nf'];
-            $totalLucroPrevisto += $item['lucro_previsto'];
-        }
-
-        // Ordenar por data decrescente
-        usort($itens, fn($a, $b) => strtotime($b['data']) - strtotime($a['data']));
-
-        return [
-            'itens' => $itens,
-            'totais' => [
-                'valor_total' => $totalProduzido,
-                'custos' => $totalCustos,
-                'taxas' => $totalTaxas,
-                'lucro_previsto' => $totalLucroPrevisto
-            ]
-        ];
-    }
-
-    /**
-     * Calcula o total da RECEITA DE DIAGNÓSTICO em um período.
-     * Somente OS com status Diagnóstico Finalizado (status_id=15).
-     */
-    public function calcularReceitaDiagnostico(string $dataInicio, string $dataFim): array
-    {
-        $osDiagnostico = $this->osModel->diagnosticoFinalizadoNoPeriodo($dataInicio, $dataFim);
+        $visao = $this->getVisaoCompetencia($dataInicio, $dataFim);
         
         $itens = [];
-        $totalReceitaDiagnostico = 0;
-        $totalCustos = 0;
-        $totalTaxas = 0;
-        $totalLucro = 0;
-
-        foreach ($osDiagnostico as $os) {
-            $osId = $os['id'];
-            $totalPago = $this->getTotalPagoByOs($osId);
-            $custos = $this->getTotalCustoByOs($osId);
-            $taxaNf = $os['valor_taxa_nf'] ?? 0;
-            $lucro = $totalPago - $custos - $taxaNf;
-            
+        foreach ($visao['itens'] as $item) {
             $itens[] = [
-                'tipo' => 'OS - Receita de Diagnóstico',
-                'origem_id' => $osId,
-                'data' => $os['data_finalizacao'],
-                'cliente' => $os['cliente'],
-                'valor_total' => $totalPago,
-                'taxa_nf' => $taxaNf,
-                'descricao' => $os['defeito_relatado'],
-                'numero' => $osId,
-                'custos' => $custos,
-                'itens' => $this->getItensPorOrigem('OS', $osId),
-                'lucro' => $lucro
+                'tipo' => 'OS - Produção de Reparo',
+                'origem_id' => $item['id'],
+                'data' => $item['data_finalizacao'],
+                'cliente' => $item['cliente'],
+                'valor_total' => $item['valor_faturado'],
+                'taxa_nf' => $item['custos_taxas'],
+                'descricao' => $item['defeito_relatado'],
+                'numero' => $item['id'],
+                'custos' => $item['custos_pecas'],
+                'lucro_previsto' => $item['lucro_prejuizo']
             ];
-            
-            $totalReceitaDiagnostico += $totalPago;
-            $totalCustos += $custos;
-            $totalTaxas += $taxaNf;
-            $totalLucro += $lucro;
         }
-        
-        // Ordenar por data decrescente
-        usort($itens, fn($a, $b) => strtotime($b['data']) - strtotime($a['data']));
 
         return [
             'itens' => $itens,
             'totais' => [
-                'valor_total' => $totalReceitaDiagnostico,
-                'custos' => $totalCustos,
-                'taxas' => $totalTaxas,
-                'lucro' => $totalLucro
+                'valor_total' => $visao['total'],
+                'custos' => array_sum(array_column($visao['itens'], 'custos_pecas')),
+                'taxas' => array_sum(array_column($visao['itens'], 'custos_taxas')),
+                'lucro_previsto' => array_sum(array_column($visao['itens'], 'lucro_prejuizo'))
             ]
         ];
     }
 
-    /**
-     * Calcula o total de ENTRADAS (caixa) em um período.
-     */
     public function calcularEntradas(string $dataInicio, string $dataFim): array
     {
-        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-        $fluxoItens = $fluxoCaixaModel->getRelatorioPorPeriodo($dataInicio, $dataFim);
-        $totaisFluxo = $fluxoCaixaModel->getTotaisPorPeriodo($dataInicio, $dataFim);
-
+        $visaoCaixa = $this->getVisaoCaixa($dataInicio, $dataFim);
         $pagamentos = [];
-        $totalCaixa = $totaisFluxo['entrada'];
-        $totalCustosCaixa = $totaisFluxo['custo'];
-        $totalTaxasNF = 0;
-        $totalTaxasCartao = 0;
-        $totalLucroCaixa = $totalCaixa - $totalCustosCaixa - $totalTaxasNF - $totalTaxasCartao;
-
-        foreach ($fluxoItens as $item) {
+        
+        foreach ($visaoCaixa['entradas'] as $item) {
             $pagamentos[] = [
                 'id' => $item['id'],
-                'tipo_origem' => $item['os_id'] ? 'os' : ($item['atendimento_externo_id'] ? 'atendimento' : null),
-                'origem_id' => $item['os_id'] ?? $item['atendimento_externo_id'],
-                'valor_bruto' => $item['valor'],
-                'valor_liquido' => $item['valor'],
-                'taxa_cartao' => 0,
-                'created_at' => $item['data'],
-                'descricao' => $item['descricao_origem'] ?? '',
-                'cliente' => $item['cliente_nome'] ?? '',
+                'tipo_origem' => $item['tipo_origem'],
+                'origem_id' => $item['origem_id'],
+                'valor_bruto' => $item['valor_bruto'],
+                'valor_liquido' => $item['valor_liquido'],
+                'taxa_cartao' => $item['taxa_cartao'],
+                'created_at' => $item['data_transacao'],
+                'descricao' => $item['descricao'],
+                'cliente' => $item['cliente'],
                 'taxa_nf' => 0,
                 'custos' => 0,
-                'lucro' => 0,
-                'valor_total_origem' => 0,
+                'lucro' => 0
             ];
         }
 
         return [
             'itens' => $pagamentos,
             'totais' => [
-                'valor_bruto' => $totalCaixa,
-                'custos' => $totalCustosCaixa,
-                'taxas_nf' => $totalTaxasNF,
-                'taxas_cartao' => $totalTaxasCartao,
-                'lucro' => $totalLucroCaixa
+                'valor_bruto' => $visaoCaixa['entrada_bruta'],
+                'custos' => 0,
+                'taxas_nf' => 0,
+                'taxas_cartao' => array_sum(array_column($visaoCaixa['entradas'], 'taxa_cartao')),
+                'lucro' => $visaoCaixa['entrada_bruta'] - array_sum(array_column($visaoCaixa['entradas'], 'taxa_cartao'))
             ]
-        ];
-    }
-
-    /**
-     * Calcula o CONTAS A RECEBER (pendências).
-     */
-    public function calcularContasAReceber(): array
-    {
-        $osPendentes = $this->osModel->comPendencias();
-        $atendimentosPendentes = $this->atendimentoModel->comPendencias();
-
-        $itens = [];
-        $totalPendente = 0;
-        $totalCustosPendente = 0;
-
-        foreach ($osPendentes as $os) {
-            $item = $this->processarItemPendenciaOS($os);
-            $itens[] = $item;
-            $totalPendente += $item['valor_pendente'];
-            $totalCustosPendente += $item['custos'];
-        }
-
-        foreach ($atendimentosPendentes as $atendimento) {
-            $item = $this->processarItemPendenciaAtendimento($atendimento);
-            $itens[] = $item;
-            $totalPendente += $item['valor_pendente'];
-            $totalCustosPendente += $item['custos'];
-        }
-
-        // Ordenar por data decrescente
-        usort($itens, fn($a, $b) => strtotime($b['data']) - strtotime($a['data']));
-
-        return [
-            'itens' => $itens,
-            'totais' => [
-                'valor_total' => $totalPendente,
-                'custos' => $totalCustosPendente
-            ]
-        ];
-    }
-
-    /**
-     * Gera o relatório financeiro completo.
-     */
-    public function relatorioFinanceiroCompleto(string $dataInicio, string $dataFim): array
-    {
-        return [
-            'produzido' => $this->calcularProduzido($dataInicio, $dataFim),
-            'receita_diagnostico' => $this->calcularReceitaDiagnostico($dataInicio, $dataFim),
-            'entradas' => $this->calcularEntradas($dataInicio, $dataFim),
-            'contas_a_receber' => $this->calcularContasAReceber()
-        ];
-    }
-
-    /**
-     * Gera relatório analítico CSV com linhas detalhadas para auditoria.
-     */
-    public function gerarRelatorioAnaliticoCsv(string $dataInicio, string $dataFim): string
-    {
-        $relatorioCompleto = $this->relatorioFinanceiroCompleto($dataInicio, $dataFim);
-        $linhas = [];
-        
-        // Cabeçalho
-        $linhas[] = ['ID', 'Status', 'Valor Total', 'Valor Recebido', 'Saldo Pendente', 'Natureza da Receita'];
-        
-        // Produção
-        foreach ($relatorioCompleto['produzido']['itens'] as $item) {
-            if ($item['tipo'] === 'Atendimento') {
-                continue; // Focar em OS por enquanto
-            }
-            $osId = $item['origem_id'];
-            $totalPago = $this->getTotalPagoByOs($osId);
-            $saldoPendente = $item['valor_total'] - $totalPago;
-            $linhas[] = [
-                $osId,
-                'Finalizada',
-                number_format($item['valor_total'], 2, ',', '.'),
-                number_format($totalPago, 2, ',', '.'),
-                number_format($saldoPendente, 2, ',', '.'),
-                'Produção'
-            ];
-        }
-        
-        // Receita de Diagnóstico
-        foreach ($relatorioCompleto['receita_diagnostico']['itens'] as $item) {
-            $osId = $item['origem_id'];
-            $totalPago = $this->getTotalPagoByOs($osId);
-            $linhas[] = [
-                $osId,
-                'Diagnóstico Finalizado',
-                number_format($totalPago, 2, ',', '.'),
-                number_format($totalPago, 2, ',', '.'),
-                '0,00',
-                'Receita de Diagnóstico'
-            ];
-        }
-        
-        // Gerar CSV
-        $output = fopen('php://temp', 'r+');
-        foreach ($linhas as $linha) {
-            fputcsv($output, $linha, ';');
-        }
-        rewind($output);
-        $csvContent = stream_get_contents($output);
-        fclose($output);
-        
-        return $csvContent;
-    }
-
-    /**
-     * Processa um item de OS para o relatório de produção.
-     */
-    private function processarItemProducaoOS(array $os): array
-    {
-        $custos = $this->getTotalCustoByOs($os['id']);
-        $lucroPrevisto = $os['valor_total_os'] - $custos - ($os['valor_taxa_nf'] ?? 0);
-
-        return [
-            'tipo' => 'OS - Produção de Reparo',
-            'origem_id' => $os['id'],
-            'data' => $os['data_finalizacao'],
-            'cliente' => $os['cliente'],
-            'valor_total' => $os['valor_total_os'],
-            'taxa_nf' => $os['valor_taxa_nf'],
-            'descricao' => $os['defeito_relatado'],
-            'numero' => $os['id'],
-            'custos' => $custos,
-            'itens' => $this->getItensPorOrigem('OS', $os['id']),
-            'lucro_previsto' => $lucroPrevisto
-        ];
-    }
-
-    /**
-     * Processa um item de atendimento para o relatório de produção.
-     */
-    private function processarItemProducaoAtendimento(array $atendimento): array
-    {
-        $custos = $this->getTotalCustoByAtendimento($atendimento['id']);
-        $lucroPrevisto = $atendimento['valor_total'] - $custos - ($atendimento['valor_taxa_nf'] ?? 0);
-
-        return [
-            'tipo' => 'Atendimento',
-            'origem_id' => $atendimento['id'],
-            'data' => $atendimento['data_finalizacao'],
-            'cliente' => $atendimento['cliente'],
-            'valor_total' => $atendimento['valor_total'],
-            'taxa_nf' => $atendimento['valor_taxa_nf'],
-            'descricao' => $atendimento['descricao_problema'],
-            'numero' => $atendimento['id'],
-            'custos' => $custos,
-            'itens' => $this->getItensPorOrigem('Atendimento', $atendimento['id']),
-            'lucro_previsto' => $lucroPrevisto
-        ];
-    }
-
-    /**
-     * Processa um item de OS para o relatório de pendências.
-     */
-    private function processarItemPendenciaOS(array $os): array
-    {
-        $custos = $this->getTotalCustoByOs($os['id']);
-        $valorPendente = $os['valor_total_os'] - $os['valor_pago'];
-
-        return [
-            'tipo' => 'OS',
-            'origem_id' => $os['id'],
-            'data' => $os['data'],
-            'cliente' => $os['cliente'],
-            'valor_total' => $os['valor_total_os'],
-            'taxa_nf' => $os['valor_taxa_nf'],
-            'descricao' => $os['defeito_relatado'],
-            'numero' => $os['id'],
-            'valor_pago' => $os['valor_pago'],
-            'valor_pendente' => $valorPendente,
-            'custos' => $custos,
-            'itens' => $this->getItensPorOrigem('OS', $os['id'])
-        ];
-    }
-
-    /**
-     * Processa um item de atendimento para o relatório de pendências.
-     */
-    private function processarItemPendenciaAtendimento(array $atendimento): array
-    {
-        $custos = $this->getTotalCustoByAtendimento($atendimento['id']);
-        $valorPendente = $atendimento['valor_total'] - $atendimento['valor_pago'];
-
-        return [
-            'tipo' => 'Atendimento',
-            'origem_id' => $atendimento['id'],
-            'data' => $atendimento['data'],
-            'cliente' => $atendimento['cliente'],
-            'valor_total' => $atendimento['valor_total'],
-            'taxa_nf' => $atendimento['valor_taxa_nf'],
-            'descricao' => $atendimento['descricao_problema'],
-            'numero' => $atendimento['id'],
-            'valor_pago' => $atendimento['valor_pago'],
-            'valor_pendente' => $valorPendente,
-            'custos' => $custos,
-            'itens' => $this->getItensPorOrigem('Atendimento', $atendimento['id'])
         ];
     }
 }

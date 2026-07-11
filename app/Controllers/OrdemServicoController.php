@@ -129,7 +129,7 @@ class OrdemServicoController extends BaseController
 
             if (!$equipamento_id) {
                 $serialRaw = filter_input(INPUT_POST, 'serial_equipamento', FILTER_UNSAFE_RAW);
-                $serial = htmlspecialchars(trim($serialRaw), ENT_QUOTES, 'UTF-8');
+                $serial = htmlspecialchars(trim($serialRaw ?? ''), ENT_QUOTES, 'UTF-8');
                 $existente = $this->equipamentoModel->findBySerial($cliente_id, $serial);
                 
                 if ($existente) {
@@ -180,11 +180,11 @@ class OrdemServicoController extends BaseController
 
             $status_id = filter_input(INPUT_POST, 'status_id', FILTER_VALIDATE_INT);
             $status_pagamentoRaw = filter_input(INPUT_POST, 'status_pagamento', FILTER_UNSAFE_RAW);
-            $status_pagamento = htmlspecialchars(trim($status_pagamentoRaw), ENT_QUOTES, 'UTF-8');
+            $status_pagamento = htmlspecialchars(trim($status_pagamentoRaw ?? ''), ENT_QUOTES, 'UTF-8');
             $status_entregaRaw = filter_input(INPUT_POST, 'status_entrega', FILTER_UNSAFE_RAW);
-            $status_entrega = htmlspecialchars(trim($status_entregaRaw), ENT_QUOTES, 'UTF-8');
+            $status_entrega = htmlspecialchars(trim($status_entregaRaw ?? ''), ENT_QUOTES, 'UTF-8');
             $observacaoRaw = filter_input(INPUT_POST, 'status_observacao', FILTER_UNSAFE_RAW);
-            $observacao = htmlspecialchars(trim($observacaoRaw), ENT_QUOTES, 'UTF-8');
+            $observacao = htmlspecialchars(trim($observacaoRaw ?? ''), ENT_QUOTES, 'UTF-8');
             
             $osAntiga = $this->osModel->find($id);
 
@@ -196,7 +196,7 @@ class OrdemServicoController extends BaseController
             ];
 
             $sn_fonteRaw = filter_input(INPUT_POST, 'sn_fonte', FILTER_UNSAFE_RAW);
-            $sn_fonte = htmlspecialchars(trim($sn_fonteRaw), ENT_QUOTES, 'UTF-8');
+            $sn_fonte = htmlspecialchars(trim($sn_fonteRaw ?? ''), ENT_QUOTES, 'UTF-8');
             if ($sn_fonte !== null) {
                 $ordem_atual = $this->osModel->find($id);
                 if ($ordem_atual && $ordem_atual['equipamento_id']) {
@@ -471,9 +471,10 @@ class OrdemServicoController extends BaseController
             if ($itemId) {
                 // Registrar custo no fluxo_caixa
                 $valorTotalCusto = $quantidade * $custo;
+                $dataCusto = date('Y-m-d');
                 if ($valorTotalCusto > 0) {
                     $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto);
+                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataCusto);
                 }
                 
                 $itens = $this->itemModel->findByOsId($osId);
@@ -518,8 +519,9 @@ class OrdemServicoController extends BaseController
                 $stmtDelete->execute([$itemId]);
                 
                 // Adiciona o novo registro
+                $dataCusto = date('Y-m-d');
                 if ($valorTotalCusto > 0) {
-                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto);
+                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataCusto);
                 }
                 
                 $itens = $this->itemModel->findByOsId($osId);

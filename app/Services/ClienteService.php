@@ -104,7 +104,7 @@ class ClienteService
 
         $sqlAE = "SELECT ae.id, ae.data_agendada, ae.pagamento, ae.valor_deslocamento, ae.descricao_problema, ae.detalhes_servico
                   FROM atendimentos_externos ae
-                  WHERE ae.cliente_id = :cid AND (ae.pagamento IS NULL OR ae.pagamento != 'pago') AND ae.ativo = 1
+                  WHERE ae.cliente_id = :cid AND (ae.pagamento IS NULL OR ae.pagamento != 'pago')
                   ORDER BY ae.id DESC";
         $stmtAE = $db->prepare($sqlAE);
         $stmtAE->execute(['cid' => $clienteId]);

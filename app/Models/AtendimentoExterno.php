@@ -133,8 +133,7 @@ class AtendimentoExterno extends Model
                 FROM {$this->table} ae
                 JOIN clientes c ON ae.cliente_id = c.id
                 LEFT JOIN pagamentos_transacoes pt ON pt.tipo_origem = 'atendimento' AND pt.origem_id = ae.id
-                WHERE ae.ativo = 1 
-                AND ae.status = 'concluido'
+                WHERE ae.status = 'concluido'
                 AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
                 GROUP BY ae.id, ae.created_at, ae.valor_total, ae.valor_deslocamento, ae.valor_taxa_nf, ae.descricao_problema, c.nome_completo
                 HAVING DATE(COALESCE(MAX(pt.created_at), ae.created_at)) BETWEEN ? AND ?
@@ -160,8 +159,7 @@ class AtendimentoExterno extends Model
                     COALESCE((SELECT SUM(valor_bruto) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1), 0) as valor_pago
                 FROM {$this->table} ae
                 JOIN clientes c ON ae.cliente_id = c.id
-                WHERE ae.ativo = 1 
-                AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
+                WHERE (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0
                 HAVING valor_pago < valor_total OR valor_pago = 0
                 ORDER BY ae.created_at DESC";
 

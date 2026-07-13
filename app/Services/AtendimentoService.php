@@ -67,7 +67,8 @@ class AtendimentoService
             'atendimento' => $atendimento,
             'itens'       => $itens,
             'valor_total' => $totalAtendimento,
-            'valor_taxa_nf' => $valorTaxaNF
+            'valor_taxa_nf' => $valorTaxaNF,
+            'valor_desconto' => $totalDesconto
         ];
     }
 

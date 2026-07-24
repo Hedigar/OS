@@ -1,32 +1,58 @@
 <?php
 /**
- * SCRIPT DE LIMPEZA - FLUXO DE CAIXA
+ * SCRIPT DE LIMPEZA - FLUXO DE CAIXA (VERSÃO PARA HOSPEDAGEM COMPARTILHADA)
  * 
- * Este script remove entradas no fluxo_caixa que estão relacionadas a pagamentos inativos ou inexistentes
+ * INSTRUÇÕES PARA HOSTINGER / HOSPEDAGEM COMPARTILHADA:
  * 
- * Versão: 1.1
- * Data: 2026-07-24
+ * 1. Edite as 4 linhas abaixo com suas credenciais do banco de dados.
+ *    Você encontra essas informações no painel da Hostinger:
+ *    Hospedagem -> Bancos de Dados -> Gerenciar (no banco correto)
  * 
- * NOTA: As credenciais do banco são carregadas automaticamente pelo autoload/config.
- *       Em produção, usar as variáveis de ambiente do servidor.
- *       Em Docker, o config.php detecta automaticamente pelo /.dockerenv
+ * 2. Envie este arquivo para a pasta do seu projeto (a mesma pasta que tem app/, bin/, etc)
+ * 
+ * 3. Rode via SSH:  php bin/cleanup_fluxo_caixa_hostinger.php
+ * 
+ * 4. OU coloque na pasta public/ e acesse via navegador (menos recomendado, delete após usar!)
+ * 
+ * VERSÃO: 1.1
+ * DATA:   2026-07-24
  */
 
-// 1. Carrega o Autoloader (que carrega Composer e config/config.php)
+// ============================================================
+// 🔧 EDITE SUAS CREDENCIAIS AQUI ABAIXO:
+// ============================================================
+$DB_HOST     = 'localhost';          // Geralmente 'localhost' na Hostinger (às vezes 127.0.0.1)
+$DB_USERNAME = 'u233127180_os_user';  // Seu usuário do MySQL (encontre no painel)
+$DB_PASSWORD = 'sua_senha_aqui';      // Sua senha do MySQL
+$DB_DATABASE = 'u233127180_os';       // Nome do banco de dados
+// ============================================================
+// NÃO EDITE NADA DAQUI PARA BAIXO
+// ============================================================
+
+$_ENV['DB_HOST']     = $DB_HOST;
+$_ENV['DB_USERNAME'] = $DB_USERNAME;
+$_ENV['DB_PASSWORD'] = $DB_PASSWORD;
+$_ENV['DB_DATABASE'] = $DB_DATABASE;
+
+putenv("DB_HOST={$DB_HOST}");
+putenv("DB_USERNAME={$DB_USERNAME}");
+putenv("DB_PASSWORD={$DB_PASSWORD}");
+putenv("DB_DATABASE={$DB_DATABASE}");
+
 require_once __DIR__ . '/../app/Core/Autoload.php';
 
 use App\Models\FluxoCaixa;
 
 echo "=============================================\n";
 echo " SCRIPT DE LIMPEZA - FLUXO DE CAIXA\n";
+echo "  (Versão para Hospedagem Compartilhada)\n";
 echo "=============================================\n\n";
 
 try {
-    // Inicializa o modelo e obtém a conexão
     $fluxoCaixa = new FluxoCaixa();
     $db = $fluxoCaixa->getConnection();
+    echo "✅ Conectado no banco: {$DB_DATABASE} (host: {$DB_HOST})\n\n";
 
-    // 1. Encontra todas as referências inválidas em fluxo_caixa
     echo "[1/3] Buscando entradas inválidas...\n";
     
     // 1a. Pagamentos inativos ou inexistentes
@@ -80,7 +106,6 @@ try {
 
     echo "\n   Encontradas " . count($entriesToRemove) . " entradas para remover!\n\n";
 
-    // 2. Remove as entradas
     echo "[2/3] Removendo entradas inválidas...\n";
     $idsToRemove = array_column($entriesToRemove, 'id');
     $placeholders = str_repeat('?,', count($idsToRemove) - 1) . '?';
@@ -91,7 +116,6 @@ try {
 
     echo "   ✅ Removidas $removedCount entradas do fluxo_caixa!\n\n";
     
-    // 3. Exibe relatório
     echo "[3/3] Relatório de limpeza:\n";
     echo "   - Pagamentos removidos: " . count($pagamentosInvalidos) . "\n";
     echo "   - Itens de OS removidos: " . count($itensOsInvalidos) . "\n";
@@ -104,7 +128,10 @@ try {
     echo "\n=============================================\n";
     echo "❌ ERRO NA LIMPEZA\n";
     echo "=============================================\n";
-    echo "Mensagem: " . $e->getMessage() . "\n";
+    echo "Mensagem: " . $e->getMessage() . "\n\n";
+    echo "💡 Dica: Verifique se as credenciais no topo do arquivo estão corretas.\n";
+    echo "   Hostinger costuma usar: localhost como host.\n";
+    echo "   Confira o usuário e senha no painel: Bancos de Dados.\n";
     echo "=============================================\n";
     exit(1);
 }

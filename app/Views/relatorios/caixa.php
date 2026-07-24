@@ -22,6 +22,9 @@ require_once __DIR__ . '/../layout/main.php';
                     <button type="button" id="btnAuditar" class="btn btn-warning">
                         <i class="fas fa-check-double"></i> Auditar
                     </button>
+                    <button type="button" id="btnLimparFluxo" class="btn btn-danger" title="Remove registros órfãos do fluxo de caixa (itens/pagamentos deletados)">
+                        <i class="fas fa-broom"></i> Limpar Fluxo
+                    </button>
                 </div>
             </form>
         </div>
@@ -208,6 +211,42 @@ require_once __DIR__ . '/../layout/main.php';
                 section.style.display = 'none';
             }
         }
+
+        document.getElementById('btnLimparFluxo')?.addEventListener('click', async function () {
+            if (!confirm('⚠️ ATENÇÃO: Esta ação irá remover registros órfãos do fluxo de caixa (itens e pagamentos deletados via softdelete).\n\nDeseja continuar?')) {
+                return;
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+            try {
+                const formData = new FormData();
+                const response = await fetch('<?= BASE_URL ?>relatorios/limpar-fluxo-caixa', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    let msg = `✅ Limpeza concluída! ${result.total_removidos} registro(s) removido(s).`;
+                    if (result.total_removidos > 0 && result.detalhes) {
+                        msg += `\n\n📊 Detalhes:\n• Pagamentos: ${result.detalhes.pagamentos}\n• Itens OS: ${result.detalhes.itens_os}\n• Itens Atendimento: ${result.detalhes.itens_atendimento}`;
+                    }
+                    alert(msg);
+                    window.location.reload();
+                } else {
+                    alert('❌ Erro: ' + (result.error || 'Erro desconhecido'));
+                }
+            } catch (err) {
+                alert('❌ Erro de conexão: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-broom"></i> Limpar Fluxo';
+            }
+        });
     </script>
 </div>
 

@@ -1,32 +1,36 @@
 <?php
 /**
- * SCRIPT DE LIMPEZA - FLUXO DE CAIXA
+ * SCRIPT TEMPORÁRIO - LIMPEZA DO FLUXO DE CAIXA
  * 
- * Este script remove entradas no fluxo_caixa que estão relacionadas a pagamentos inativos ou inexistentes
- * 
- * Versão: 1.1
- * Data: 2026-07-24
- * 
- * NOTA: As credenciais do banco são carregadas automaticamente pelo autoload/config.
- *       Em produção, usar as variáveis de ambiente do servidor.
- *       Em Docker, o config.php detecta automaticamente pelo /.dockerenv
+ * INSTRUÇÕES:
+ * 1. Altere a senha abaixo!
+ * 2. Envie este arquivo para a pasta public_html/public (ou onde fica o index.php)
+ * 3. Acesse no navegador: https://seusite.com/_limpar_fluxo.php?senha=SUA_SENHA
+ * 4. DELETE ESTE ARQUIVO IMEDIATAMENTE APÓS USAR! (se deixar, qualquer pessoa pode acessar)
  */
 
-// 1. Carrega o Autoloader (que carrega Composer e config/config.php)
+// ================= CONFIGURAÇÃO =================
+define('SENHA_ACESSO', 'altere_essa_senha_123'); // <<< ALTERE ESSA SENHA!
+// ================================================
+
+if (($_GET['senha'] ?? '') !== SENHA_ACESSO) {
+    http_response_code(403);
+    die('❌ Acesso negado. Senha incorreta.');
+}
+
 require_once __DIR__ . '/../app/Core/Autoload.php';
 
 use App\Models\FluxoCaixa;
 
+echo "<pre style='font-family:monospace;font-size:14px;background:#111;color:#0f0;padding:20px;border-radius:8px;'>";
 echo "=============================================\n";
 echo " SCRIPT DE LIMPEZA - FLUXO DE CAIXA\n";
 echo "=============================================\n\n";
 
 try {
-    // Inicializa o modelo e obtém a conexão
     $fluxoCaixa = new FluxoCaixa();
     $db = $fluxoCaixa->getConnection();
 
-    // 1. Encontra todas as referências inválidas em fluxo_caixa
     echo "[1/3] Buscando entradas inválidas...\n";
     
     // 1a. Pagamentos inativos ou inexistentes
@@ -75,6 +79,7 @@ try {
         echo "=============================================\n";
         echo "✅ LIMPEZA CONCLUÍDA COM SUCESSO!\n";
         echo "=============================================\n";
+        echo "\n⚠️  NÃO ESQUEÇA DE DELETAR ESTE ARQUIVO: _limpar_fluxo.php\n";
         exit(0);
     }
 
@@ -100,11 +105,16 @@ try {
     echo "=============================================\n";
     echo "✅ LIMPEZA CONCLUÍDA COM SUCESSO!\n";
     echo "=============================================\n";
+    echo "\n⚠️  ⚠️  ⚠️  ATENÇÃO! DELETE ESTE ARQUIVO AGORA! ⚠️ ⚠️ ⚠️\n";
+    echo "   Arquivo: public/_limpar_fluxo.php\n";
+    echo "   Deixe o arquivo existindo = risco de segurança!\n";
+    echo "</pre>";
 } catch (PDOException $e) {
     echo "\n=============================================\n";
     echo "❌ ERRO NA LIMPEZA\n";
     echo "=============================================\n";
     echo "Mensagem: " . $e->getMessage() . "\n";
     echo "=============================================\n";
+    echo "</pre>";
     exit(1);
 }

@@ -47,6 +47,7 @@ $router->get('relatorios/caixa', 'RelatorioController@caixa');
 $router->get('relatorios/analitica', 'RelatorioController@analitica');
 $router->get('relatorios/orfas', 'RelatorioController@orfas');
 $router->get('relatorios/auditar', 'RelatorioController@auditar');
+$router->post('relatorios/limpar-fluxo-caixa', 'RelatorioController@limparFluxoCaixa');
 $router->get('relatorios/crm', 'RelatorioController@crm');
 $router->get('relatorios/exportar-producao', 'RelatorioController@exportarProducao');
 $router->get('relatorios/exportar-caixa', 'RelatorioController@exportarCaixa');

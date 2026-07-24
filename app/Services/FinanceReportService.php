@@ -260,8 +260,15 @@ class FinanceReportService
                         fc.data as data_transacao,
                         '' as categoria
                     FROM fluxo_caixa fc
+                    LEFT JOIN itens_ordem_servico ios 
+                        ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
+                        OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id))
                     WHERE fc.tipo = 'custo'
                     AND DATE(fc.data) BETWEEN ? AND ?
+                    AND (
+                        fc.referencia_tipo NOT IN ('item_os', 'item_atendimento')
+                        OR (ios.id IS NOT NULL AND ios.ativo = 1)
+                    )
                     ORDER BY data_transacao DESC";
         
         $stmtSaidas = $db->prepare($sqlSaidas);
@@ -426,25 +433,67 @@ class FinanceReportService
         
         // Verificar se há divergências
         $divergencias = [];
+        $db = $this->osModel->getConnection();
         
         // Verificar pagamentos inativos que ainda estão no fluxo de caixa
-        $db = $this->osModel->getConnection();
-        $sql = "SELECT fc.id, fc.referencia_id 
+        $sqlPagamentos = "SELECT fc.id, fc.referencia_id 
                 FROM fluxo_caixa fc
                 LEFT JOIN pagamentos_transacoes pt ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
                 WHERE fc.referencia_tipo = 'pagamento'
                 AND DATE(fc.data) BETWEEN ? AND ?
                 AND (pt.id IS NULL OR pt.ativo = 0)";
         
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$dataInicio, $dataFim]);
-        $entradasInvalidas = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $stmtPag = $db->prepare($sqlPagamentos);
+        $stmtPag->execute([$dataInicio, $dataFim]);
+        $entradasInvalidas = $stmtPag->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         
         if (!empty($entradasInvalidas)) {
             $divergencias[] = [
                 'tipo' => 'Entradas Inválidas',
                 'descricao' => 'Há pagamentos inativos ou inexistentes no fluxo de caixa',
                 'quantidade' => count($entradasInvalidas)
+            ];
+        }
+        
+        // Verificar custos de itens de OS inativos ou inexistentes
+        $sqlItensOs = "SELECT fc.id, fc.referencia_id 
+                FROM fluxo_caixa fc
+                LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id
+                WHERE fc.referencia_tipo = 'item_os'
+                AND fc.tipo = 'custo'
+                AND DATE(fc.data) BETWEEN ? AND ?
+                AND (ios.id IS NULL OR ios.ativo = 0)";
+        
+        $stmtItensOs = $db->prepare($sqlItensOs);
+        $stmtItensOs->execute([$dataInicio, $dataFim]);
+        $custosItensOsInvalidos = $stmtItensOs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        
+        if (!empty($custosItensOsInvalidos)) {
+            $divergencias[] = [
+                'tipo' => 'Custos Inválidos (Itens OS)',
+                'descricao' => 'Há custos de itens de OS inativos ou inexistentes no fluxo de caixa',
+                'quantidade' => count($custosItensOsInvalidos)
+            ];
+        }
+        
+        // Verificar custos de itens de atendimento inativos ou inexistentes
+        $sqlItensAtend = "SELECT fc.id, fc.referencia_id 
+                FROM fluxo_caixa fc
+                LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id
+                WHERE fc.referencia_tipo = 'item_atendimento'
+                AND fc.tipo = 'custo'
+                AND DATE(fc.data) BETWEEN ? AND ?
+                AND (ios.id IS NULL OR ios.ativo = 0)";
+        
+        $stmtItensAtend = $db->prepare($sqlItensAtend);
+        $stmtItensAtend->execute([$dataInicio, $dataFim]);
+        $custosItensAtendInvalidos = $stmtItensAtend->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        
+        if (!empty($custosItensAtendInvalidos)) {
+            $divergencias[] = [
+                'tipo' => 'Custos Inválidos (Itens Atendimento)',
+                'descricao' => 'Há custos de itens de atendimento inativos ou inexistentes no fluxo de caixa',
+                'quantidade' => count($custosItensAtendInvalidos)
             ];
         }
 

@@ -28,31 +28,62 @@ try {
     $fluxoCaixa = new FluxoCaixa();
     $db = $fluxoCaixa->getConnection();
 
-    // 1. Encontra todas as referências 'pagamento' em fluxo_caixa que referem-se a pagamentos inativos (ativo = 0) ou inexistentes
-    echo "[1/2] Buscando entradas inválidas...\n";
-    $sql = "
+    // 1. Encontra todas as referências inválidas em fluxo_caixa
+    echo "[1/3] Buscando entradas inválidas...\n";
+    
+    // 1a. Pagamentos inativos ou inexistentes
+    $sqlPagamentos = "
         SELECT fc.id, fc.referencia_id 
         FROM fluxo_caixa fc
         LEFT JOIN pagamentos_transacoes pt ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
         WHERE fc.referencia_tipo = 'pagamento'
         AND (pt.id IS NULL OR pt.ativo = 0)
     ";
-    $stmt = $db->prepare($sql);
-    $stmt->execute();
-    $entriesToRemove = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmtPag = $db->prepare($sqlPagamentos);
+    $stmtPag->execute();
+    $pagamentosInvalidos = $stmtPag->fetchAll(PDO::FETCH_ASSOC);
+    echo "   Pagamentos inválidos: " . count($pagamentosInvalidos) . "\n";
+    
+    // 1b. Itens de OS inativos ou inexistentes
+    $sqlItensOs = "
+        SELECT fc.id, fc.referencia_id 
+        FROM fluxo_caixa fc
+        LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id
+        WHERE fc.referencia_tipo = 'item_os'
+        AND (ios.id IS NULL OR ios.ativo = 0)
+    ";
+    $stmtItensOs = $db->prepare($sqlItensOs);
+    $stmtItensOs->execute();
+    $itensOsInvalidos = $stmtItensOs->fetchAll(PDO::FETCH_ASSOC);
+    echo "   Itens de OS inválidos: " . count($itensOsInvalidos) . "\n";
+    
+    // 1c. Itens de atendimento inativos ou inexistentes
+    $sqlItensAtend = "
+        SELECT fc.id, fc.referencia_id 
+        FROM fluxo_caixa fc
+        LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id
+        WHERE fc.referencia_tipo = 'item_atendimento'
+        AND (ios.id IS NULL OR ios.ativo = 0)
+    ";
+    $stmtItensAtend = $db->prepare($sqlItensAtend);
+    $stmtItensAtend->execute();
+    $itensAtendInvalidos = $stmtItensAtend->fetchAll(PDO::FETCH_ASSOC);
+    echo "   Itens de atendimento inválidos: " . count($itensAtendInvalidos) . "\n";
+    
+    $entriesToRemove = array_merge($pagamentosInvalidos, $itensOsInvalidos, $itensAtendInvalidos);
 
     if (empty($entriesToRemove)) {
-        echo "   ✅ Nenhuma entrada para remover do fluxo_caixa!\n\n";
+        echo "\n   ✅ Nenhuma entrada para remover do fluxo_caixa!\n\n";
         echo "=============================================\n";
         echo "✅ LIMPEZA CONCLUÍDA COM SUCESSO!\n";
         echo "=============================================\n";
         exit(0);
     }
 
-    echo "   Encontradas " . count($entriesToRemove) . " entradas para remover!\n\n";
+    echo "\n   Encontradas " . count($entriesToRemove) . " entradas para remover!\n\n";
 
     // 2. Remove as entradas
-    echo "[2/2] Removendo entradas inválidas...\n";
+    echo "[2/3] Removendo entradas inválidas...\n";
     $idsToRemove = array_column($entriesToRemove, 'id');
     $placeholders = str_repeat('?,', count($idsToRemove) - 1) . '?';
     $deleteSql = "DELETE FROM fluxo_caixa WHERE id IN ($placeholders)";
@@ -61,6 +92,13 @@ try {
     $removedCount = $deleteStmt->rowCount();
 
     echo "   ✅ Removidas $removedCount entradas do fluxo_caixa!\n\n";
+    
+    // 3. Exibe relatório
+    echo "[3/3] Relatório de limpeza:\n";
+    echo "   - Pagamentos removidos: " . count($pagamentosInvalidos) . "\n";
+    echo "   - Itens de OS removidos: " . count($itensOsInvalidos) . "\n";
+    echo "   - Itens de atendimento removidos: " . count($itensAtendInvalidos) . "\n\n";
+    
     echo "=============================================\n";
     echo "✅ LIMPEZA CONCLUÍDA COM SUCESSO!\n";
     echo "=============================================\n";

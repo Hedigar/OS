@@ -177,6 +177,9 @@ class AtendimentoExternoController extends BaseController
 
             $itemModel = new \App\Models\ItemOS();
             if ($itemModel->delete($itemId)) {
+                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                $fluxoCaixaModel->removerCustoItemAtendimento($itemId);
+
                 // Recalcula totals do atendimento
                 $atendimentoModel = new \App\Models\AtendimentoExterno();
                 $itens = $atendimentoModel->listarItens($atendimentoId);

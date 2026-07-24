@@ -541,6 +541,9 @@ class OrdemServicoController extends BaseController
             $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT);
 
             if ($this->itemModel->delete($itemId)) {
+                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                $fluxoCaixaModel->removerCustoItemOs($itemId);
+
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);

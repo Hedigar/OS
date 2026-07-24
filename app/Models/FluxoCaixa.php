@@ -103,7 +103,17 @@ class FluxoCaixa extends Model
                 LEFT JOIN atendimentos_externos ae ON fc.atendimento_externo_id = ae.id
                 LEFT JOIN clientes c ON os.cliente_id = c.id
                 LEFT JOIN clientes c_at ON ae.cliente_id = c_at.id
+                LEFT JOIN pagamentos_transacoes pt 
+                    ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
+                LEFT JOIN itens_ordem_servico ios 
+                    ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
+                    OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id))
                 WHERE fc.data BETWEEN ? AND ?
+                AND (
+                    fc.referencia_tipo NOT IN ('pagamento', 'item_os', 'item_atendimento')
+                    OR (fc.referencia_tipo = 'pagamento' AND pt.id IS NOT NULL AND pt.ativo = 1)
+                    OR (fc.referencia_tipo IN ('item_os', 'item_atendimento') AND ios.id IS NOT NULL AND ios.ativo = 1)
+                )
                 ORDER BY fc.data DESC, fc.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$dataInicio, $dataFim]);
@@ -121,16 +131,46 @@ class FluxoCaixa extends Model
     }
 
     /**
+     * Remove custo de item de OS da tabela fluxo_caixa (quando item é deletado)
+     */
+    public function removerCustoItemOs(int $itemId): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE referencia_tipo = 'item_os' AND referencia_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$itemId]);
+    }
+
+    /**
+     * Remove custo de item de atendimento da tabela fluxo_caixa (quando item é deletado)
+     */
+    public function removerCustoItemAtendimento(int $itemId): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE referencia_tipo = 'item_atendimento' AND referencia_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$itemId]);
+    }
+
+    /**
      * Obtém totais por período
      */
     public function getTotaisPorPeriodo(string $dataInicio, string $dataFim): array
     {
         $sql = "SELECT 
-                    tipo,
-                    SUM(valor) as total
-                FROM {$this->table}
-                WHERE data BETWEEN ? AND ?
-                GROUP BY tipo";
+                    fc.tipo,
+                    SUM(fc.valor) as total
+                FROM {$this->table} fc
+                LEFT JOIN pagamentos_transacoes pt 
+                    ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
+                LEFT JOIN itens_ordem_servico ios 
+                    ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
+                    OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id))
+                WHERE fc.data BETWEEN ? AND ?
+                AND (
+                    fc.referencia_tipo NOT IN ('pagamento', 'item_os', 'item_atendimento')
+                    OR (fc.referencia_tipo = 'pagamento' AND pt.id IS NOT NULL AND pt.ativo = 1)
+                    OR (fc.referencia_tipo IN ('item_os', 'item_atendimento') AND ios.id IS NOT NULL AND ios.ativo = 1)
+                )
+                GROUP BY fc.tipo";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$dataInicio, $dataFim]);
         $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);

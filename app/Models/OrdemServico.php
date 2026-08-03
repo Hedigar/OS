@@ -136,6 +136,9 @@ class OrdemServico extends Model
         if (!empty($filters['sem_atualizacao_dias'])) {
             $sql .= " AND DATEDIFF(NOW(), COALESCE((SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id), os.created_at)) >= :sem_dias";
         }
+        if (!empty($filters['inconsistencia'])) {
+            $sql .= " AND os.status_atual_id IN (5, 6) AND (os.laudo_tecnico IS NULL OR TRIM(os.laudo_tecnico) = '')";
+        }
         
         return $sql;
     }

@@ -25,14 +25,28 @@ class AtendimentoExternoController extends BaseController
         $paginaAtual = filter_input(INPUT_GET, 'pagina', FILTER_VALIDATE_INT) ?: 1;
         $offset = ($paginaAtual - 1) * $porPagina;
         $termo = filter_input(INPUT_GET, 'busca', FILTER_SANITIZE_SPECIAL_CHARS);
+        $statusPagamento = filter_input(INPUT_GET, 'status_pagamento', FILTER_SANITIZE_SPECIAL_CHARS);
 
         $whereClause = '';
         $params = [];
+        $whereParts = [];
 
         if ($termo) {
-            $whereClause = "c.nome_completo LIKE :term_nome OR ae.descricao_problema LIKE :term_desc";
+            $whereParts[] = "(c.nome_completo LIKE :term_nome OR ae.descricao_problema LIKE :term_desc)";
             $params['term_nome'] = "%{$termo}%";
             $params['term_desc'] = "%{$termo}%";
+        }
+
+        if ($statusPagamento === 'pendente') {
+            $whereParts[] = "(SELECT COALESCE(SUM(valor_bruto), 0) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1) = 0 
+                            AND (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0)) > 0";
+        } elseif ($statusPagamento === 'parcial') {
+            $whereParts[] = "(SELECT COALESCE(SUM(valor_bruto), 0) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1) > 0 
+                            AND (SELECT COALESCE(SUM(valor_bruto), 0) FROM pagamentos_transacoes WHERE tipo_origem = 'atendimento' AND origem_id = ae.id AND ativo = 1) < (COALESCE(ae.valor_total, 0) + COALESCE(ae.valor_deslocamento, 0))";
+        }
+
+        if (!empty($whereParts)) {
+            $whereClause = implode(" AND ", $whereParts);
         }
 
         $totalAtendimentos = $this->atendimentoModel->countAll($whereClause, $params);

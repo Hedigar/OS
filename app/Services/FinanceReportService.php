@@ -241,7 +241,8 @@ class FinanceReportService
                         d.valor,
                         d.descricao,
                         d.data_despesa as data_transacao,
-                        dc.nome as categoria
+                        dc.nome as categoria,
+                        NULL as origem_id_relacionada
                     FROM despesas d
                     JOIN despesas_categorias dc ON d.categoria_id = dc.id
                     WHERE d.ativo = 1 

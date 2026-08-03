@@ -166,9 +166,9 @@ require_once __DIR__ . '/../layout/main.php';
                             <thead>
                                 <tr>
                                     <th>Data</th>
-                                    <th>Origem</th>
+                                    <th>Origem / Objeto</th>
                                     <th>Categoria</th>
-                                    <th>Descrição</th>
+                                    <th>Item / OS</th>
                                     <th>Valor</th>
                                 </tr>
                             </thead>
@@ -176,7 +176,21 @@ require_once __DIR__ . '/../layout/main.php';
                                 <?php foreach ($dados['saidas'] as $saida): ?>
                                 <tr>
                                     <td><?= date('d/m/Y', strtotime($saida['data_transacao'])) ?></td>
-                                    <td><?= strtoupper($saida['tipo_origem']) ?> #<?= $saida['origem_id'] ?></td>
+                                    <td>
+                                        <?php if ($saida['tipo_origem'] == 'item_os'): ?>
+                                            <a href="<?= BASE_URL ?>ordens/view?id=<?= $saida['origem_id_relacionada'] ?? $saida['origem_id'] ?>" class="text-primary fw-bold">
+                                                <i class="fas fa-file-invoice"></i> Item OS #<?= $saida['origem_id'] ?>
+                                            </a>
+                                        <?php elseif ($saida['tipo_origem'] == 'item_atendimento'): ?>
+                                            <a href="<?= BASE_URL ?>atendimentos-externos/view?id=<?= $saida['origem_id_relacionada'] ?? $saida['origem_id'] ?>" class="text-info fw-bold">
+                                                <i class="fas fa-external-link-alt"></i> Item Atend #<?= $saida['origem_id'] ?>
+                                            </a>
+                                        <?php elseif ($saida['tipo_origem'] == 'despesa'): ?>
+                                            <span class="text-muted"><i class="fas fa-money-bill-wave"></i> DESPESA #<?= $saida['origem_id'] ?></span>
+                                        <?php else: ?>
+                                            <?= strtoupper($saida['tipo_origem']) ?> #<?= $saida['origem_id'] ?>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= htmlspecialchars($saida['categoria']) ?></td>
                                     <td><?= htmlspecialchars($saida['descricao']) ?></td>
                                     <td class="text-warning">R$ <?= number_format($saida['valor'], 2, ',', '.') ?></td>

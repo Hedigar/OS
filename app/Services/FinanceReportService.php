@@ -253,12 +253,17 @@ class FinanceReportService
                         fc.referencia_id as origem_id,
                         fc.valor,
                         CASE 
-                            WHEN fc.referencia_tipo = 'item_os' THEN 'Custo de Item OS'
-                            WHEN fc.referencia_tipo = 'item_atendimento' THEN 'Custo de Item Atendimento'
+                            WHEN fc.referencia_tipo = 'item_os' THEN CONCAT(COALESCE(ios.descricao, 'Custo Item'), ' (OS #', ios.ordem_servico_id, ')')
+                            WHEN fc.referencia_tipo = 'item_atendimento' THEN CONCAT(COALESCE(ios.descricao, 'Custo Item'), ' (Atend #', ios.atendimento_externo_id, ')')
                             ELSE 'Saída'
                         END as descricao,
                         fc.data as data_transacao,
-                        '' as categoria
+                        '' as categoria,
+                        CASE 
+                            WHEN fc.referencia_tipo = 'item_os' THEN ios.ordem_servico_id
+                            WHEN fc.referencia_tipo = 'item_atendimento' THEN ios.atendimento_externo_id
+                            ELSE NULL
+                        END as origem_id_relacionada
                     FROM fluxo_caixa fc
                     LEFT JOIN itens_ordem_servico ios 
                         ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)

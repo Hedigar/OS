@@ -16,6 +16,9 @@ class FinanceReportService
     private FluxoCaixa $fluxoCaixaModel;
     private Despesa $despesaModel;
 
+    // Status aprovados para computar custos e faturamento no DRE
+    private array $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
+
     public function __construct()
     {
         $this->osModel = new OrdemServico();
@@ -31,10 +34,7 @@ class FinanceReportService
     private function getTotalCustoByOs(int $osId): float
     {
         $db = $this->osModel->getConnection();
-
-        // Status aprovados para computar custos (os mesmos do DRE)
-        $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
-        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+        $placeholders = implode(',', array_fill(0, count($this->statusAprovados), '?'));
 
         $sql = "SELECT COALESCE(SUM(ios.quantidade * COALESCE(NULLIF(ios.valor_custo, 0), NULLIF(ios.custo, 0), 0)), 0) 
                 FROM itens_ordem_servico ios
@@ -44,7 +44,7 @@ class FinanceReportService
                 AND os.status_atual_id IN ($placeholders)";
         
         $stmt = $db->prepare($sql);
-        $params = array_merge([$osId], $statusAprovados);
+        $params = array_merge([$osId], $this->statusAprovados);
         $stmt->execute($params);
         return (float)($stmt->fetchColumn() ?: 0);
     }
@@ -55,9 +55,16 @@ class FinanceReportService
     private function getTotalTaxasByOs(int $osId): float
     {
         $db = $this->osModel->getConnection();
-        $sql = "SELECT COALESCE(valor_taxa_nf, 0) FROM ordens_servico WHERE id = ? AND ativo = 1";
+        $placeholders = implode(',', array_fill(0, count($this->statusAprovados), '?'));
+        
+        $sql = "SELECT COALESCE(valor_taxa_nf, 0) 
+                FROM ordens_servico 
+                WHERE id = ? AND ativo = 1 
+                AND status_atual_id IN ($placeholders)";
+        
         $stmt = $db->prepare($sql);
-        $stmt->execute([$osId]);
+        $params = array_merge([$osId], $this->statusAprovados);
+        $stmt->execute($params);
         return (float)($stmt->fetchColumn() ?: 0);
     }
 
@@ -78,18 +85,7 @@ class FinanceReportService
     public function getVisaoCompetencia(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();
-
-        // Status que representam serviço efetivo/aprovado/concluído para o DRE
-        $statusAprovados = [
-            4,  // Em Execucao
-            5,  // Finalizada
-            8,  // Para POA autorizado
-            11, // Comprar Peça
-            12, // Aguardando Peça
-            14, // Autorizado
-            15  // Diagnóstico Finalizado
-        ];
-        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+        $placeholders = implode(',', array_fill(0, count($this->statusAprovados), '?'));
 
         // Fetch OS aprovadas/finalizadas
         $sqlOs = "SELECT 
@@ -114,7 +110,7 @@ class FinanceReportService
                 ORDER BY h.created_at DESC, os.updated_at DESC";
         
         $stmtOs = $db->prepare($sqlOs);
-        $params = array_merge([OrdemServico::STATUS_FINALIZADA], $statusAprovados, [$dataInicio, $dataFim]);
+        $params = array_merge([OrdemServico::STATUS_FINALIZADA], $this->statusAprovados, [$dataInicio, $dataFim]);
         $stmtOs->execute($params);
         $osFinalizadas = $stmtOs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
@@ -223,6 +219,7 @@ class FinanceReportService
     public function getVisaoCaixa(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();
+        $placeholders = implode(',', array_fill(0, count($this->statusAprovados), '?'));
         
         // Entradas (pagamentos ativos)
         $sqlEntradas = "SELECT 
@@ -292,16 +289,24 @@ class FinanceReportService
                     LEFT JOIN itens_ordem_servico ios 
                         ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
                         OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id))
+                    LEFT JOIN ordens_servico os_fc ON (fc.referencia_tipo = 'item_os' AND ios.ordem_servico_id = os_fc.id)
                     WHERE fc.tipo = 'custo'
                     AND DATE(fc.data) BETWEEN ? AND ?
                     AND (
                         fc.referencia_tipo NOT IN ('item_os', 'item_atendimento')
-                        OR (ios.id IS NOT NULL AND ios.ativo = 1)
+                        OR (
+                            fc.referencia_tipo = 'item_os' 
+                            AND ios.id IS NOT NULL 
+                            AND ios.ativo = 1 
+                            AND os_fc.status_atual_id IN ($placeholders)
+                        )
+                        OR (fc.referencia_tipo = 'item_atendimento' AND ios.id IS NOT NULL AND ios.ativo = 1)
                     )
                     ORDER BY data_transacao DESC";
         
         $stmtSaidas = $db->prepare($sqlSaidas);
-        $stmtSaidas->execute([$dataInicio, $dataFim, $dataInicio, $dataFim]);
+        $paramsSaidas = array_merge([$dataInicio, $dataFim], [$dataInicio, $dataFim], $this->statusAprovados);
+        $stmtSaidas->execute($paramsSaidas);
         $saidas = $stmtSaidas->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
         // Calculate DRE values
@@ -331,10 +336,7 @@ class FinanceReportService
     public function getVisaoAnaliticaOs(int $osIdInicio, int $osIdFim): array
     {
         $db = $this->osModel->getConnection();
-
-        // Status permitidos para análise de lucratividade (mesmos do DRE)
-        $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
-        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+        $placeholders = implode(',', array_fill(0, count($this->statusAprovados), '?'));
 
         $sql = "SELECT 
                     os.id,
@@ -352,7 +354,7 @@ class FinanceReportService
                 ORDER BY os.id ASC";
         
         $stmt = $db->prepare($sql);
-        $params = array_merge([$osIdInicio, $osIdFim], $statusAprovados);
+        $params = array_merge([$osIdInicio, $osIdFim], $this->statusAprovados);
         $stmt->execute($params);
         $osList = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 

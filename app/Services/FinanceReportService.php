@@ -69,7 +69,20 @@ class FinanceReportService
     public function getVisaoCompetencia(string $dataInicio, string $dataFim): array
     {
         $db = $this->osModel->getConnection();
-        // Fetch OS finalizadas
+
+        // Status que representam serviço efetivo/aprovado/concluído para o DRE
+        $statusAprovados = [
+            4,  // Em Execucao
+            5,  // Finalizada
+            8,  // Para POA autorizado
+            11, // Comprar Peça
+            12, // Aguardando Peça
+            14, // Autorizado
+            15  // Diagnóstico Finalizado
+        ];
+        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+
+        // Fetch OS aprovadas/finalizadas
         $sqlOs = "SELECT 
                     os.id,
                     os.valor_total_os,
@@ -87,12 +100,13 @@ class FinanceReportService
                     GROUP BY ordem_servico_id
                 ) h ON os.id = h.ordem_servico_id
                 WHERE os.ativo = 1 
-                AND os.status_atual_id = ?
+                AND os.status_atual_id IN ($placeholders)
                 AND DATE(COALESCE(h.created_at, os.updated_at)) BETWEEN ? AND ?
                 ORDER BY h.created_at DESC, os.updated_at DESC";
         
         $stmtOs = $db->prepare($sqlOs);
-        $stmtOs->execute([OrdemServico::STATUS_FINALIZADA, OrdemServico::STATUS_FINALIZADA, $dataInicio, $dataFim]);
+        $params = array_merge([OrdemServico::STATUS_FINALIZADA], $statusAprovados, [$dataInicio, $dataFim]);
+        $stmtOs->execute($params);
         $osFinalizadas = $stmtOs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
         // Fetch atendimentos externos concluídos
@@ -308,6 +322,11 @@ class FinanceReportService
     public function getVisaoAnaliticaOs(int $osIdInicio, int $osIdFim): array
     {
         $db = $this->osModel->getConnection();
+
+        // Status permitidos para análise de lucratividade (mesmos do DRE)
+        $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
+        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+
         $sql = "SELECT 
                     os.id,
                     os.valor_total_os,
@@ -320,10 +339,12 @@ class FinanceReportService
                 JOIN clientes c ON os.cliente_id = c.id
                 WHERE os.ativo = 1 
                 AND os.id BETWEEN ? AND ?
+                AND os.status_atual_id IN ($placeholders)
                 ORDER BY os.id ASC";
         
         $stmt = $db->prepare($sql);
-        $stmt->execute([$osIdInicio, $osIdFim]);
+        $params = array_merge([$osIdInicio, $osIdFim], $statusAprovados);
+        $stmt->execute($params);
         $osList = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
         $itens = [];

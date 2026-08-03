@@ -31,12 +31,21 @@ class FinanceReportService
     private function getTotalCustoByOs(int $osId): float
     {
         $db = $this->osModel->getConnection();
-        $sql = "SELECT COALESCE(SUM(quantidade * COALESCE(NULLIF(valor_custo, 0), NULLIF(custo, 0), 0)), 0) 
-                FROM itens_ordem_servico 
-                WHERE ordem_servico_id = ? AND ativo = 1";
+
+        // Status aprovados para computar custos (os mesmos do DRE)
+        $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
+        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+
+        $sql = "SELECT COALESCE(SUM(ios.quantidade * COALESCE(NULLIF(ios.valor_custo, 0), NULLIF(ios.custo, 0), 0)), 0) 
+                FROM itens_ordem_servico ios
+                JOIN ordens_servico os ON ios.ordem_servico_id = os.id
+                WHERE ios.ordem_servico_id = ? 
+                AND ios.ativo = 1 
+                AND os.status_atual_id IN ($placeholders)";
         
         $stmt = $db->prepare($sql);
-        $stmt->execute([$osId]);
+        $params = array_merge([$osId], $statusAprovados);
+        $stmt->execute($params);
         return (float)($stmt->fetchColumn() ?: 0);
     }
 

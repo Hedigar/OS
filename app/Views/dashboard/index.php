@@ -8,7 +8,7 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
 $isAdmin = Auth::isAdmin();
 ?>
 
-<div class="container">
+<div class="container-fluid px-4">
     <!-- CABEÇALHO E AÇÕES RÁPIDAS -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-6">
@@ -23,41 +23,91 @@ $isAdmin = Auth::isAdmin();
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0">
             <div class="d-flex gap-2 justify-content-md-end flex-wrap">
-                <a href="<?php echo BASE_URL; ?>ordens/form" class="btn btn-primary shadow-sm">
+                <a href="<?php echo BASE_URL; ?>ordens/form" class="btn btn-primary shadow-sm border-0" style="border-radius: 10px;">
                     <i class="fas fa-plus-circle me-1"></i> Nova OS
                 </a>
-                <a href="<?php echo BASE_URL; ?>atendimentos-externos/form" class="btn btn-info text-white shadow-sm">
+                <a href="<?php echo BASE_URL; ?>atendimentos-externos/form" class="btn btn-info text-white shadow-sm border-0" style="border-radius: 10px;">
                     <i class="fas fa-truck me-1"></i> Novo Externo
                 </a>
-                <a href="<?php echo BASE_URL; ?>clientes/criar" class="btn btn-secondary shadow-sm">
+                <a href="<?php echo BASE_URL; ?>clientes/criar" class="btn btn-secondary shadow-sm border-0" style="border-radius: 10px;">
                     <i class="fas fa-user-plus me-1"></i> Cliente
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="dashboard-grid">
+    <?php if ($isAdmin): ?>
+    <!-- SEÇÃO FINANCEIRA EXECUTIVA (PRODUÇÃO VS CAIXA) -->
+    <div class="row g-3 mb-4">
+        <!-- PRODUÇÃO (DRE) -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 15px; background: linear-gradient(135deg, #2c3e50, #000000); color: white;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0 text-white-50"><i class="fas fa-industry me-2"></i> Relatório de Produção (DRE)</h5>
+                        <span class="badge bg-primary bg-opacity-25 text-white">Mês Atual</span>
+                    </div>
+                    <div class="row align-items-end">
+                        <div class="col-6">
+                            <small class="d-block text-white-50">Faturamento Produzido</small>
+                            <h3 class="fw-bold mb-0">R$ <?php echo number_format($stats['faturamento_producao'], 2, ',', '.'); ?></h3>
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="d-block text-white-50">Lucro Previsto</small>
+                            <h3 class="fw-bold mb-0 text-success">R$ <?php echo number_format($stats['lucro_mes'], 2, ',', '.'); ?></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- CAIXA (REAL) -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 15px; background: linear-gradient(135deg, #1e3c72, #2a5298); color: white;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0 text-white-50"><i class="fas fa-wallet me-2"></i> Visão de Caixa (Real)</h5>
+                        <span class="badge bg-success bg-opacity-25 text-white">Mês Atual</span>
+                    </div>
+                    <div class="row align-items-end">
+                        <div class="col-6">
+                            <small class="d-block text-white-50">Entrada Real (Dinheiro)</small>
+                            <h3 class="fw-bold mb-0">R$ <?php echo number_format($stats['faturamento_caixa'], 2, ',', '.'); ?></h3>
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="d-block text-white-50">Saldo Final (Líquido)</small>
+                            <h3 class="fw-bold mb-0 text-info">R$ <?php echo number_format($stats['lucro_caixa'], 2, ',', '.'); ?></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="row g-4">
         <!-- COLUNA PRINCIPAL -->
-        <div class="main-content-area">
+        <div class="col-xl-9 col-lg-8">
             
             <!-- SEÇÃO 1: ORDENS DE SERVIÇO -->
             <div class="mb-4">
-                <h4 class="fw-bold mb-3"><i class="fas fa-tools text-primary me-2"></i> Ordens de Serviço</h4>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-tools text-primary me-2"></i> Ordens de Serviço</h5>
+                    <a href="<?php echo BASE_URL; ?>ordens" class="btn btn-sm btn-link text-decoration-none">Ver todas <i class="fas fa-chevron-right ms-1"></i></a>
+                </div>
                 <div class="row g-3">
                     <!-- OS Abertas -->
                     <div class="col-md-3">
                         <a href="<?php echo BASE_URL; ?>ordens?status_id=1" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="text-muted text-uppercase fw-semibold small">OS Abertas</h6>
-                                            <h2 class="fw-bold mb-0"><?php echo $stats['total_abertas']; ?></h2>
-                                        </div>
-                                        <div class="bg-primary bg-opacity-10 p-2 rounded">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded-circle">
                                             <i class="fas fa-folder-open text-primary"></i>
                                         </div>
+                                        <span class="text-muted small fw-bold">Ativas</span>
                                     </div>
+                                    <h2 class="fw-bold mb-0"><?php echo $stats['total_abertas']; ?></h2>
+                                    <small class="text-muted">OS em Aberto</small>
                                 </div>
                             </div>
                         </a>
@@ -65,19 +115,18 @@ $isAdmin = Auth::isAdmin();
                     <!-- Pagamentos Pendentes OS -->
                     <div class="col-md-3">
                         <a href="<?php echo BASE_URL; ?>ordens?status_pagamento=pendente" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="text-muted text-uppercase fw-semibold small">Pag. Pendentes</h6>
-                                            <h2 class="fw-bold mb-0 <?php echo $stats['total_pag_pendentes_os'] > 0 ? 'text-danger' : ''; ?>">
-                                                <?php echo $stats['total_pag_pendentes_os']; ?>
-                                            </h2>
-                                        </div>
-                                        <div class="bg-danger bg-opacity-10 p-2 rounded">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle">
                                             <i class="fas fa-money-bill-wave text-danger"></i>
                                         </div>
+                                        <span class="text-danger small fw-bold">Pendente</span>
                                     </div>
+                                    <h2 class="fw-bold mb-0 <?php echo $stats['total_pag_pendentes_os'] > 0 ? 'text-danger' : ''; ?>">
+                                        <?php echo $stats['total_pag_pendentes_os']; ?>
+                                    </h2>
+                                    <small class="text-muted">Pag. Pendentes</small>
                                 </div>
                             </div>
                         </a>
@@ -85,19 +134,18 @@ $isAdmin = Auth::isAdmin();
                     <!-- Pagamentos Parciais OS -->
                     <div class="col-md-3">
                         <a href="<?php echo BASE_URL; ?>ordens?status_pagamento=parcial" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="text-muted text-uppercase fw-semibold small">Pag. Parciais</h6>
-                                            <h2 class="fw-bold mb-0 <?php echo $stats['total_pag_parciais_os'] > 0 ? 'text-warning' : ''; ?>">
-                                                <?php echo $stats['total_pag_parciais_os']; ?>
-                                            </h2>
-                                        </div>
-                                        <div class="bg-warning bg-opacity-10 p-2 rounded">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle">
                                             <i class="fas fa-adjust text-warning"></i>
                                         </div>
+                                        <span class="text-warning small fw-bold">Parcial</span>
                                     </div>
+                                    <h2 class="fw-bold mb-0 <?php echo $stats['total_pag_parciais_os'] > 0 ? 'text-warning' : ''; ?>">
+                                        <?php echo $stats['total_pag_parciais_os']; ?>
+                                    </h2>
+                                    <small class="text-muted">Pag. Parciais</small>
                                 </div>
                             </div>
                         </a>
@@ -105,22 +153,18 @@ $isAdmin = Auth::isAdmin();
                     <!-- Inconsistências -->
                     <div class="col-md-3">
                         <a href="<?php echo BASE_URL; ?>ordens?inconsistencia=1" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new <?php echo $stats['total_inconsistencias'] > 0 ? 'border-start border-danger border-4' : ''; ?>">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="text-muted text-uppercase fw-semibold small">Inconsistências</h6>
-                                            <h2 class="fw-bold mb-0 <?php echo $stats['total_inconsistencias'] > 0 ? 'text-danger' : ''; ?>">
-                                                <?php echo $stats['total_inconsistencias']; ?>
-                                            </h2>
-                                        </div>
-                                        <div class="bg-dark bg-opacity-10 p-2 rounded">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover <?php echo $stats['total_inconsistencias'] > 0 ? 'bg-danger bg-opacity-10 border border-danger' : ''; ?>" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-dark bg-opacity-10 p-2 rounded-circle">
                                             <i class="fas fa-search-minus text-dark"></i>
                                         </div>
+                                        <span class="text-dark small fw-bold">Auditoria</span>
                                     </div>
-                                    <?php if ($stats['total_inconsistencias'] > 0): ?>
-                                        <span class="badge bg-danger mt-2">Sem Laudo</span>
-                                    <?php endif; ?>
+                                    <h2 class="fw-bold mb-0 <?php echo $stats['total_inconsistencias'] > 0 ? 'text-danger' : ''; ?>">
+                                        <?php echo $stats['total_inconsistencias']; ?>
+                                    </h2>
+                                    <small class="<?php echo $stats['total_inconsistencias'] > 0 ? 'text-danger fw-bold' : 'text-muted'; ?>">Sem Laudo Técnico</small>
                                 </div>
                             </div>
                         </a>
@@ -130,34 +174,36 @@ $isAdmin = Auth::isAdmin();
 
             <!-- SEÇÃO 2: ATENDIMENTOS EXTERNOS -->
             <div class="mb-4">
-                <h4 class="fw-bold mb-3"><i class="fas fa-car-side text-info me-2"></i> Atendimentos Externos</h4>
+                <h5 class="fw-bold mb-3"><i class="fas fa-car-side text-info me-2"></i> Atendimentos Externos</h5>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <a href="<?php echo BASE_URL; ?>atendimentos-externos?status_pagamento=pendente" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new">
-                                <div class="card-body d-flex align-items-center">
-                                    <div class="bg-danger bg-opacity-10 p-3 rounded me-3">
+                            <div class="card border-0 shadow-sm stat-card-hover" style="border-radius: 15px;">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="bg-danger bg-opacity-10 p-3 rounded-circle me-4">
                                         <i class="fas fa-clock text-danger fa-lg"></i>
                                     </div>
                                     <div>
-                                        <h6 class="text-muted text-uppercase fw-semibold small mb-1">Externos com Pagamento Pendente</h6>
-                                        <h3 class="fw-bold mb-0"><?php echo $stats['total_ext_pendentes']; ?></h3>
+                                        <h4 class="fw-bold mb-0"><?php echo $stats['total_ext_pendentes']; ?></h4>
+                                        <p class="text-muted mb-0">Pagamentos Pendentes (Externo)</p>
                                     </div>
+                                    <i class="fas fa-chevron-right ms-auto text-muted opacity-25"></i>
                                 </div>
                             </div>
                         </a>
                     </div>
                     <div class="col-md-6">
                         <a href="<?php echo BASE_URL; ?>atendimentos-externos?status_pagamento=parcial" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new">
-                                <div class="card-body d-flex align-items-center">
-                                    <div class="bg-warning bg-opacity-10 p-3 rounded me-3">
+                            <div class="card border-0 shadow-sm stat-card-hover" style="border-radius: 15px;">
+                                <div class="card-body d-flex align-items-center p-4">
+                                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle me-4">
                                         <i class="fas fa-hourglass-half text-warning fa-lg"></i>
                                     </div>
                                     <div>
-                                        <h6 class="text-muted text-uppercase fw-semibold small mb-1">Externos com Pagamento Parcial</h6>
-                                        <h3 class="fw-bold mb-0"><?php echo $stats['total_ext_parciais']; ?></h3>
+                                        <h4 class="fw-bold mb-0"><?php echo $stats['total_ext_parciais']; ?></h4>
+                                        <p class="text-muted mb-0">Pagamentos Parciais (Externo)</p>
                                     </div>
+                                    <i class="fas fa-chevron-right ms-auto text-muted opacity-25"></i>
                                 </div>
                             </div>
                         </a>
@@ -165,43 +211,43 @@ $isAdmin = Auth::isAdmin();
                 </div>
             </div>
 
-            <!-- SEÇÃO 3: CRM E PÓS-VENDA (SEMANAL) -->
-            <div class="mb-5">
-                <h4 class="fw-bold mb-3"><i class="fas fa-chart-line text-success me-2"></i> CRM & Pós-Venda (Na Semana)</h4>
+            <!-- SEÇÃO 3: CRM E PÓS-VENDA -->
+            <div class="mb-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-chart-line text-success me-2"></i> CRM & Pós-Venda <small class="text-muted fw-normal fs-6">(Na Semana)</small></h5>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <div class="card h-100 border-0 shadow-sm stat-card-new">
-                            <div class="card-body">
-                                <h6 class="text-muted text-uppercase fw-semibold small">Contatados via CRM</h6>
-                                <div class="d-flex align-items-center mt-2">
-                                    <h2 class="fw-bold mb-0 me-2"><?php echo $stats['total_crm_contatados']; ?></h2>
-                                    <span class="text-success small"><i class="fas fa-user-check me-1"></i> clientes</span>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+                            <div class="card-body p-4 text-center">
+                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                                    <i class="fas fa-users text-primary fa-lg"></i>
                                 </div>
+                                <h3 class="fw-bold mb-1"><?php echo $stats['total_crm_contatados']; ?></h3>
+                                <p class="text-muted mb-0">Contatados CRM</p>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card h-100 border-0 shadow-sm stat-card-new">
-                            <div class="card-body">
-                                <h6 class="text-muted text-uppercase fw-semibold small">Pós-Venda Realizados</h6>
-                                <div class="d-flex align-items-center mt-2">
-                                    <h2 class="fw-bold mb-0 me-2 text-success"><?php echo $stats['total_pos_venda_realizados']; ?></h2>
-                                    <i class="fas fa-check-double text-success"></i>
+                        <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+                            <div class="card-body p-4 text-center">
+                                <div class="bg-success bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                                    <i class="fas fa-check-circle text-success fa-lg"></i>
                                 </div>
+                                <h3 class="fw-bold mb-1"><?php echo $stats['total_pos_venda_realizados']; ?></h3>
+                                <p class="text-muted mb-0">Pós-Venda Realizado</p>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <a href="<?php echo BASE_URL; ?>pos-venda" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm stat-card-new">
-                                <div class="card-body">
-                                    <h6 class="text-muted text-uppercase fw-semibold small">Pós-Venda Pendentes</h6>
-                                    <div class="d-flex align-items-center mt-2">
-                                        <h2 class="fw-bold mb-0 me-2 <?php echo $stats['total_pos_venda_pendentes'] > 0 ? 'text-danger' : ''; ?>">
-                                            <?php echo $stats['total_pos_venda_pendentes']; ?>
-                                        </h2>
-                                        <i class="fas fa-exclamation-circle <?php echo $stats['total_pos_venda_pendentes'] > 0 ? 'text-danger' : 'text-muted'; ?>"></i>
+                            <div class="card border-0 shadow-sm h-100 stat-card-hover" style="border-radius: 15px;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="bg-danger bg-opacity-10 p-3 rounded-circle d-inline-flex mb-3">
+                                        <i class="fas fa-exclamation-triangle text-danger fa-lg"></i>
                                     </div>
+                                    <h3 class="fw-bold mb-1 <?php echo $stats['total_pos_venda_pendentes'] > 0 ? 'text-danger' : ''; ?>">
+                                        <?php echo $stats['total_pos_venda_pendentes']; ?>
+                                    </h3>
+                                    <p class="text-muted mb-0">Pós-Venda Pendente</p>
                                 </div>
                             </div>
                         </a>
@@ -211,127 +257,83 @@ $isAdmin = Auth::isAdmin();
 
             <!-- GRÁFICO DE TENDÊNCIA -->
             <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px; background: white;">
-                <h5 class="fw-bold mb-4"><i class="fas fa-chart-area text-primary me-2"></i> Volume de Abertura (Últimos 7 dias)</h5>
-                <canvas id="trendChart" height="100"></canvas>
-            </div>
-
-            <!-- ÁREA DE FLUXO DE ATIVIDADES -->
-            <div class="card border-0 shadow-sm p-4" style="border-radius: 20px; background: var(--bg-secondary);">
-                <h5 class="mb-4 fw-bold"><i class="fas fa-history text-info me-2"></i> Fluxo de Atividades Recentes</h5>
-                <div class="activity-feed" style="max-height: 400px; overflow-y: auto;">
-                    <?php if (empty($atividades)): ?>
-                        <p class="text-muted text-center py-4">Nenhuma atividade registrada recentemente.</p>
-                    <?php else: ?>
-                        <div class="list-group list-group-flush bg-transparent">
-                            <?php foreach ($atividades as $log): ?>
-                                <?php 
-                                    $referencia = $log['referencia'] ?? '';
-                                    $acao = $log['acao'] ?? '';
-                                    $osId = null;
-                                    if (preg_match('/#(\d+)/', $referencia, $matches)) { $osId = $matches[1]; }
-                                    $link = "#";
-                                    if ($osId && (strpos($referencia, 'Ordem') !== false || strpos($referencia, 'OS') !== false)) {
-                                        $link = BASE_URL . "ordens/view?id=" . $osId;
-                                    } elseif (preg_match('/Cliente #(\d+)/', $referencia, $matches)) {
-                                        $link = BASE_URL . "clientes/view?id=" . $matches[1];
-                                    }
-                                ?>
-                                <a href="<?php echo $link; ?>" class="list-group-item list-group-item-action bg-transparent border-0 px-0 py-3 d-flex align-items-start gap-3">
-                                    <div class="activity-icon bg-white shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; flex-shrink: 0;">
-                                        <?php 
-                                            if (strpos($acao, 'Criou') !== false) echo '<i class="fas fa-plus text-success small"></i>';
-                                            elseif (strpos($acao, 'Excluiu') !== false) echo '<i class="fas fa-trash text-danger small"></i>';
-                                            elseif (strpos($acao, 'Atualizou') !== false) echo '<i class="fas fa-edit text-warning small"></i>';
-                                            elseif (strpos($acao, 'Status') !== false) echo '<i class="fas fa-sync text-info small"></i>';
-                                            else echo '<i class="fas fa-info-circle text-secondary small"></i>';
-                                        ?>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">
-                                                <?php echo htmlspecialchars($acao); ?>
-                                            </h6>
-                                            <small class="text-muted" style="font-size: 0.7rem;">
-                                                <?php echo isset($log['created_at']) ? date('d/m H:i', strtotime($log['created_at'])) : '--/--'; ?>
-                                            </small>
-                                        </div>
-                                        <p class="mb-0 text-secondary" style="font-size: 0.8rem;">
-                                            <?php echo htmlspecialchars($referencia); ?>
-                                        </p>
-                                    </div>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-chart-area text-primary me-2"></i> Volume de Abertura (7 dias)</h5>
+                    <div class="btn-group btn-group-sm shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                        <button class="btn btn-primary">Novas OS</button>
+                    </div>
                 </div>
+                <canvas id="trendChart" height="90"></canvas>
             </div>
         </div>
 
         <!-- COLUNA LATERAL -->
-        <aside class="tasks-sidebar-content">
-            <div class="tasks-section shadow-sm mb-4">
-                <h5 class="fw-bold mb-3"><i class="fas fa-bell text-warning me-2"></i> Alertas Críticos</h5>
-                <div id="alerts-container">
-                    <?php if (empty($alertas)): ?>
-                        <div class="text-muted fs-sm p-3 text-center border rounded-3 border-dashed">
-                            Tudo sob controle!
-                        </div>
-                    <?php else: ?>
-                        <?php foreach ($alertas as $alerta): ?>
-                            <div class="alert-item mb-2 p-2 rounded-3 border bg-white shadow-sm">
-                                <div class="d-flex flex-column">
-                                    <div class="small mb-2">
-                                        <i class="fas fa-circle text-<?php echo ($alerta['prioridade'] ?? '') === 'alta' ? 'danger' : 'warning'; ?> me-1" style="font-size: 8px;"></i>
-                                        <?php echo htmlspecialchars($alerta['mensagem'] ?? ''); ?>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <?php if (!empty($alerta['os_id'])): ?>
-                                            <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo (int)$alerta['os_id']; ?>" class="btn btn-xs btn-outline-primary py-0 px-2 small" style="font-size: 11px;">
-                                                Ver OS
-                                            </a>
-                                        <?php endif; ?>
-                                        <?php 
-                                            $isPosVenda = ($alerta['tipo'] ?? '') === 'pos_venda';
-                                            $telefone = preg_replace('/\D+/', '', $alerta['cliente_telefone'] ?? '');
-                                            if ($isPosVenda && !empty($telefone)) {
-                                                echo '<a href="#" class="btn btn-xs btn-success py-0 px-2 small" style="font-size: 11px;">WhatsApp</a>';
-                                            }
-                                        ?>
-                                    </div>
-                                </div>
+        <div class="col-xl-3 col-lg-4">
+            <!-- ALERTAS -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4"><i class="fas fa-bell text-warning me-2"></i> Alertas Ativos</h5>
+                    <div id="alerts-container">
+                        <?php if (empty($alertas)): ?>
+                            <div class="text-center py-5 opacity-50">
+                                <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                                <p class="mb-0">Sem pendências críticas</p>
                             </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                        <?php else: ?>
+                            <div class="d-flex flex-column gap-3">
+                                <?php foreach ($alertas as $index => $alerta): if ($index >= 5) break; ?>
+                                    <div class="p-3 rounded-4 border-start border-4 border-<?php echo ($alerta['prioridade'] ?? '') === 'alta' ? 'danger' : 'warning'; ?> bg-light position-relative">
+                                        <div class="small fw-bold text-dark mb-1">OS #<?php echo $alerta['os_id'] ?? ''; ?></div>
+                                        <div class="small text-secondary mb-2 lh-sm"><?php echo htmlspecialchars($alerta['mensagem'] ?? ''); ?></div>
+                                        <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo $alerta['os_id']; ?>" class="btn btn-sm btn-white shadow-sm border py-0 px-2 fw-bold" style="font-size: 10px;">TRATAR AGORA</a>
+                                    </div>
+                                <?php endforeach; ?>
+                                <?php if (count($alertas) > 5): ?>
+                                    <button class="btn btn-sm btn-link text-center text-decoration-none">Ver mais <?php echo count($alertas)-5; ?> alertas...</button>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 
-            <div class="tasks-section shadow-sm">
-                <h5 class="fw-bold mb-3"><i class="fas fa-calendar-check text-primary me-2"></i> Checklist do Dia</h5>
-                <div class="d-flex gap-2 mb-3">
-                    <input type="text" id="new-task-input" class="form-control form-control-sm" placeholder="Nova tarefa...">
-                    <button id="add-task-btn" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i></button>
-                </div>
-                <div id="task-list">
-                    <!-- Tasks renderizadas via JS -->
+            <!-- CHECKLIST -->
+            <div class="card border-0 shadow-sm" style="border-radius: 20px;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-calendar-check text-primary me-2"></i> Tasks do Dia</h5>
+                    <div class="d-flex gap-2 mb-3">
+                        <input type="text" id="new-task-input" class="form-control form-control-sm border-0 bg-light" placeholder="O que fazer hoje?" style="border-radius: 8px;">
+                        <button id="add-task-btn" class="btn btn-primary btn-sm rounded-circle"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="task-list" class="d-flex flex-column gap-2">
+                        <!-- Render via JS -->
+                    </div>
                 </div>
             </div>
-        </aside>
+        </div>
     </div>
 </div>
 
 <style>
-    .stat-card-new {
-        transition: transform 0.2s, box-shadow 0.2s;
-        border-radius: 15px;
+    :root {
+        --bg-secondary: #f8f9fa;
     }
-    .stat-card-new:hover {
+    body {
+        background-color: #f4f6f9;
+    }
+    .stat-card-hover {
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+    .stat-card-hover:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important;
     }
-    .btn-xs {
-        padding: 1px 5px;
-        font-size: 10px;
+    .btn-white {
+        background: white;
+        color: #333;
     }
+    .rounded-4 { border-radius: 12px !important; }
+    canvas { max-width: 100%; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -349,7 +351,7 @@ $isAdmin = Auth::isAdmin();
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Novas OS',
+                    label: 'Abertura de OS',
                     data: values,
                     borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13, 110, 253, 0.1)',
@@ -357,18 +359,33 @@ $isAdmin = Auth::isAdmin();
                     tension: 0.4,
                     borderWidth: 3,
                     pointBackgroundColor: '#0d6efd',
-                    pointRadius: 4
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleFont: { size: 14, weight: 'bold' },
+                        padding: 12,
+                        cornerRadius: 8
+                    }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { stepSize: 1 }
+                        ticks: { stepSize: 1, color: '#94a3b8' },
+                        grid: { borderDash: [5, 5], color: '#e2e8f0' }
+                    },
+                    x: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { display: false }
                     }
                 }
             }

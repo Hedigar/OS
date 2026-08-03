@@ -92,8 +92,13 @@ class DashboardService
         $stmtAtrasadas = $db->query("SELECT COUNT(*) as total FROM ordens_servico WHERE status_atual_id NOT IN (5, 6) AND ativo = 1 AND created_at < DATE_SUB(NOW(), INTERVAL 3 DAY)");
         $totalAtrasadas = (int)($stmtAtrasadas->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
 
-        $relatorio = $this->financeService->calcularProduzido($dataInicioMes, $dataFimMes);
-        $lucroMes = $relatorio['totais']['lucro_previsto'];
+        $relatorioProducao = $this->financeService->calcularProduzido($dataInicioMes, $dataFimMes);
+        $lucroMes = $relatorioProducao['totais']['lucro_previsto'];
+        $faturamentoProducao = $relatorioProducao['totais']['valor_total'];
+
+        $relatorioCaixa = $this->financeService->getVisaoCaixa($dataInicioMes, $dataFimMes);
+        $faturamentoCaixa = $relatorioCaixa['entrada_bruta'];
+        $lucroCaixa = $relatorioCaixa['resultado_final'];
 
         // Gráfico de Tendência (Últimos 7 dias)
         $trend = [];
@@ -122,6 +127,9 @@ class DashboardService
             'valor_finalizadas' => $valorFinalizadas,
             'total_atrasadas' => $totalAtrasadas,
             'lucro_mes' => $lucroMes,
+            'faturamento_producao' => $faturamentoProducao,
+            'faturamento_caixa' => $faturamentoCaixa,
+            'lucro_caixa' => $lucroCaixa,
             'trend' => $trend
         ];
     }

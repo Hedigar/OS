@@ -256,15 +256,7 @@ $isAdmin = Auth::isAdmin();
             </div>
 
             <!-- GRÁFICO DE TENDÊNCIA -->
-            <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 20px; background: white;">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold mb-0"><i class="fas fa-chart-area text-primary me-2"></i> Volume de Abertura (7 dias)</h5>
-                    <div class="btn-group btn-group-sm shadow-sm" style="border-radius: 8px; overflow: hidden;">
-                        <button class="btn btn-primary">Novas OS</button>
-                    </div>
-                </div>
-                <canvas id="trendChart" height="90"></canvas>
-            </div>
+            
         </div>
 
         <!-- COLUNA LATERAL -->

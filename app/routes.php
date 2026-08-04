@@ -22,6 +22,8 @@ $router->get('configuracoes/os', 'ConfiguracoesController@os');
 $router->get('configuracoes/financeiro', 'ConfiguracoesController@financeiro');
 $router->post('configuracoes/salvar-financeiro', 'ConfiguracoesController@salvarFinanceiro');
 $router->post('configuracoes/salvar-impressao', 'ConfiguracoesController@salvarImpressao');
+$router->post('configuracoes/fechar-periodo', 'ConfiguracoesController@fecharPeriodo');
+$router->post('configuracoes/reabrir-periodo', 'ConfiguracoesController@reabrirPeriodo');
 $router->get('configuracoes/produtos-servicos', 'ProdutoServicoController@index');
 $router->get('configuracoes/produtos-servicos/form', 'ProdutoServicoController@form');
 $router->post('configuracoes/produtos-servicos/salvar', 'ProdutoServicoController@store');

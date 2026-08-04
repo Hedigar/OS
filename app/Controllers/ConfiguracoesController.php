@@ -40,11 +40,15 @@ class ConfiguracoesController extends BaseController
     public function financeiro()
     {
         $fin = $this->settings->getFinanceiro();
+        $periodService = new \App\Services\PeriodControlService();
+        $fechamentos = $periodService->getClosedPeriods();
+
         $this->render('configuracoes/financeiro', [
             'title' => 'Configurações Financeiras',
             'current_page' => 'configuracoes_financeiro',
             'nf_porcentagem_produtos' => $fin['nf_porcentagem_produtos'],
-            'nf_porcentagem_servicos' => $fin['nf_porcentagem_servicos']
+            'nf_porcentagem_servicos' => $fin['nf_porcentagem_servicos'],
+            'fechamentos' => $fechamentos
         ]);
     }
 
@@ -53,6 +57,46 @@ class ConfiguracoesController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ok = $this->settings->salvarFinanceiro($_POST);
             $_SESSION['success'] = $ok ? "Configurações financeiras atualizadas!" : "Falha ao salvar configurações.";
+            $this->redirect('configuracoes/financeiro');
+        }
+    }
+
+    public function fecharPeriodo()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ano = filter_input(INPUT_POST, 'ano', FILTER_VALIDATE_INT);
+            $mes = filter_input(INPUT_POST, 'mes', FILTER_VALIDATE_INT);
+            $observacoes = filter_input(INPUT_POST, 'observacoes', FILTER_SANITIZE_SPECIAL_CHARS);
+            $usuarioId = \App\Core\Auth::id() ?: 1;
+
+            if ($ano && $mes) {
+                $periodService = new \App\Services\PeriodControlService();
+                try {
+                    $ok = $periodService->closePeriod($ano, $mes, $usuarioId, $observacoes);
+                    $_SESSION['success'] = $ok ? "Período fiscal {$mes}/{$ano} fechado com sucesso!" : "Erro ao fechar período.";
+                } catch (\PDOException $e) {
+                    $_SESSION['error'] = "Este período já se encontra fechado!";
+                }
+            } else {
+                $_SESSION['error'] = "Mês e Ano são obrigatórios para o fechamento.";
+            }
+            $this->redirect('configuracoes/financeiro');
+        }
+    }
+
+    public function reabrirPeriodo()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $ano = filter_input(INPUT_POST, 'ano', FILTER_VALIDATE_INT);
+            $mes = filter_input(INPUT_POST, 'mes', FILTER_VALIDATE_INT);
+
+            if ($ano && $mes) {
+                $periodService = new \App\Services\PeriodControlService();
+                $ok = $periodService->reopenPeriod($ano, $mes);
+                $_SESSION['success'] = $ok ? "Período fiscal {$mes}/{$ano} reaberto com sucesso!" : "Erro ao reabrir período.";
+            } else {
+                $_SESSION['error'] = "Mês e Ano são obrigatórios para a reabertura.";
+            }
             $this->redirect('configuracoes/financeiro');
         }
     }

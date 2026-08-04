@@ -455,6 +455,13 @@ class OrdemServicoController extends BaseController
             $comprarPeca = filter_input(INPUT_POST, 'comprar_peca', FILTER_VALIDATE_INT) ?: 0;
             $linkFornecedor = filter_input(INPUT_POST, 'link_fornecedor', FILTER_SANITIZE_URL);
 
+            // Verificar se o período atual está fechado
+            $periodService = new \App\Services\PeriodControlService();
+            if ($periodService->isPeriodClosed(date('Y-m-d'))) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível adicionar itens no período fiscal atual pois ele está fechado.');
+                return;
+            }
+
             $itemData = [
                 'ordem_servico_id' => $osId,
                 'tipo_item' => $tipo,
@@ -502,6 +509,23 @@ class OrdemServicoController extends BaseController
             $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT);
             $desconto = filter_input(INPUT_POST, 'desconto', FILTER_VALIDATE_FLOAT) ?: 0;
 
+            // Verificar se o período atual ou o período original do custo está fechado
+            $periodService = new \App\Services\PeriodControlService();
+            if ($periodService->isPeriodClosed(date('Y-m-d'))) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível atualizar itens no período fiscal atual pois ele está fechado.');
+                return;
+            }
+
+            $db = $this->itemModel->getConnection();
+            $stmt = $db->prepare("SELECT data FROM fluxo_caixa WHERE referencia_tipo = 'item_os' AND referencia_id = ?");
+            $stmt->execute([$itemId]);
+            $originalDate = $stmt->fetchColumn();
+
+            if ($originalDate && $periodService->isPeriodClosed($originalDate)) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível alterar itens pertencentes a um período fiscal que já foi fechado.');
+                return;
+            }
+
             $itemData = [
                 'quantidade' => $quantidade,
                 'custo' => $custo,
@@ -542,6 +566,23 @@ class OrdemServicoController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
             $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT);
+
+            // Verificar se o período atual ou o período original do custo está fechado
+            $periodService = new \App\Services\PeriodControlService();
+            if ($periodService->isPeriodClosed(date('Y-m-d'))) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível remover itens no período fiscal atual pois ele está fechado.');
+                return;
+            }
+
+            $db = $this->itemModel->getConnection();
+            $stmt = $db->prepare("SELECT data FROM fluxo_caixa WHERE referencia_tipo = 'item_os' AND referencia_id = ?");
+            $stmt->execute([$itemId]);
+            $originalDate = $stmt->fetchColumn();
+
+            if ($originalDate && $periodService->isPeriodClosed($originalDate)) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível remover itens pertencentes a um período fiscal que já foi fechado.');
+                return;
+            }
 
             if ($this->itemModel->delete($itemId)) {
                 $fluxoCaixaModel = new \App\Models\FluxoCaixa();

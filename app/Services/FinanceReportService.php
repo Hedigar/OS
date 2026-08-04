@@ -229,7 +229,8 @@ class FinanceReportService
         $placeholders = implode(',', array_fill(0, count($this->statusAprovados), '?'));
         
         // Entradas (pagamentos ativos)
-        $sqlEntradas = "SELECT pt.*, 
+        $sqlEntradas = "SELECT pt.*,
+                               pt.created_at as data_transacao,
                                CASE WHEN pt.tipo_origem = 'os' THEN c.nome_completo ELSE c_at.nome_completo END as cliente,
                                CASE WHEN pt.tipo_origem = 'os' THEN os.defeito_relatado ELSE ae.descricao_problema END as descricao,
                                pt.valor_taxa as taxa_cartao
@@ -261,11 +262,11 @@ class FinanceReportService
                             fc.referencia_id as origem_id,
                             fc.referencia_tipo as tipo_origem,
                             fc.valor,
-                            CASE
-                                WHEN fc.referencia_tipo = 'item_os' THEN CONCAT('Custo OS #', os_fc.id)
-                                WHEN fc.referencia_tipo = 'item_atendimento' THEN CONCAT('Custo Atend #', ae_fc.id)
+                            COALESCE(NULLIF(ios.descricao, ''), CASE
+                                WHEN fc.referencia_tipo = 'item_os' THEN CONCAT('Item OS #', fc.referencia_id)
+                                WHEN fc.referencia_tipo = 'item_atendimento' THEN CONCAT('Item Atend #', fc.referencia_id)
                                 ELSE 'Custo'
-                            END as descricao,
+                            END) as descricao,
                             fc.data as data_transacao,
                             CASE
                                 WHEN fc.referencia_tipo = 'item_os' THEN 'Custo OS'

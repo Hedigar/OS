@@ -6,6 +6,8 @@ use App\Core\Auth;
 
 $nivel = $user['nivel_acesso'] ?? 'usuario';
 $isAdmin = Auth::isAdmin();
+$stats = $stats ?? [];
+$alertas = $alertas ?? [];
 ?>
 
 <div class="container-fluid px-4">
@@ -50,7 +52,7 @@ $isAdmin = Auth::isAdmin();
                     <div class="row align-items-end">
                         <div class="col-6">
                             <small class="d-block text-white-50">Faturamento Produzido</small>
-                            <h3 class="fw-bold mb-0">R$ <?php echo number_format($stats['faturamento_producao'], 2, ',', '.'); ?></h3>
+                            <h3 class="fw-bold mb-0 text-white">R$ <?php echo number_format($stats['faturamento_producao'], 2, ',', '.'); ?></h3>
                         </div>
                         <div class="col-6 text-end">
                             <small class="d-block text-white-50">Lucro Previsto</small>
@@ -71,7 +73,7 @@ $isAdmin = Auth::isAdmin();
                     <div class="row align-items-end">
                         <div class="col-6">
                             <small class="d-block text-white-50">Entrada Real (Dinheiro)</small>
-                            <h3 class="fw-bold mb-0">R$ <?php echo number_format($stats['faturamento_caixa'], 2, ',', '.'); ?></h3>
+                            <h3 class="fw-bold mb-0 text-white">R$ <?php echo number_format($stats['faturamento_caixa'], 2, ',', '.'); ?></h3>
                         </div>
                         <div class="col-6 text-end">
                             <small class="d-block text-white-50">Saldo Final (Líquido)</small>
@@ -306,35 +308,21 @@ $isAdmin = Auth::isAdmin();
     </div>
 </div>
 
-<style>
-    :root {
-        --bg-secondary: #f8f9fa;
-    }
-    body {
-        background-color: #f4f6f9;
-    }
-    .stat-card-hover {
-        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-    }
-    .stat-card-hover:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important;
-    }
-    .btn-white {
-        background: white;
-        color: #333;
-    }
-    .rounded-4 { border-radius: 12px !important; }
-    canvas { max-width: 100%; }
-</style>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     window.dashboardAlerts = <?php echo json_encode($alertas ?? []); ?>;
     window.trendData = <?php echo json_encode($stats['trend'] ?? []); ?>;
 
     document.addEventListener('DOMContentLoaded', function() {
-        const ctx = document.getElementById('trendChart').getContext('2d');
+        const canvas = document.getElementById('trendChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const css = getComputedStyle(document.documentElement);
+        const tickColor = (css.getPropertyValue('--text-muted') || '').trim() || '#94a3b8';
+        const gridColor = (css.getPropertyValue('--border-color') || '').trim() || '#e2e8f0';
+        const tooltipBg = (css.getPropertyValue('--bg-tertiary') || '').trim() || '#1e293b';
+
         const labels = window.trendData.map(d => d.date);
         const values = window.trendData.map(d => d.total);
 
@@ -363,7 +351,7 @@ $isAdmin = Auth::isAdmin();
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#1e293b',
+                        backgroundColor: tooltipBg,
                         titleFont: { size: 14, weight: 'bold' },
                         padding: 12,
                         cornerRadius: 8
@@ -372,11 +360,11 @@ $isAdmin = Auth::isAdmin();
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { stepSize: 1, color: '#94a3b8' },
-                        grid: { borderDash: [5, 5], color: '#e2e8f0' }
+                        ticks: { stepSize: 1, color: tickColor },
+                        grid: { borderDash: [5, 5], color: gridColor }
                     },
                     x: {
-                        ticks: { color: '#94a3b8' },
+                        ticks: { color: tickColor },
                         grid: { display: false }
                     }
                 }

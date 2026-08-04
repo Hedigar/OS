@@ -265,7 +265,7 @@ label, .form-group label {
 }
 
 /* Ajuste de contraste para textos em cards e tabelas */
-.card p, .card span, .table td {
+.card p, .card .card-content span, .table td {
     color: var(--text-primary) !important;
 }
 
@@ -1070,3 +1070,20 @@ td.text-wrap {
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
+.stat-card-hover {
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.stat-card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.25) !important;
+}
+
+.btn-white {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary) !important;
+}
+
+canvas { max-width: 100%; }

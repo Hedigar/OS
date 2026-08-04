@@ -317,6 +317,70 @@ class FinanceReportService
         return ['itens' => $itens];
     }
 
+    public function auditarSaldo(string $dataInicio, string $dataFim): array
+    {
+        $visao = $this->getVisaoCaixa($dataInicio, $dataFim);
+        $saldoCalculado = (float)($visao['resultado_final'] ?? 0);
+
+        $db = $this->osModel->getConnection();
+
+        $sqlPag = "SELECT COUNT(*) FROM fluxo_caixa fc
+                   LEFT JOIN pagamentos_transacoes pt ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
+                   WHERE fc.referencia_tipo = 'pagamento'
+                   AND fc.data BETWEEN ? AND ?
+                   AND (pt.id IS NULL OR pt.ativo = 0)";
+        $stmtPag = $db->prepare($sqlPag);
+        $stmtPag->execute([$dataInicio, $dataFim]);
+        $pagInvalidos = (int)($stmtPag->fetchColumn() ?: 0);
+
+        $sqlItensOs = "SELECT COUNT(*) FROM fluxo_caixa fc
+                       LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id
+                       WHERE fc.referencia_tipo = 'item_os'
+                       AND fc.data BETWEEN ? AND ?
+                       AND (ios.id IS NULL OR ios.ativo = 0)";
+        $stmtItensOs = $db->prepare($sqlItensOs);
+        $stmtItensOs->execute([$dataInicio, $dataFim]);
+        $itensOsInvalidos = (int)($stmtItensOs->fetchColumn() ?: 0);
+
+        $sqlItensAtend = "SELECT COUNT(*) FROM fluxo_caixa fc
+                          LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id
+                          WHERE fc.referencia_tipo = 'item_atendimento'
+                          AND fc.data BETWEEN ? AND ?
+                          AND (ios.id IS NULL OR ios.ativo = 0)";
+        $stmtItensAtend = $db->prepare($sqlItensAtend);
+        $stmtItensAtend->execute([$dataInicio, $dataFim]);
+        $itensAtendInvalidos = (int)($stmtItensAtend->fetchColumn() ?: 0);
+
+        $divergencias = [];
+
+        if ($pagInvalidos > 0) {
+            $divergencias[] = [
+                'descricao' => 'Pagamentos órfãos/inativos no fluxo de caixa',
+                'quantidade' => $pagInvalidos
+            ];
+        }
+
+        if ($itensOsInvalidos > 0) {
+            $divergencias[] = [
+                'descricao' => 'Itens de OS órfãos/inativos no fluxo de caixa',
+                'quantidade' => $itensOsInvalidos
+            ];
+        }
+
+        if ($itensAtendInvalidos > 0) {
+            $divergencias[] = [
+                'descricao' => 'Itens de atendimento órfãos/inativos no fluxo de caixa',
+                'quantidade' => $itensAtendInvalidos
+            ];
+        }
+
+        return [
+            'status' => empty($divergencias) ? 'OK' : 'DIVERGENTE',
+            'saldo_calculado' => $saldoCalculado,
+            'divergencias' => $divergencias
+        ];
+    }
+
     /**
      * COMPATIBILIDADE
      */

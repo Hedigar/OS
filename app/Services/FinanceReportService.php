@@ -245,16 +245,45 @@ class FinanceReportService
         $stmtEntradas->execute([$dataInicio, $dataFim]);
         $entradas = $stmtEntradas->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         
-        // Saídas (Filtradas por status de OS aprovada)
-        $sqlSaidas = "SELECT d.id, 'despesa' as tipo_origem, d.valor, d.descricao, d.data_despesa as data_transacao
-                      FROM despesas d WHERE d.ativo = 1 AND DATE(d.data_despesa) BETWEEN ? AND ?
+        $sqlSaidas = "SELECT 
+                            d.id as origem_id,
+                            'despesa' as tipo_origem,
+                            d.valor,
+                            d.descricao,
+                            d.data_despesa as data_transacao,
+                            COALESCE(c.nome, '') as categoria,
+                            NULL as origem_id_relacionada
+                      FROM despesas d
+                      LEFT JOIN despesas_categorias c ON d.categoria_id = c.id
+                      WHERE d.ativo = 1 AND DATE(d.data_despesa) BETWEEN ? AND ?
                       UNION ALL
-                      SELECT fc.id, fc.referencia_tipo as tipo_origem, fc.valor, 
-                             CASE WHEN fc.referencia_tipo = 'item_os' THEN CONCAT('Custo OS #', os_fc.id) ELSE 'Custo Atend' END as descricao,
-                             fc.data as data_transacao
+                      SELECT 
+                            fc.referencia_id as origem_id,
+                            fc.referencia_tipo as tipo_origem,
+                            fc.valor,
+                            CASE
+                                WHEN fc.referencia_tipo = 'item_os' THEN CONCAT('Custo OS #', os_fc.id)
+                                WHEN fc.referencia_tipo = 'item_atendimento' THEN CONCAT('Custo Atend #', ae_fc.id)
+                                ELSE 'Custo'
+                            END as descricao,
+                            fc.data as data_transacao,
+                            CASE
+                                WHEN fc.referencia_tipo = 'item_os' THEN 'Custo OS'
+                                WHEN fc.referencia_tipo = 'item_atendimento' THEN 'Custo Atendimento'
+                                ELSE 'Custo'
+                            END as categoria,
+                            CASE
+                                WHEN fc.referencia_tipo = 'item_os' THEN os_fc.id
+                                WHEN fc.referencia_tipo = 'item_atendimento' THEN ae_fc.id
+                                ELSE NULL
+                            END as origem_id_relacionada
                       FROM fluxo_caixa fc
-                      LEFT JOIN itens_ordem_servico ios ON (fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
+                      LEFT JOIN itens_ordem_servico ios ON (
+                          (fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
+                          OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id)
+                      )
                       LEFT JOIN ordens_servico os_fc ON ios.ordem_servico_id = os_fc.id
+                      LEFT JOIN atendimentos_externos ae_fc ON ios.atendimento_externo_id = ae_fc.id
                       WHERE fc.tipo = 'custo' AND DATE(fc.data) BETWEEN ? AND ?
                       AND (fc.referencia_tipo != 'item_os' OR os_fc.status_atual_id IN ($placeholders))
                       ORDER BY data_transacao DESC";

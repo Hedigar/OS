@@ -50,6 +50,17 @@ require_once __DIR__ . '/../layout/main.php';
                 </div>
             </a>
         </div>
+
+        <div class="col-md-6 mb-4">
+            <a href="<?= BASE_URL ?>relatorios/ranking-clientes" class="card text-decoration-none">
+                <div class="card-body">
+                    <h5 class="card-title text-warning" style="color: #fbbf24 !important;">
+                        <i class="fas fa-crown"></i> Ranking de Clientes (Melhores Clientes)
+                    </h5>
+                    <p class="card-text text-muted">Classificação dos clientes que mais gastam na empresa por mês ou ano</p>
+                </div>
+            </a>
+        </div>
     </div>
 </div>
 

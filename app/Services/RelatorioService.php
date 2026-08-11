@@ -502,5 +502,52 @@ class RelatorioService
         return $financeService->relatorioFinanceiroCompleto($dataInicio, $dataFim);
     }
 
-
+    public function getRankingClientes(string $dataInicio, string $dataFim): array
+    {
+        $db = $this->osModel->getConnection();
+        $sql = "SELECT 
+                    c.id,
+                    c.nome_completo,
+                    c.documento,
+                    c.telefone_principal,
+                    COALESCE(os_summary.qtd_os, 0) as qtd_os,
+                    COALESCE(os_summary.total_os, 0) as total_os,
+                    COALESCE(ae_summary.qtd_ae, 0) as qtd_ae,
+                    COALESCE(ae_summary.total_ae, 0) as total_ae,
+                    (COALESCE(os_summary.total_os, 0) + COALESCE(ae_summary.total_ae, 0)) as total_gasto
+                FROM clientes c
+                LEFT JOIN (
+                    SELECT 
+                        cliente_id,
+                        COUNT(*) as qtd_os,
+                        SUM(COALESCE(valor_total_os, 0) - COALESCE(valor_desconto, 0)) as total_os
+                    FROM ordens_servico
+                    WHERE ativo = 1 AND status_atual_id != 6
+                      AND DATE(created_at) BETWEEN :data_inicio AND :data_fim
+                    GROUP BY cliente_id
+                ) os_summary ON c.id = os_summary.cliente_id
+                LEFT JOIN (
+                    SELECT 
+                        cliente_id,
+                        COUNT(*) as qtd_ae,
+                        SUM(COALESCE(valor_total, 0) + COALESCE(valor_deslocamento, 0)) as total_ae
+                    FROM atendimentos_externos
+                    WHERE ativo = 1 AND status = 'concluido'
+                      AND DATE(created_at) BETWEEN :data_inicio2 AND :data_fim2
+                    GROUP BY cliente_id
+                ) ae_summary ON c.id = ae_summary.cliente_id
+                WHERE (os_summary.qtd_os > 0 OR ae_summary.qtd_ae > 0)
+                ORDER BY total_gasto DESC
+                LIMIT 100";
+                
+        $stmt = $db->prepare($sql);
+        $stmt->execute([
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim,
+            'data_inicio2' => $dataInicio,
+            'data_fim2' => $dataFim
+        ]);
+        
+        return $stmt->fetchAll() ?: [];
+    }
 }

@@ -51,6 +51,7 @@ $router->get('relatorios/orfas', 'RelatorioController@orfas');
 $router->get('relatorios/auditar', 'RelatorioController@auditar');
 $router->post('relatorios/limpar-fluxo-caixa', 'RelatorioController@limparFluxoCaixa');
 $router->get('relatorios/crm', 'RelatorioController@crm');
+$router->get('relatorios/ranking-clientes', 'RelatorioController@rankingClientes');
 $router->get('relatorios/exportar-producao', 'RelatorioController@exportarProducao');
 $router->get('relatorios/exportar-caixa', 'RelatorioController@exportarCaixa');
 $router->get('relatorios/exportar-pendencias', 'RelatorioController@exportarPendencias');

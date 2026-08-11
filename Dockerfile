@@ -3,8 +3,14 @@ FROM php:8.2-apache
 # Ativa mod_rewrite e SSL
 RUN a2enmod rewrite ssl
 
-# Instala extensões necessárias
-RUN docker-php-ext-install mysqli pdo pdo_mysql
+# Instala extensões necessárias e biblioteca GD para geração de PDFs com imagem no Dompdf
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd mysqli pdo pdo_mysql \
+    && rm -rf /var/lib/apt/lists/*
 
 # Ajusta DocumentRoot (opcional, mas recomendado)
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public

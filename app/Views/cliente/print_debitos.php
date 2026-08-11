@@ -9,6 +9,96 @@ if (!function_exists('formatCurrency')) {
     }
 }
 
+if (!function_exists('generatePixPayload')) {
+    function generatePixPayload($key, $amount, $merchantName = 'Myranda Informatica', $merchantCity = 'Osorio') {
+        // 1. Format Pix Key
+        if (preg_match('/^\d{11}$/', $key)) {
+            $key = '+55' . $key;
+        }
+        
+        // 2. Merchant Account Info (Tag 26)
+        $gui = "0014br.gov.bcb.pix";
+        $keyTag = "01" . str_pad(strlen($key), 2, '0', STR_PAD_LEFT) . $key;
+        $merchantAccountInfo = "26" . str_pad(strlen($gui . $keyTag), 2, '0', STR_PAD_LEFT) . $gui . $keyTag;
+        
+        // 3. Payload elements
+        $parts = [
+            "00" => "000201", // Payload Format Indicator
+            "26" => $merchantAccountInfo,
+            "52" => "52040000", // Merchant Category Code
+            "53" => "5303986",  // Transaction Currency (986 = BRL)
+        ];
+        
+        // Amount (Tag 54)
+        if ($amount > 0) {
+            $amountStr = number_format((float)$amount, 2, '.', '');
+            $parts["54"] = "54" . str_pad(strlen($amountStr), 2, '0', STR_PAD_LEFT) . $amountStr;
+        }
+        
+        // Country Code (Tag 58)
+        $parts["58"] = "5802BR";
+        
+        // Merchant Name (Tag 59)
+        if (function_exists('iconv')) {
+            $cleanName = preg_replace('/[^A-Za-z0-9 ]/', '', @iconv('UTF-8', 'ASCII//TRANSLIT', $merchantName));
+        } else {
+            $cleanName = str_replace(
+                ['á','à','â','ã','ä','é','è','ê','ë','í','ì','î','ï','ó','ò','ô','õ','ö','ú','ù','û','ü','ç','Á','À','Â','Ã','Ä','É','È','Ê','Ë','Í','Ì','Î','Ï','Ó','Ò','Ô','Õ','Ö','Ú','Ù','Û','Ü','Ç'],
+                ['a','a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','o','u','u','u','u','c','A','A','A','A','A','E','E','E','E','I','I','I','I','O','O','O','O','O','U','U','U','U','C'],
+                $merchantName
+            );
+            $cleanName = preg_replace('/[^A-Za-z0-9 ]/', '', $cleanName);
+        }
+        $cleanName = substr(trim($cleanName), 0, 25);
+        $parts["59"] = "59" . str_pad(strlen($cleanName), 2, '0', STR_PAD_LEFT) . $cleanName;
+        
+        // Merchant City (Tag 60)
+        if (function_exists('iconv')) {
+            $cleanCity = preg_replace('/[^A-Za-z0-9 ]/', '', @iconv('UTF-8', 'ASCII//TRANSLIT', $merchantCity));
+        } else {
+            $cleanCity = str_replace(
+                ['á','à','â','ã','ä','é','è','ê','ë','í','ì','î','ï','ó','ò','ô','õ','ö','ú','ù','û','ü','ç','Á','À','Â','Ã','Ä','É','È','Ê','Ë','Í','Ì','Î','Ï','Ó','Ò','Ô','Õ','Ö','Ú','Ù','Û','Ü','Ç'],
+                ['a','a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','o','u','u','u','u','c','A','A','A','A','A','E','E','E','E','I','I','I','I','O','O','O','O','O','U','U','U','U','C'],
+                $merchantCity
+            );
+            $cleanCity = preg_replace('/[^A-Za-z0-9 ]/', '', $cleanCity);
+        }
+        $cleanCity = substr(trim($cleanCity), 0, 15);
+        $parts["60"] = "60" . str_pad(strlen($cleanCity), 2, '0', STR_PAD_LEFT) . $cleanCity;
+        
+        // Additional Data Field (Tag 62)
+        $parts["62"] = "62070503***";
+        
+        // Assemble payload string
+        $payload = $parts["00"] . $parts["26"] . $parts["52"] . $parts["53"];
+        if (isset($parts["54"])) {
+            $payload .= $parts["54"];
+        }
+        $payload .= $parts["58"] . $parts["59"] . $parts["60"] . $parts["62"];
+        
+        // Append CRC tag indicator
+        $payload .= "6304";
+        
+        // Calculate CRC16 CCITT
+        $crc = 0xFFFF;
+        $length = strlen($payload);
+        for ($i = 0; $i < $length; $i++) {
+            $crc ^= (ord($payload[$i]) << 8);
+            for ($j = 0; $j < 8; $j++) {
+                if (($crc & 0x8000) != 0) {
+                    $crc = (($crc << 1) ^ 0x1021) & 0xFFFF;
+                } else {
+                    $crc = ($crc << 1) & 0xFFFF;
+                }
+            }
+        }
+        
+        $crcHex = strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+        
+        return $payload . $crcHex;
+    }
+}
+
 $totalBrutoGeral = 0;
 $totalDescontoGeral = 0;
 
@@ -175,5 +265,38 @@ foreach ($debitosAE as $ae) {
             <td class="text-right"><?php echo formatCurrency($totalBrutoGeral - $totalDescontoGeral); ?></td>
         </tr>
     </table>
+
+    <?php 
+    $valorPagar = $totalBrutoGeral - $totalDescontoGeral;
+    if ($valorPagar > 0): 
+        $pixPayload = generatePixPayload('51983591567', $valorPagar, 'Myranda Informatica', 'Osorio');
+    ?>
+    <div style="margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px;">
+        <table width="100%" style="border-collapse: collapse;">
+            <tr>
+                <td width="40%" style="vertical-align: top; text-align: center; padding-right: 20px;">
+                    <div style="background-color: #fcfcfc; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; text-align: center;">
+                        <h4 style="margin: 0 0 10px 0; color: #27ae60; font-size: 12px; text-transform: uppercase; font-weight: bold;">Pague com Pix</h4>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo urlencode($pixPayload); ?>" alt="QR Code Pix" style="width: 140px; height: 140px; margin-bottom: 5px; border: 1px solid #ccc; padding: 5px; background: #fff;" />
+                        <div style="font-size: 9px; color: #7f8c8d; line-height: 1.2;">Escaneie o QR Code acima com o aplicativo do seu banco para pagar.</div>
+                    </div>
+                </td>
+                <td width="60%" style="vertical-align: top;">
+                    <div style="background-color: #fcfcfc; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; height: 154px; box-sizing: border-box;">
+                        <h4 style="margin: 0 0 10px 0; color: #2980b9; font-size: 12px; text-transform: uppercase; font-weight: bold;">Pix Copia e Cola</h4>
+                        <div style="font-family: monospace; font-size: 8px; border: 1px solid #ccc; border-radius: 4px; padding: 6px; background-color: #f5f5f5; color: #333; word-break: break-all; height: 50px; overflow: hidden; line-height: 1.3;">
+                            <?php echo htmlspecialchars($pixPayload); ?>
+                        </div>
+                        <div style="font-size: 9px; color: #7f8c8d; margin-top: 5px; line-height: 1.2;">Se preferir, utilize a opção "Pix Copia e Cola" no app do seu banco com o código acima.</div>
+                        <div style="font-size: 10px; margin-top: 10px; line-height: 1.4; border-top: 1px solid #eee; padding-top: 8px;">
+                            <strong>Beneficiário:</strong> Myranda Informática<br>
+                            <strong>Chave Pix:</strong> (51) 98359-1567 (Telefone)
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <?php endif; ?>
 </body>
 </html>

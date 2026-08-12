@@ -139,6 +139,12 @@ class OrdemServico extends Model
         if (!empty($filters['inconsistencia'])) {
             $sql .= " AND os.status_atual_id IN (5, 6) AND (os.laudo_tecnico IS NULL OR TRIM(os.laudo_tecnico) = '')";
         }
+        if (!empty($filters['sem_laudo'])) {
+            $sql .= " AND os.status_atual_id NOT IN (5, 6) AND (os.laudo_tecnico IS NULL OR TRIM(os.laudo_tecnico) = '')";
+        }
+        if (!empty($filters['sem_itens'])) {
+            $sql .= " AND os.status_atual_id NOT IN (5, 6) AND NOT EXISTS (SELECT 1 FROM itens_ordem_servico ios WHERE ios.ordem_servico_id = os.id AND ios.ativo = 1)";
+        }
         
         return $sql;
     }

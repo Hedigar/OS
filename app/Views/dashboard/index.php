@@ -90,6 +90,191 @@ $alertas = $alertas ?? [];
         <!-- COLUNA PRINCIPAL -->
         <div class="col-xl-9 col-lg-8">
             
+            <?php if (Auth::isTecnico() && !$isAdmin): ?>
+            <!-- PAINEL EXCLUSIVO PARA TÉCNICOS -->
+            
+            <!-- SEÇÃO 1: MÉTRICAS DE MANUTENÇÃO (CARDS) -->
+            <div class="mb-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-wrench text-primary me-2"></i> Minhas Metas & Pendências</h5>
+                <div class="row g-3">
+                    <!-- OS Sem Laudo -->
+                    <div class="col-md-3">
+                        <a href="<?php echo BASE_URL; ?>ordens?sem_laudo=1" class="text-decoration-none">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover <?php echo $tecnicoStats['total_sem_laudo'] > 0 ? 'bg-danger bg-opacity-10 border border-danger' : ''; ?>" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-danger bg-opacity-10 p-2 rounded-circle">
+                                            <i class="fas fa-file-signature text-danger"></i>
+                                        </div>
+                                        <span class="text-danger small fw-bold">Pendente</span>
+                                    </div>
+                                    <h2 class="fw-bold mb-0 text-danger"><?php echo $tecnicoStats['total_sem_laudo']; ?></h2>
+                                    <small class="text-muted">OS Sem Laudo Técnico</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <!-- OS Sem Atualização (2+ dias) -->
+                    <div class="col-md-3">
+                        <a href="<?php echo BASE_URL; ?>ordens?sem_atualizacao_dias=2" class="text-decoration-none">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover <?php echo $tecnicoStats['total_sem_atualizacao'] > 0 ? 'bg-warning bg-opacity-10 border border-warning' : ''; ?>" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-warning bg-opacity-10 p-2 rounded-circle">
+                                            <i class="fas fa-clock text-warning"></i>
+                                        </div>
+                                        <span class="text-warning small fw-bold">Atrasadas</span>
+                                    </div>
+                                    <h2 class="fw-bold mb-0 text-warning"><?php echo $tecnicoStats['total_sem_atualizacao']; ?></h2>
+                                    <small class="text-muted">Sem Atualizar (2+ dias)</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <!-- OS Sem Itens (Prod/Serv) -->
+                    <div class="col-md-3">
+                        <a href="<?php echo BASE_URL; ?>ordens?sem_itens=1" class="text-decoration-none">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover <?php echo $tecnicoStats['total_sem_itens'] > 0 ? 'bg-info bg-opacity-10 border border-info' : ''; ?>" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-info bg-opacity-10 p-2 rounded-circle">
+                                            <i class="fas fa-box-open text-info"></i>
+                                        </div>
+                                        <span class="text-info small fw-bold">Incompleto</span>
+                                    </div>
+                                    <h2 class="fw-bold mb-0 text-info"><?php echo $tecnicoStats['total_sem_itens']; ?></h2>
+                                    <small class="text-muted">Sem Produto ou Serviço</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <!-- OS Abertas Gerais -->
+                    <div class="col-md-3">
+                        <a href="<?php echo BASE_URL; ?>ordens" class="text-decoration-none">
+                            <div class="card h-100 border-0 shadow-sm stat-card-hover" style="border-radius: 12px;">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded-circle">
+                                            <i class="fas fa-folder-open text-primary"></i>
+                                        </div>
+                                        <span class="text-muted small fw-bold">Total</span>
+                                    </div>
+                                    <h2 class="fw-bold mb-0"><?php echo $stats['total_abertas']; ?></h2>
+                                    <small class="text-muted">OS Ativas em Aberto</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 2: CRM & PÓS-VENDA DA SEMANA (CRONOGRAMA DIA-A-DIA) -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-calendar-alt text-success me-2"></i> CRM & Pós-Venda (Contatos Semanais)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-start">Canal de Contato</th>
+                                    <?php foreach ($crmSemanaStats['dias'] as $dia): ?>
+                                        <th>
+                                            <div><?php echo $dia['dia_nome']; ?></div>
+                                            <small class="text-muted"><?php echo $dia['data_formatada']; ?></small>
+                                        </th>
+                                    <?php endforeach; ?>
+                                    <th class="table-dark">Total Geral</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="text-start fw-bold"><i class="fas fa-bullhorn text-primary me-1"></i> Contatos Realizados (CRM)</td>
+                                    <?php foreach ($crmSemanaStats['dias'] as $dia): ?>
+                                        <td class="<?php echo $dia['crm'] > 0 ? 'fw-bold text-primary bg-primary bg-opacity-10' : 'text-muted'; ?>">
+                                            <?php echo $dia['crm']; ?>
+                                        </td>
+                                    <?php endforeach; ?>
+                                    <td class="table-dark fw-bold"><?php echo $crmSemanaStats['total_crm']; ?></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-start fw-bold"><i class="fas fa-handshake text-success me-1"></i> Contatos Pós-Venda (Por Venda)</td>
+                                    <?php foreach ($crmSemanaStats['dias'] as $dia): ?>
+                                        <td class="<?php echo $dia['pos_venda'] > 0 ? 'fw-bold text-success bg-success bg-opacity-10' : 'text-muted'; ?>">
+                                            <?php echo $dia['pos_venda']; ?>
+                                        </td>
+                                    <?php endforeach; ?>
+                                    <td class="table-dark fw-bold"><?php echo $crmSemanaStats['total_pos_venda']; ?></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 bg-light p-3 rounded-3">
+                        <h6 class="fw-bold mb-1"><i class="fas fa-info-circle text-secondary me-1"></i> Resumo do CRM na Semana</h6>
+                        <p class="text-muted small mb-0">
+                            Nesta semana, foram efetuados um total de <strong><?php echo $crmSemanaStats['total_crm'] + $crmSemanaStats['total_pos_venda']; ?> interações</strong> de contato com clientes, sendo <strong><?php echo $crmSemanaStats['total_crm']; ?></strong> interações de campanhas/atrativos (CRM) e <strong><?php echo $crmSemanaStats['total_pos_venda']; ?></strong> acompanhamentos pós-vendas das ordens entregues.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO 3: OS PARADAS / ESQUECIDAS (AÇÃO NECESSÁRIA) -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> OS Paradas ou "Esquecidas" <small class="text-muted fw-normal fs-6">(Inativas há mais de 5 dias)</small></h5>
+                        <span class="badge bg-danger"><?php echo $tecnicoStats['total_esquecidas']; ?> OS Paradas</span>
+                    </div>
+                    
+                    <?php if (empty($tecnicoStats['esquecidas'])): ?>
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-star-and-crescent text-success fa-2x mb-2"></i>
+                            <p class="mb-0">Incrível! Não existem Ordens de Serviço paradas há mais de 5 dias.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>OS #</th>
+                                        <th>Cliente</th>
+                                        <th>Status Atual</th>
+                                        <th>Última Atualização</th>
+                                        <th class="text-end">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($tecnicoStats['esquecidas'] as $os): 
+                                        $diasParados = (new \DateTimeImmutable($os['ultima_atualizacao']))->diff(new \DateTimeImmutable())->days;
+                                    ?>
+                                        <tr>
+                                            <td><strong>#<?php echo $os['id']; ?></strong></td>
+                                            <td><?php echo htmlspecialchars($os['cliente_nome'] ?? $os['cliente_name'] ?? ''); ?></td>
+                                            <td>
+                                                <span class="badge" style="background-color: <?php echo $os['status_cor']; ?>; color: #fff;">
+                                                    <?php echo htmlspecialchars($os['status_nome']); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="text-danger fw-bold"><?php echo $diasParados; ?> dias sem mexer</div>
+                                                <small class="text-muted"><?php echo date('d/m/Y H:i', strtotime($os['ultima_atualizacao'])); ?></small>
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo $os['id']; ?>" class="btn btn-sm btn-danger px-3" style="border-radius: 8px;">
+                                                    <i class="fas fa-wrench me-1"></i> TRATAR AGORA
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <?php else: ?>
+            <!-- ORIGINAL EXECUTIVE / ADMIN DASHBOARD -->
+            
             <!-- SEÇÃO 1: ORDENS DE SERVIÇO -->
             <div class="mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -259,6 +444,7 @@ $alertas = $alertas ?? [];
 
             <!-- GRÁFICO DE TENDÊNCIA -->
             
+            <?php endif; ?>
         </div>
 
         <!-- COLUNA LATERAL -->

@@ -21,13 +21,18 @@ class DashboardController extends BaseController
         $stats = $this->service->getStats();
         $atividades = $this->service->getRecentActivities(10);
         $alertas = $this->service->getAlertas();
+        
+        $tecnicoStats = $this->service->getTecnicoStats();
+        $crmSemanaStats = $this->service->getCrmSemanaStats();
 
         $this->render('dashboard/index', [
             'title' => 'Dashboard',
             'user' => $user,
             'stats' => $stats,
             'atividades' => $atividades,
-            'alertas' => $alertas
+            'alertas' => $alertas,
+            'tecnicoStats' => $tecnicoStats,
+            'crmSemanaStats' => $crmSemanaStats
         ]);
     }
 }

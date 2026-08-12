@@ -149,4 +149,131 @@ class DashboardService
         if ($adminOuTecnico) return $alertas;
         return array_values(array_filter($alertas, fn($a) => ($a['nivel'] ?? '') === 'todos'));
     }
+
+    public function getTecnicoStats(): array
+    {
+        $db = $this->osModel->getConnection();
+
+        // 1. OS sem laudo preenchido (não finalizadas e não canceladas)
+        $stmtSemLaudo = $db->query("
+            SELECT COUNT(*) as total 
+            FROM ordens_servico 
+            WHERE status_atual_id NOT IN (5, 6) 
+              AND (laudo_tecnico IS NULL OR TRIM(laudo_tecnico) = '') 
+              AND ativo = 1
+        ");
+        $totalSemLaudo = (int)($stmtSemLaudo->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
+
+        // 2. OS aberta a mais de 2 dias e sem atualização de status
+        $stmtSemAtualizacao = $db->query("
+            SELECT COUNT(*) as total 
+            FROM ordens_servico os
+            WHERE os.status_atual_id NOT IN (5, 6) 
+              AND os.ativo = 1 
+              AND os.created_at < DATE_SUB(NOW(), INTERVAL 2 DAY)
+              AND COALESCE(
+                  (SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id),
+                  os.created_at
+              ) < DATE_SUB(NOW(), INTERVAL 2 DAY)
+        ");
+        $totalSemAtualizacao = (int)($stmtSemAtualizacao->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
+
+        // 3. OS sem produto ou serviço adicionado (não finalizadas e não canceladas)
+        $stmtSemItens = $db->query("
+            SELECT COUNT(*) as total 
+            FROM ordens_servico os 
+            WHERE os.status_atual_id NOT IN (5, 6) 
+              AND os.ativo = 1 
+              AND NOT EXISTS (
+                  SELECT 1 FROM itens_ordem_servico ios 
+                  WHERE ios.ordem_servico_id = os.id 
+                    AND ios.ativo = 1
+              )
+        ");
+        $totalSemItens = (int)($stmtSemItens->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
+
+        // 4. OS paradas ou 'esquecidas' (não finalizadas, sem alteração há mais de 5 dias)
+        $stmtEsquecidas = $db->query("
+            SELECT 
+                os.id, 
+                os.created_at, 
+                s.nome as status_nome, 
+                s.cor as status_cor,
+                c.nome_completo as cliente_nome,
+                COALESCE(
+                    (SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id),
+                    os.created_at
+                ) as ultima_atualizacao
+            FROM ordens_servico os
+            JOIN status_os s ON os.status_atual_id = s.id
+            JOIN clientes c ON os.cliente_id = c.id
+            WHERE os.status_atual_id NOT IN (5, 6) 
+              AND os.ativo = 1 
+              AND COALESCE(
+                  (SELECT MAX(h.created_at) FROM ordens_servico_status_historico h WHERE h.ordem_servico_id = os.id),
+                  os.created_at
+              ) < DATE_SUB(NOW(), INTERVAL 5 DAY)
+            ORDER BY ultima_atualizacao ASC
+        ");
+        $esquecidas = $stmtEsquecidas->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        return [
+            'total_sem_laudo' => $totalSemLaudo,
+            'total_sem_atualizacao' => $totalSemAtualizacao,
+            'total_sem_itens' => $totalSemItens,
+            'esquecidas' => $esquecidas,
+            'total_esquecidas' => count($esquecidas)
+        ];
+    }
+
+    public function getCrmSemanaStats(): array
+    {
+        $db = $this->osModel->getConnection();
+        
+        $monday = date('Y-m-d', strtotime('monday this week'));
+        
+        $dias = [
+            1 => ['nome' => 'Segunda-feira', 'data' => date('Y-m-d', strtotime($monday))],
+            2 => ['nome' => 'Terça-feira', 'data' => date('Y-m-d', strtotime("$monday +1 day"))],
+            3 => ['nome' => 'Quarta-feira', 'data' => date('Y-m-d', strtotime("$monday +2 days"))],
+            4 => ['nome' => 'Quinta-feira', 'data' => date('Y-m-d', strtotime("$monday +3 days"))],
+            5 => ['nome' => 'Sexta-feira', 'data' => date('Y-m-d', strtotime("$monday +4 days"))],
+            6 => ['nome' => 'Sábado', 'data' => date('Y-m-d', strtotime("$monday +5 days"))]
+        ];
+        
+        $res = [];
+        $totalCrmGeral = 0;
+        $totalPosVendaGeral = 0;
+        
+        foreach ($dias as $num => $info) {
+            $stmt = $db->prepare("
+                SELECT 
+                    SUM(CASE WHEN tipo = 'crm' THEN 1 ELSE 0 END) as crm,
+                    SUM(CASE WHEN tipo = 'pos_venda' THEN 1 ELSE 0 END) as pos_venda
+                FROM cliente_interacoes 
+                WHERE DATE(created_at) = ?
+            ");
+            $stmt->execute([$info['data']]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            $crm = (int)($row['crm'] ?? 0);
+            $posVenda = (int)($row['pos_venda'] ?? 0);
+            
+            $res[] = [
+                'dia_nome' => $info['nome'],
+                'data_formatada' => date('d/m', strtotime($info['data'])),
+                'crm' => $crm,
+                'pos_venda' => $posVenda
+            ];
+            
+            $totalCrmGeral += $crm;
+            $totalPosVendaGeral += $posVenda;
+        }
+        
+        return [
+            'dias' => $res,
+            'total_crm' => $totalCrmGeral,
+            'total_pos_venda' => $totalPosVendaGeral
+        ];
+    }
 }

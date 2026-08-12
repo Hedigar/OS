@@ -69,13 +69,17 @@ class OrdemServicoController extends BaseController
         $statusEntrega = filter_input(INPUT_GET, 'status_entrega', FILTER_SANITIZE_SPECIAL_CHARS) ?: null;
         $semAtualizacaoDias = filter_input(INPUT_GET, 'sem_atualizacao_dias', FILTER_VALIDATE_INT) ?: null;
         $inconsistencia = filter_input(INPUT_GET, 'inconsistencia', FILTER_VALIDATE_BOOLEAN) ?: null;
+        $semLaudo = filter_input(INPUT_GET, 'sem_laudo', FILTER_VALIDATE_BOOLEAN) ?: null;
+        $semItens = filter_input(INPUT_GET, 'sem_itens', FILTER_VALIDATE_BOOLEAN) ?: null;
 
         $filters = [
             'status_id' => $statusId,
             'status_pagamento' => in_array($statusPagamento, ['pendente', 'parcial', 'pago']) ? $statusPagamento : null,
             'status_entrega' => in_array($statusEntrega, ['entregue', 'nao_entregue']) ? $statusEntrega : null,
             'sem_atualizacao_dias' => $semAtualizacaoDias,
-            'inconsistencia' => $inconsistencia
+            'inconsistencia' => $inconsistencia,
+            'sem_laudo' => $semLaudo,
+            'sem_itens' => $semItens
         ];
         
         // 4. Obter Total para Cálculo de Páginas

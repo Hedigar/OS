@@ -38,6 +38,9 @@ if (!function_exists('safe_val')) {
             <a href="<?php echo BASE_URL; ?>ordens/form?id=<?php echo safe_text($ordem, 'id', ''); ?>" class="btn btn-info">
                 ✏️ Editar OS
             </a>
+            <button type="button" onclick="abrirModalRetorno()" class="btn btn-danger" style="background-color: #d32f2f; border-color: #c62828; color: white;">
+                🔄 Retorno
+            </button>
             <a href="<?php echo BASE_URL; ?>ordens/print-receipt?id=<?php echo safe_text($ordem, 'id', ''); ?>" target="_blank" class="btn btn-primary">
                 🖨️ Imprimir OS
             </a>
@@ -817,5 +820,48 @@ document.addEventListener('DOMContentLoaded', function() {
     border-bottom: 1px solid var(--border-color);
 }
 </style>
+
+<!-- MODAL RETORNO -->
+<div id="modalRetorno" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items: center; justify-content: center;">
+    <div class="modal-content card" style="background: var(--bg-secondary, #fff); color: var(--text-primary, #000); margin: 10% auto; padding: 20px; width: 500px; border-radius: 8px; border: 1px solid var(--border-color, #ccc);">
+        <div class="d-flex justify-between mb-3" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">🔄 Gerar Retorno de OS</h3>
+            <span style="cursor:pointer; font-size:24px;" onclick="fecharModalRetorno()">&times;</span>
+        </div>
+        <form action="<?php echo BASE_URL; ?>ordens/retorno" method="POST">
+            <input type="hidden" name="parent_id" value="<?php echo $ordem['id']; ?>">
+            
+            <p style="margin-bottom: 15px;">
+                Você está gerando uma nova OS de retorno para o cliente <strong><?php echo safe_text($ordem, 'cliente_nome', 'N/A'); ?></strong> referente ao equipamento <strong><?php echo safe_text($ordem, 'equipamento_tipo', '') . ' ' . safe_text($ordem, 'equipamento_marca', '') . ' ' . safe_text($ordem, 'equipamento_modelo', ''); ?></strong>.
+            </p>
+
+            <div class="form-group mb-4">
+                <label class="form-label d-block mb-2" style="font-weight: bold;">Detalhes do Retorno (o que houve):</label>
+                <textarea name="detalhes" class="form-control" style="width: 100%; min-height: 100px; box-sizing: border-box;" placeholder="Descreva se voltou o mesmo problema ou se gerou algo novo... (deixe em branco se não houver detalhes)"></textarea>
+            </div>
+
+            <div class="d-flex justify-end gap-2" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalRetorno()">Cancelar</button>
+                <button type="submit" class="btn btn-danger" style="background-color: #d32f2f; border-color: #c62828; color: white;">Confirmar e Gerar OS</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirModalRetorno() {
+    document.getElementById('modalRetorno').style.display = 'flex';
+}
+function fecharModalRetorno() {
+    document.getElementById('modalRetorno').style.display = 'none';
+}
+// Fechar modal ao clicar fora
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalRetorno');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

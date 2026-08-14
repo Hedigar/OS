@@ -641,6 +641,63 @@ class OrdemServicoController extends BaseController
         exit;
     }
 
+    public function retorno()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $parentId = filter_input(INPUT_POST, 'parent_id', FILTER_VALIDATE_INT);
+            $detalhes = trim(filter_input(INPUT_POST, 'detalhes', FILTER_UNSAFE_RAW) ?? '');
+            
+            if (!$parentId) {
+                $this->redirect('ordens?error=ID da OS original inválido');
+                return;
+            }
+
+            $parentOs = $this->osModel->findWithDetails($parentId);
+            if (!$parentOs) {
+                $this->redirect('ordens?error=OS original não encontrada');
+                return;
+            }
+
+            // Formatação da data de entrega/última atualização
+            $dataEntrega = date('d/m/Y', strtotime($parentOs['updated_at'] ?? $parentOs['created_at'] ?? 'now'));
+            
+            // Laudo técnico anterior
+            $laudoAnterior = trim($parentOs['laudo_tecnico'] ?? '');
+            if (empty($laudoAnterior)) {
+                $laudoAnterior = '(sem laudo cadastrado)';
+            }
+
+            // Determina o texto de defeito relatado para a nova OS
+            if (empty($detalhes)) {
+                $textoProblema = "Retorno da OS numero {$parentId}, foi entregue dia {$dataEntrega}, foi feito ({$laudoAnterior}) e agora apresenta: não foi passado detalhes entrar em contato com o cliente";
+            } else {
+                $textoProblema = "Retorno da OS numero {$parentId}, foi entregue dia {$dataEntrega}, foi feito ({$laudoAnterior}) e agora apresenta ({$detalhes})";
+            }
+
+            // Prepara os dados para a nova OS
+            $newOsData = [
+                'cliente_id' => $parentOs['cliente_id'],
+                'equipamento_id' => $parentOs['equipamento_id'],
+                'defeito_relatado' => $textoProblema,
+                'laudo_tecnico' => '',
+                'status_atual_id' => 1, // Geralmente status inicial (1)
+                'status_pagamento' => 'pendente',
+                'status_entrega' => 'nao_entregue',
+            ];
+
+            $newOsId = $this->osModel->create($newOsData);
+
+            if ($newOsId) {
+                $this->log("Criou nova OS de Retorno #{$newOsId} a partir da OS #{$parentId}", "OS #{$newOsId}");
+                
+                // Redireciona diretamente para a visualização da nova OS para que possa imprimir rápido
+                $this->redirect('ordens/view?id=' . $newOsId);
+            } else {
+                $this->redirect('ordens/view?id=' . $parentId . '&error=Erro ao gerar OS de retorno');
+            }
+        }
+    }
+
     public function destroy()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

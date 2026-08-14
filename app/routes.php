@@ -112,6 +112,7 @@ $router->get('ordens', 'OrdemServicoController@index');
 $router->get('ordens/form', 'OrdemServicoController@form'); // Usando 'form' para criar/editar
 $router->post('ordens/salvar', 'OrdemServicoController@store');
 $router->post('ordens/atualizar', 'OrdemServicoController@update');
+$router->post('ordens/retorno', 'OrdemServicoController@retorno');
 $router->get('ordens/view', 'OrdemServicoController@showView'); // Visualizar OS
 $router->get('ordens/print', 'OrdemServicoController@printOS'); // Imprimir OS
 $router->get('ordens/print-receipt', 'OrdemServicoController@printReceipt'); // Impressão: Recepção (2 cópias por A4)

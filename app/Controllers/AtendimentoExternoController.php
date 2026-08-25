@@ -152,11 +152,15 @@ class AtendimentoExternoController extends BaseController
             if (!$id) $this->redirect('atendimentos-externos');
 
             $data = $this->getPostData();
-            if ($this->service->atualizarAtendimento($id, $data)) {
-                $this->log("Atualizou atendimento", "Atendimento #{$id}");
-                $this->redirect('atendimentos-externos/view?id=' . $id);
-            } else {
-                $this->redirect('atendimentos-externos/form?id=' . $id . '&error=1');
+            try {
+                if ($this->service->atualizarAtendimento($id, $data)) {
+                    $this->log("Atualizou atendimento", "Atendimento #{$id}");
+                    $this->redirect('atendimentos-externos/view?id=' . $id);
+                } else {
+                    $this->redirect('atendimentos-externos/form?id=' . $id . '&error=1');
+                }
+            } catch (\RuntimeException $e) {
+                $this->redirect('atendimentos-externos/view?id=' . $id . '&error=' . urlencode($e->getMessage()));
             }
         }
     }
@@ -165,8 +169,12 @@ class AtendimentoExternoController extends BaseController
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $atendimentoId = filter_input(INPUT_POST, 'atendimento_externo_id', FILTER_VALIDATE_INT);
-            if ($this->service->salvarItem($_POST)) {
-                $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
+            try {
+                if ($this->service->salvarItem($_POST)) {
+                    $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
+                }
+            } catch (\RuntimeException $e) {
+                $this->redirect('atendimentos-externos/view?id=' . $atendimentoId . '&error=' . urlencode($e->getMessage()));
             }
         }
     }
@@ -177,8 +185,12 @@ class AtendimentoExternoController extends BaseController
             $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
             $atendimentoId = filter_input(INPUT_POST, 'atendimento_externo_id', FILTER_VALIDATE_INT);
 
-            if ($this->service->atualizarItem($itemId, $_POST)) {
-                $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
+            try {
+                if ($this->service->atualizarItem($itemId, $_POST)) {
+                    $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
+                }
+            } catch (\RuntimeException $e) {
+                $this->redirect('atendimentos-externos/view?id=' . $atendimentoId . '&error=' . urlencode($e->getMessage()));
             }
         }
     }
@@ -189,17 +201,37 @@ class AtendimentoExternoController extends BaseController
             $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
             $atendimentoId = filter_input(INPUT_POST, 'atendimento_externo_id', FILTER_VALIDATE_INT);
 
-            $itemModel = new \App\Models\ItemOS();
-            if ($itemModel->delete($itemId)) {
-                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                $fluxoCaixaModel->removerCustoItemAtendimento($itemId);
+            // Bloqueio de período fechado: período atual OU data de conclusão do atendimento
+            try {
+                $periodService = new \App\Services\PeriodControlService();
+                if ($periodService->isPeriodClosed(date('Y-m-d'))) {
+                    throw new \RuntimeException('Não é possível remover itens no período fiscal atual pois ele está fechado.');
+                }
+                if ($atendimentoId) {
+                    $atendimentoModel = new \App\Models\AtendimentoExterno();
+                    $atual = $atendimentoModel->find($atendimentoId);
+                    if ($atual && $atual['status'] === 'concluido') {
+                        $dataCompetencia = date('Y-m-d', strtotime($atual['updated_at'] ?? $atual['created_at'] ?? 'now'));
+                        if ($periodService->isPeriodClosed($dataCompetencia)) {
+                            throw new \RuntimeException('Não é possível remover itens de atendimento concluído cujo período já foi fechado.');
+                        }
+                    }
+                }
 
-                // Recalcula totals do atendimento
-                $atendimentoModel = new \App\Models\AtendimentoExterno();
-                $itens = $atendimentoModel->listarItens($atendimentoId);
-                $atendimentoModel->updateTotals($atendimentoId, $itens);
-                
-                $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
+                $itemModel = new \App\Models\ItemOS();
+                if ($itemModel->delete($itemId)) {
+                    $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                    $fluxoCaixaModel->removerCustoItemAtendimento($itemId);
+
+                    // Recalcula totals do atendimento
+                    $atendimentoModel = new \App\Models\AtendimentoExterno();
+                    $itens = $atendimentoModel->listarItens($atendimentoId);
+                    $atendimentoModel->updateTotals($atendimentoId, $itens);
+                    
+                    $this->redirect('atendimentos-externos/view?id=' . $atendimentoId);
+                }
+            } catch (\RuntimeException $e) {
+                $this->redirect('atendimentos-externos/view?id=' . $atendimentoId . '&error=' . urlencode($e->getMessage()));
             }
         }
     }

@@ -48,39 +48,31 @@ class CaixaController extends BaseController
         $totalTaxas = (float)($sumIn['total_taxa'] ?? 0);
         $totalSaidas = (float)($sumOut['total'] ?? 0);
 
-        // --- NOVO: Cálculo de Custos de OS/Atendimentos Finalizados no período ---
-        // Isso garante que o lucro real seja refletido no saldo do caixa
-        
-        // 1. Custo de Peças de OS Finalizadas no período
-        $sqlCustoPecas = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
-                          FROM itens_ordem_servico i
-                          JOIN ordens_servico o ON i.ordem_servico_id = o.id
-                          WHERE o.status_atual_id = 5 AND o.ativo = 1 AND i.ativo = 1
-                          AND DATE(i.created_at) BETWEEN :start AND :end";
-        $stmtCusto = $db->prepare($sqlCustoPecas);
+        // --- FONTE ÚNICA: Cálculo de Custos SOMENTE via tabela fluxo_caixa tipo='custo' ---
+        // Elimina cálculos alternativos baseados em created_at das tabelas-fonte.
+        // Data a ser usada: fc.data (data de aprovação/competência, gravada no lançamento).
+        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+        $fcDb = $fluxoCaixaModel->getConnection();
+        $sqlCusto = "SELECT COALESCE(SUM(fc.valor), 0)
+                     FROM fluxo_caixa fc
+                     LEFT JOIN pagamentos_transacoes pt 
+                            ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
+                     LEFT JOIN itens_ordem_servico ios_os
+                            ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios_os.id
+                     LEFT JOIN itens_ordem_servico ios_at
+                            ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios_at.id
+                     WHERE fc.tipo = 'custo'
+                       AND fc.data BETWEEN :start AND :end
+                       AND (
+                           fc.referencia_tipo IN ('taxa_nf_os', 'taxa_nf_atendimento', 'despesa', 'outros')
+                           OR (fc.referencia_tipo = 'pagamento' AND pt.id IS NOT NULL AND pt.ativo = 1)
+                           OR (fc.referencia_tipo = 'item_os' AND ios_os.id IS NOT NULL AND ios_os.ativo = 1)
+                           OR (fc.referencia_tipo = 'item_atendimento' AND ios_at.id IS NOT NULL AND ios_at.ativo = 1)
+                       )";
+        $stmtCusto = $fcDb->prepare($sqlCusto);
         $stmtCusto->execute(['start' => $dataInicio, 'end' => $dataFim]);
-        $custoPecasOS = (float)$stmtCusto->fetchColumn();
+        $totalCustosVenda = (float)$stmtCusto->fetchColumn();
 
-        // 2. Custo de Peças de Atendimentos Externos Finalizados no período
-        $sqlCustoAt = "SELECT SUM(i.quantidade * COALESCE(NULLIF(i.valor_custo, 0), NULLIF(i.custo, 0), 0))
-                       FROM itens_ordem_servico i
-                       JOIN atendimentos_externos a ON i.atendimento_externo_id = a.id
-                       WHERE a.status = 'concluido' AND a.ativo = 1 AND i.ativo = 1
-                       AND DATE(i.created_at) BETWEEN :start AND :end";
-        $stmtCustoAt = $db->prepare($sqlCustoAt);
-        $stmtCustoAt->execute(['start' => $dataInicio, 'end' => $dataFim]);
-        $custoPecasAt = (float)$stmtCustoAt->fetchColumn();
-
-        // 3. Custo de Impostos (NF) de OS/Atendimentos Finalizados no período
-        $sqlNF = "SELECT 
-                    (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM ordens_servico WHERE status_atual_id = 5 AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s1 AND :e1) +
-                    (SELECT COALESCE(SUM(valor_taxa_nf), 0) FROM atendimentos_externos WHERE status = 'concluido' AND ativo = 1 AND DATE(COALESCE(updated_at, created_at)) BETWEEN :s2 AND :e2)
-                  as total_nf";
-        $stmtNF = $db->prepare($sqlNF);
-        $stmtNF->execute(['s1' => $dataInicio, 'e1' => $dataFim, 's2' => $dataInicio, 'e2' => $dataFim]);
-        $custoNF = (float)$stmtNF->fetchColumn();
-
-        $totalCustosVenda = $custoPecasOS + $custoPecasAt + $custoNF;
         $saldo = $totalEntradas - $totalSaidas - $totalCustosVenda;
 
         $this->render('caixa/index', [

@@ -232,6 +232,55 @@ class OrdemServicoController extends BaseController
                             BASE_URL . "ordens/view?id={$id}"
                         );
                     }
+
+                    // Lançamento de CUSTO (peças + taxa NF) SOMENTE na transição para status aprovado
+                    // — e apenas 1 vez (INSERT IGNORE + UNIQUE key)
+                    $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
+                    $statusAntigoAprovado = in_array((int)$osAntiga['status_atual_id'], $statusAprovados, true);
+                    $statusNovoAprovado = in_array((int)$status_id, $statusAprovados, true);
+
+                    if (!$statusAntigoAprovado && $statusNovoAprovado) {
+                        $db = $this->osModel->getConnection();
+
+                        // Data da aprovação = primeira data em que esta OS entrou em status aprovado
+                        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+                        $stmtData = $db->prepare("SELECT DATE(MIN(created_at)) 
+                                                  FROM ordens_servico_status_historico 
+                                                  WHERE ordem_servico_id = ? AND status_id IN ($placeholders)");
+                        $paramsData = array_merge([$id], $statusAprovados);
+                        $stmtData->execute($paramsData);
+                        $dataAprovacao = $stmtData->fetchColumn() ?: date('Y-m-d');
+
+                        // Bloqueio: se período da aprovação já estiver fechado, aborta lançamento
+                        $periodService = new \App\Services\PeriodControlService();
+                        if ($periodService->isPeriodClosed($dataAprovacao)) {
+                            $this->redirect('ordens/view?id=' . $id . '&error=Período fiscal da aprovação já está fechado. Contate o administrador.');
+                            return;
+                        }
+
+                        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+
+                        // 1. Custo de cada peça/item
+                        $itens = $this->itemModel->findByOsId($id);
+                        foreach ($itens as $item) {
+                            if (empty($item['ativo']) || (int)$item['ativo'] !== 1) {
+                                continue;
+                            }
+                            $qtd = (float)($item['quantidade'] ?? 0);
+                            $custo = (float)($item['valor_custo'] ?? $item['custo'] ?? 0);
+                            $valorTotalCusto = $qtd * $custo;
+                            if ($valorTotalCusto > 0) {
+                                $fluxoCaixaModel->registrarCustoItemOs((int)$item['id'], $id, $valorTotalCusto, $dataAprovacao);
+                            }
+                        }
+
+                        // 2. Custo de taxa NF da OS
+                        $osAtual = $this->osModel->find($id);
+                        $taxaNf = (float)($osAtual['valor_taxa_nf'] ?? 0);
+                        if ($taxaNf > 0) {
+                            $fluxoCaixaModel->registrarCustoTaxaNf('os', $id, $taxaNf, $dataAprovacao);
+                        }
+                    }
                 }
 
                 $this->log("Atualizou Ordem de Serviço", "OS #{$id}");
@@ -459,11 +508,32 @@ class OrdemServicoController extends BaseController
             $comprarPeca = filter_input(INPUT_POST, 'comprar_peca', FILTER_VALIDATE_INT) ?: 0;
             $linkFornecedor = filter_input(INPUT_POST, 'link_fornecedor', FILTER_SANITIZE_URL);
 
-            // Verificar se o período atual está fechado
+            $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
             $periodService = new \App\Services\PeriodControlService();
+
+            // Verificar se o período atual está fechado
             if ($periodService->isPeriodClosed(date('Y-m-d'))) {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível adicionar itens no período fiscal atual pois ele está fechado.');
                 return;
+            }
+
+            // Verificar se OS já está aprovada: bloquear se período da 1ª aprovação estiver fechado
+            $osAtual = $this->osModel->find($osId);
+            $dataAprovacao = null;
+            $osJaAprovada = $osAtual && in_array((int)$osAtual['status_atual_id'], $statusAprovados, true);
+            if ($osJaAprovada) {
+                $db = $this->itemModel->getConnection();
+                $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+                $stmtData = $db->prepare("SELECT DATE(MIN(created_at)) 
+                                          FROM ordens_servico_status_historico 
+                                          WHERE ordem_servico_id = ? AND status_id IN ($placeholders)");
+                $paramsData = array_merge([$osId], $statusAprovados);
+                $stmtData->execute($paramsData);
+                $dataAprovacao = $stmtData->fetchColumn();
+                if ($dataAprovacao && $periodService->isPeriodClosed($dataAprovacao)) {
+                    $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível adicionar itens a uma OS aprovada cujo período já foi fechado.');
+                    return;
+                }
             }
 
             $itemData = [
@@ -483,17 +553,19 @@ class OrdemServicoController extends BaseController
 
             $itemId = $this->itemModel->create($itemData);
             if ($itemId) {
-                // Registrar custo no fluxo_caixa
-                $valorTotalCusto = $quantidade * $custo;
-                $dataCusto = date('Y-m-d');
-                if ($valorTotalCusto > 0) {
-                    $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataCusto);
-                }
-                
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
+
+                // OS JÁ APROVADA: lança o custo do item NOVO imediatamente com a data da 1ª aprovação
+                if ($osJaAprovada) {
+                    $valorTotalCusto = (float)$quantidade * (float)$custo;
+                    if ($valorTotalCusto > 0) {
+                        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                        $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataAprovacao ?: date('Y-m-d'));
+                    }
+                }
+
                 $this->redirect('ordens/view?id=' . $osId);
             } else {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao adicionar item');
@@ -513,20 +585,31 @@ class OrdemServicoController extends BaseController
             $maoDeObra = filter_input(INPUT_POST, 'valor_mao_de_obra', FILTER_VALIDATE_FLOAT);
             $desconto = filter_input(INPUT_POST, 'desconto', FILTER_VALIDATE_FLOAT) ?: 0;
 
-            // Verificar se o período atual ou o período original do custo está fechado
+            // Verificar bloqueio de período:
+            // - Período atual
+            // - OU data da primeira aprovação da OS (se já estiver aprovada)
             $periodService = new \App\Services\PeriodControlService();
             if ($periodService->isPeriodClosed(date('Y-m-d'))) {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível atualizar itens no período fiscal atual pois ele está fechado.');
                 return;
             }
 
+            $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
             $db = $this->itemModel->getConnection();
-            $stmt = $db->prepare("SELECT data FROM fluxo_caixa WHERE referencia_tipo = 'item_os' AND referencia_id = ?");
-            $stmt->execute([$itemId]);
-            $originalDate = $stmt->fetchColumn();
+            $stmtData = $db->prepare("SELECT DATE(MIN(h.created_at)) 
+                                      FROM ordens_servico_status_historico h
+                                      JOIN ordens_servico o ON o.id = h.ordem_servico_id
+                                      WHERE h.ordem_servico_id = ? 
+                                        AND h.status_id IN (".implode(',', array_fill(0, count($statusAprovados), '?')).")
+                                        AND o.status_atual_id IN (".implode(',', array_fill(0, count($statusAprovados), '?')).")");
+            $params = array_merge([$osId], $statusAprovados, $statusAprovados);
+            $stmtData->execute($params);
+            $dataAprovacao = $stmtData->fetchColumn();
 
-            if ($originalDate && $periodService->isPeriodClosed($originalDate)) {
-                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível alterar itens pertencentes a um período fiscal que já foi fechado.');
+            $osJaAprovada = !empty($dataAprovacao);
+
+            if ($dataAprovacao && $periodService->isPeriodClosed($dataAprovacao)) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível alterar itens de uma OS aprovada cujo período já foi fechado.');
                 return;
             }
 
@@ -540,24 +623,17 @@ class OrdemServicoController extends BaseController
             ];
 
             if ($this->itemModel->update($itemId, $itemData)) {
-                // Atualizar custo no fluxo_caixa (remover antigo e adicionar novo, ou usar REPLACE)
-                $valorTotalCusto = $quantidade * $custo;
-                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                
-                // Primeiro remove o registro existente (se houver)
-                $sqlDelete = "DELETE FROM fluxo_caixa WHERE referencia_tipo = 'item_os' AND referencia_id = ?";
-                $stmtDelete = $fluxoCaixaModel->getConnection()->prepare($sqlDelete);
-                $stmtDelete->execute([$itemId]);
-                
-                // Adiciona o novo registro
-                $dataCusto = date('Y-m-d');
-                if ($valorTotalCusto > 0) {
-                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataCusto);
-                }
-                
                 $itens = $this->itemModel->findByOsId($osId);
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
+
+                // OS JÁ APROVADA: atualiza o valor do custo no fluxo_caixa (período ainda está aberto)
+                if ($osJaAprovada) {
+                    $novoValorCusto = (float)$quantidade * (float)$custo;
+                    $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                    $fluxoCaixaModel->atualizarCusto($itemId, 'item_os', $novoValorCusto);
+                }
+
                 $this->redirect('ordens/view?id=' . $osId);
             } else {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Erro ao atualizar item');
@@ -571,20 +647,29 @@ class OrdemServicoController extends BaseController
             $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
             $osId = filter_input(INPUT_POST, 'ordem_servico_id', FILTER_VALIDATE_INT);
 
-            // Verificar se o período atual ou o período original do custo está fechado
+            // Verificar bloqueio de período:
+            // - Período atual
+            // - OU data da primeira aprovação da OS (se já estiver aprovada)
             $periodService = new \App\Services\PeriodControlService();
             if ($periodService->isPeriodClosed(date('Y-m-d'))) {
                 $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível remover itens no período fiscal atual pois ele está fechado.');
                 return;
             }
 
+            $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
             $db = $this->itemModel->getConnection();
-            $stmt = $db->prepare("SELECT data FROM fluxo_caixa WHERE referencia_tipo = 'item_os' AND referencia_id = ?");
-            $stmt->execute([$itemId]);
-            $originalDate = $stmt->fetchColumn();
+            $stmtData = $db->prepare("SELECT DATE(MIN(h.created_at)) 
+                                      FROM ordens_servico_status_historico h
+                                      JOIN ordens_servico o ON o.id = h.ordem_servico_id
+                                      WHERE h.ordem_servico_id = ? 
+                                        AND h.status_id IN (".implode(',', array_fill(0, count($statusAprovados), '?')).")
+                                        AND o.status_atual_id IN (".implode(',', array_fill(0, count($statusAprovados), '?')).")");
+            $params = array_merge([$osId], $statusAprovados, $statusAprovados);
+            $stmtData->execute($params);
+            $dataAprovacao = $stmtData->fetchColumn();
 
-            if ($originalDate && $periodService->isPeriodClosed($originalDate)) {
-                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível remover itens pertencentes a um período fiscal que já foi fechado.');
+            if ($dataAprovacao && $periodService->isPeriodClosed($dataAprovacao)) {
+                $this->redirect('ordens/view?id=' . $osId . '&error=Não é possível remover itens de uma OS aprovada cujo período já foi fechado.');
                 return;
             }
 
@@ -617,11 +702,29 @@ class OrdemServicoController extends BaseController
         }
 
         try {
+            $statusAprovados = [4, 5, 8, 11, 12, 14, 15];
+            $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+            $db = $fluxoCaixaModel->getConnection();
+
             if ($type === 'atendimento') {
                 $atendimentoModel = new \App\Models\AtendimentoExterno();
                 $atendimentoService = new \App\Services\AtendimentoService();
                 if ($atendimentoModel->update($id, ['emitir_nf' => $value])) {
                     $atendimentoService->obterDetalhesVisualizacao($id); // Força recálculo e salvamento da taxa
+
+                    // Se atendimento já está concluído, registrar custo da taxa NF no fluxo_caixa
+                    $atual = $atendimentoModel->find($id);
+                    if ($atual && $atual['status'] === 'concluido') {
+                        $dataCompetencia = date('Y-m-d', strtotime($atual['updated_at'] ?? $atual['created_at'] ?? 'now'));
+                        $taxaNf = (float)($atual['valor_taxa_nf'] ?? 0);
+
+                        $fluxoCaixaModel->removerCustoTaxaNf('atendimento', $id);
+
+                        if ($value == 1 && $taxaNf > 0) {
+                            $fluxoCaixaModel->registrarCustoTaxaNf('atendimento', $id, $taxaNf, $dataCompetencia);
+                        }
+                    }
+
                     echo json_encode(['success' => true]);
                 } else {
                     echo json_encode(['success' => false, 'error' => 'Erro ao atualizar atendimento']);
@@ -630,6 +733,28 @@ class OrdemServicoController extends BaseController
                 if ($this->osModel->update($id, ['emitir_nf' => $value, 'updated_at' => date('Y-m-d H:i:s')])) {
                     $itens = $this->itemModel->findByOsId($id);
                     $this->osModel->updateTotals($id, $itens);
+
+                    // Se OS já está aprovada, registrar custo da taxa NF no fluxo_caixa
+                    $osAtual = $this->osModel->find($id);
+                    if ($osAtual && in_array((int)$osAtual['status_atual_id'], $statusAprovados, true)) {
+                        // Data de competência = primeira aprovação
+                        $placeholders = implode(',', array_fill(0, count($statusAprovados), '?'));
+                        $stmtData = $db->prepare("SELECT DATE(MIN(created_at)) 
+                                                  FROM ordens_servico_status_historico 
+                                                  WHERE ordem_servico_id = ? AND status_id IN ($placeholders)");
+                        $paramsData = array_merge([$id], $statusAprovados);
+                        $stmtData->execute($paramsData);
+                        $dataCompetencia = $stmtData->fetchColumn() ?: date('Y-m-d', strtotime($osAtual['created_at'] ?? 'now'));
+
+                        $taxaNf = (float)($osAtual['valor_taxa_nf'] ?? 0);
+
+                        $fluxoCaixaModel->removerCustoTaxaNf('os', $id);
+
+                        if ($value == 1 && $taxaNf > 0) {
+                            $fluxoCaixaModel->registrarCustoTaxaNf('os', $id, $taxaNf, $dataCompetencia);
+                        }
+                    }
+
                     echo json_encode(['success' => true]);
                 } else {
                     echo json_encode(['success' => false, 'error' => 'Erro ao atualizar OS']);

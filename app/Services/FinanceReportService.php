@@ -262,31 +262,47 @@ class FinanceReportService
                             fc.referencia_id as origem_id,
                             fc.referencia_tipo as tipo_origem,
                             fc.valor,
-                            COALESCE(NULLIF(ios.descricao, ''), CASE
-                                WHEN fc.referencia_tipo = 'item_os' THEN CONCAT('Item OS #', fc.referencia_id)
-                                WHEN fc.referencia_tipo = 'item_atendimento' THEN CONCAT('Item Atend #', fc.referencia_id)
-                                ELSE 'Custo'
-                            END) as descricao,
+                            COALESCE(
+                                NULLIF(ios_os.descricao, ''),
+                                NULLIF(ios_at.descricao, ''),
+                                CASE
+                                    WHEN fc.referencia_tipo = 'item_os' THEN CONCAT('Item OS #', fc.referencia_id)
+                                    WHEN fc.referencia_tipo = 'item_atendimento' THEN CONCAT('Item Atend #', fc.referencia_id)
+                                    WHEN fc.referencia_tipo = 'taxa_nf_os' THEN CONCAT('Taxa NF OS #', fc.referencia_id)
+                                    WHEN fc.referencia_tipo = 'taxa_nf_atendimento' THEN CONCAT('Taxa NF Atend #', fc.referencia_id)
+                                    ELSE 'Custo'
+                                END
+                            ) as descricao,
                             fc.data as data_transacao,
                             CASE
                                 WHEN fc.referencia_tipo = 'item_os' THEN 'Custo OS'
                                 WHEN fc.referencia_tipo = 'item_atendimento' THEN 'Custo Atendimento'
+                                WHEN fc.referencia_tipo = 'taxa_nf_os' THEN 'Taxa NF OS'
+                                WHEN fc.referencia_tipo = 'taxa_nf_atendimento' THEN 'Taxa NF Atendimento'
                                 ELSE 'Custo'
                             END as categoria,
                             CASE
-                                WHEN fc.referencia_tipo = 'item_os' THEN os_fc.id
-                                WHEN fc.referencia_tipo = 'item_atendimento' THEN ae_fc.id
+                                WHEN fc.referencia_tipo = 'item_os' OR fc.referencia_tipo = 'taxa_nf_os' THEN os_fc.id
+                                WHEN fc.referencia_tipo = 'item_atendimento' OR fc.referencia_tipo = 'taxa_nf_atendimento' THEN ae_fc.id
                                 ELSE NULL
                             END as origem_id_relacionada
                       FROM fluxo_caixa fc
-                      LEFT JOIN itens_ordem_servico ios ON (
-                          (fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
-                          OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id)
-                      )
-                      LEFT JOIN ordens_servico os_fc ON ios.ordem_servico_id = os_fc.id
-                      LEFT JOIN atendimentos_externos ae_fc ON ios.atendimento_externo_id = ae_fc.id
+                      LEFT JOIN itens_ordem_servico ios_os
+                             ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios_os.id
+                      LEFT JOIN itens_ordem_servico ios_at
+                             ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios_at.id
+                      LEFT JOIN ordens_servico os_fc
+                             ON (fc.referencia_tipo = 'item_os' AND ios_os.ordem_servico_id = os_fc.id)
+                             OR (fc.referencia_tipo = 'taxa_nf_os' AND fc.os_id = os_fc.id)
+                      LEFT JOIN atendimentos_externos ae_fc
+                             ON (fc.referencia_tipo = 'item_atendimento' AND ios_at.atendimento_externo_id = ae_fc.id)
+                             OR (fc.referencia_tipo = 'taxa_nf_atendimento' AND fc.atendimento_externo_id = ae_fc.id)
                       WHERE fc.tipo = 'custo' AND DATE(fc.data) BETWEEN ? AND ?
-                      AND (fc.referencia_tipo != 'item_os' OR os_fc.status_atual_id IN ($placeholders))
+                      AND (
+                          fc.referencia_tipo NOT IN ('item_os', 'item_atendimento')
+                          OR (fc.referencia_tipo = 'item_os' AND ios_os.id IS NOT NULL AND ios_os.ativo = 1 AND os_fc.status_atual_id IN ($placeholders))
+                          OR (fc.referencia_tipo = 'item_atendimento' AND ios_at.id IS NOT NULL AND ios_at.ativo = 1 AND ae_fc.status = 'concluido')
+                      )
                       ORDER BY data_transacao DESC";
         
         $stmtSaidas = $db->prepare($sqlSaidas);
@@ -364,22 +380,40 @@ class FinanceReportService
         $pagInvalidos = (int)($stmtPag->fetchColumn() ?: 0);
 
         $sqlItensOs = "SELECT COUNT(*) FROM fluxo_caixa fc
-                       LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id
+                       LEFT JOIN itens_ordem_servico ios_os ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios_os.id
                        WHERE fc.referencia_tipo = 'item_os'
                        AND fc.data BETWEEN ? AND ?
-                       AND (ios.id IS NULL OR ios.ativo = 0)";
+                       AND (ios_os.id IS NULL OR ios_os.ativo = 0)";
         $stmtItensOs = $db->prepare($sqlItensOs);
         $stmtItensOs->execute([$dataInicio, $dataFim]);
         $itensOsInvalidos = (int)($stmtItensOs->fetchColumn() ?: 0);
 
         $sqlItensAtend = "SELECT COUNT(*) FROM fluxo_caixa fc
-                          LEFT JOIN itens_ordem_servico ios ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id
+                          LEFT JOIN itens_ordem_servico ios_at ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios_at.id
                           WHERE fc.referencia_tipo = 'item_atendimento'
                           AND fc.data BETWEEN ? AND ?
-                          AND (ios.id IS NULL OR ios.ativo = 0)";
+                          AND (ios_at.id IS NULL OR ios_at.ativo = 0)";
         $stmtItensAtend = $db->prepare($sqlItensAtend);
         $stmtItensAtend->execute([$dataInicio, $dataFim]);
         $itensAtendInvalidos = (int)($stmtItensAtend->fetchColumn() ?: 0);
+
+        $sqlTaxaNfOs = "SELECT COUNT(*) FROM fluxo_caixa fc
+                        LEFT JOIN ordens_servico os ON fc.os_id = os.id
+                        WHERE fc.referencia_tipo = 'taxa_nf_os'
+                        AND fc.data BETWEEN ? AND ?
+                        AND (os.id IS NULL OR os.ativo = 0)";
+        $stmtTaxaNfOs = $db->prepare($sqlTaxaNfOs);
+        $stmtTaxaNfOs->execute([$dataInicio, $dataFim]);
+        $taxaNfOsInvalidos = (int)($stmtTaxaNfOs->fetchColumn() ?: 0);
+
+        $sqlTaxaNfAt = "SELECT COUNT(*) FROM fluxo_caixa fc
+                        LEFT JOIN atendimentos_externos ae ON fc.atendimento_externo_id = ae.id
+                        WHERE fc.referencia_tipo = 'taxa_nf_atendimento'
+                        AND fc.data BETWEEN ? AND ?
+                        AND (ae.id IS NULL OR ae.ativo = 0)";
+        $stmtTaxaNfAt = $db->prepare($sqlTaxaNfAt);
+        $stmtTaxaNfAt->execute([$dataInicio, $dataFim]);
+        $taxaNfAtInvalidos = (int)($stmtTaxaNfAt->fetchColumn() ?: 0);
 
         $divergencias = [];
 
@@ -401,6 +435,20 @@ class FinanceReportService
             $divergencias[] = [
                 'descricao' => 'Itens de atendimento órfãos/inativos no fluxo de caixa',
                 'quantidade' => $itensAtendInvalidos
+            ];
+        }
+
+        if ($taxaNfOsInvalidos > 0) {
+            $divergencias[] = [
+                'descricao' => 'Taxas NF de OS órfãs/inativas no fluxo de caixa',
+                'quantidade' => $taxaNfOsInvalidos
+            ];
+        }
+
+        if ($taxaNfAtInvalidos > 0) {
+            $divergencias[] = [
+                'descricao' => 'Taxas NF de atendimento órfãs/inativas no fluxo de caixa',
+                'quantidade' => $taxaNfAtInvalidos
             ];
         }
 

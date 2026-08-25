@@ -58,6 +58,24 @@ class FluxoCaixa extends Model
     }
 
     /**
+     * Registra o custo de taxa NF de OS/atendimento (se ainda não existir)
+     */
+    public function registrarCustoTaxaNf(string $tipoOrigem, int $origemId, float $valor, string $data = null): bool
+    {
+        if ($valor <= 0) {
+            return true;
+        }
+        $data = $data ?? date('Y-m-d');
+        $osId = $tipoOrigem === 'os' ? $origemId : null;
+        $atendimentoId = $tipoOrigem === 'atendimento' ? $origemId : null;
+        $sql = "INSERT IGNORE INTO {$this->table} 
+                (data, os_id, atendimento_externo_id, tipo, valor, referencia_tipo, referencia_id) 
+                VALUES (?, ?, ?, 'custo', ?, 'taxa_nf_{$tipoOrigem}', ?)";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$data, $osId, $atendimentoId, $valor, $origemId]);
+    }
+
+    /**
      * Registra uma entrada de pagamento (se ainda não existir)
      */
     public function registrarEntradaPagamento(int $pagamentoId, string $tipoOrigem, int $origemId, float $valorBruto, string $data = null): bool
@@ -83,6 +101,37 @@ class FluxoCaixa extends Model
     }
 
     /**
+     * Atualiza o valor de um custo já lançado (usado quando item é editado em OS/Atend ainda aprovado/concluído com período aberto)
+     */
+    public function atualizarCusto(int $itemId, string $referenciaTipo, float $novoValor): bool
+    {
+        if ($novoValor <= 0) {
+            return $this->removerCustoGenerico($itemId, $referenciaTipo);
+        }
+        $sql = "UPDATE {$this->table} SET valor = ? WHERE referencia_tipo = ? AND referencia_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$novoValor, $referenciaTipo, $itemId]);
+    }
+
+    /**
+     * Remove custo genérico por tipo de referência + id
+     */
+    public function removerCustoGenerico(int $referenciaId, string $referenciaTipo): bool
+    {
+        $sql = "DELETE FROM {$this->table} WHERE referencia_tipo = ? AND referencia_id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$referenciaTipo, $referenciaId]);
+    }
+
+    /**
+     * Remove custo de taxa NF de OS/atendimento
+     */
+    public function removerCustoTaxaNf(string $tipoOrigem, int $origemId): bool
+    {
+        return $this->removerCustoGenerico($origemId, 'taxa_nf_' . $tipoOrigem);
+    }
+
+    /**
      * Obtém relatório de fluxo de caixa por período
      */
     public function getRelatorioPorPeriodo(string $dataInicio, string $dataFim): array
@@ -97,7 +146,8 @@ class FluxoCaixa extends Model
                            WHEN fc.os_id IS NOT NULL THEN c.nome_completo
                            WHEN fc.atendimento_externo_id IS NOT NULL THEN c_at.nome_completo
                            ELSE ''
-                       END as cliente_nome
+                       END as cliente_name,
+                       COALESCE(NULLIF(ios_os.descricao, ''), NULLIF(ios_at.descricao, '')) as item_descricao
                 FROM {$this->table} fc
                 LEFT JOIN ordens_servico os ON fc.os_id = os.id
                 LEFT JOIN atendimentos_externos ae ON fc.atendimento_externo_id = ae.id
@@ -105,14 +155,16 @@ class FluxoCaixa extends Model
                 LEFT JOIN clientes c_at ON ae.cliente_id = c_at.id
                 LEFT JOIN pagamentos_transacoes pt 
                     ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
-                LEFT JOIN itens_ordem_servico ios 
-                    ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
-                    OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id))
+                LEFT JOIN itens_ordem_servico ios_os 
+                    ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios_os.id
+                LEFT JOIN itens_ordem_servico ios_at 
+                    ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios_at.id
                 WHERE fc.data BETWEEN ? AND ?
                 AND (
                     fc.referencia_tipo NOT IN ('pagamento', 'item_os', 'item_atendimento')
                     OR (fc.referencia_tipo = 'pagamento' AND pt.id IS NOT NULL AND pt.ativo = 1)
-                    OR (fc.referencia_tipo IN ('item_os', 'item_atendimento') AND ios.id IS NOT NULL AND ios.ativo = 1)
+                    OR (fc.referencia_tipo = 'item_os' AND ios_os.id IS NOT NULL AND ios_os.ativo = 1)
+                    OR (fc.referencia_tipo = 'item_atendimento' AND ios_at.id IS NOT NULL AND ios_at.ativo = 1)
                 )
                 ORDER BY fc.data DESC, fc.id DESC";
         $stmt = $this->db->prepare($sql);
@@ -161,14 +213,16 @@ class FluxoCaixa extends Model
                 FROM {$this->table} fc
                 LEFT JOIN pagamentos_transacoes pt 
                     ON fc.referencia_tipo = 'pagamento' AND fc.referencia_id = pt.id
-                LEFT JOIN itens_ordem_servico ios 
-                    ON ((fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios.id)
-                    OR (fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios.id))
+                LEFT JOIN itens_ordem_servico ios_os 
+                    ON fc.referencia_tipo = 'item_os' AND fc.referencia_id = ios_os.id
+                LEFT JOIN itens_ordem_servico ios_at 
+                    ON fc.referencia_tipo = 'item_atendimento' AND fc.referencia_id = ios_at.id
                 WHERE fc.data BETWEEN ? AND ?
                 AND (
                     fc.referencia_tipo NOT IN ('pagamento', 'item_os', 'item_atendimento')
                     OR (fc.referencia_tipo = 'pagamento' AND pt.id IS NOT NULL AND pt.ativo = 1)
-                    OR (fc.referencia_tipo IN ('item_os', 'item_atendimento') AND ios.id IS NOT NULL AND ios.ativo = 1)
+                    OR (fc.referencia_tipo = 'item_os' AND ios_os.id IS NOT NULL AND ios_os.ativo = 1)
+                    OR (fc.referencia_tipo = 'item_atendimento' AND ios_at.id IS NOT NULL AND ios_at.ativo = 1)
                 )
                 GROUP BY fc.tipo";
         $stmt = $this->db->prepare($sql);

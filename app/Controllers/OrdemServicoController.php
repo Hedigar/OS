@@ -536,6 +536,9 @@ class OrdemServicoController extends BaseController
                 }
             }
 
+            $comprado = isset($_POST['comprado']) ? 1 : 0;
+            $dataCompra = filter_input(INPUT_POST, 'data_compra', FILTER_SANITIZE_SPECIAL_CHARS);
+
             $itemData = [
                 'ordem_servico_id' => $osId,
                 'tipo_item' => $tipo,
@@ -548,7 +551,9 @@ class OrdemServicoController extends BaseController
                 'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto,
                 'comprar_peca' => $comprarPeca,
                 'link_fornecedor' => $linkFornecedor,
-                'ativo' => 1
+                'ativo' => 1,
+                'comprado' => $comprado,
+                'data_compra' => $comprado ? ($dataCompra ?: date('Y-m-d')) : null
             ];
 
             $itemId = $this->itemModel->create($itemData);
@@ -557,13 +562,14 @@ class OrdemServicoController extends BaseController
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
 
-                // OS JÁ APROVADA: lança o custo do item NOVO imediatamente com a data da 1ª aprovação
-                if ($osJaAprovada) {
-                    $valorTotalCusto = (float)$quantidade * (float)$custo;
-                    if ($valorTotalCusto > 0) {
-                        $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                        $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataAprovacao ?: date('Y-m-d'));
-                    }
+                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                $valorTotalCusto = (float)$quantidade * (float)$custo;
+                $dataLanc = $comprado ? ($dataCompra ?: date('Y-m-d')) : null;
+
+                if ($comprado && $valorTotalCusto > 0) {
+                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataLanc);
+                } else {
+                    $fluxoCaixaModel->removerCustoGenerico($itemId, 'item_os');
                 }
 
                 $this->redirect('ordens/view?id=' . $osId);
@@ -613,13 +619,18 @@ class OrdemServicoController extends BaseController
                 return;
             }
 
+            $comprado = isset($_POST['comprado']) ? 1 : 0;
+            $dataCompra = filter_input(INPUT_POST, 'data_compra', FILTER_SANITIZE_SPECIAL_CHARS);
+
             $itemData = [
                 'quantidade' => $quantidade,
                 'custo' => $custo,
                 'valor_unitario' => $venda,
                 'valor_mao_de_obra' => $maoDeObra,
                 'desconto' => $desconto,
-                'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto
+                'valor_total' => (($venda + $maoDeObra) * $quantidade) - $desconto,
+                'comprado' => $comprado,
+                'data_compra' => $comprado ? ($dataCompra ?: date('Y-m-d')) : null
             ];
 
             if ($this->itemModel->update($itemId, $itemData)) {
@@ -627,11 +638,14 @@ class OrdemServicoController extends BaseController
                 $this->osModel->updateTotals($osId, $itens);
                 $this->osModel->update($osId, ['updated_at' => date('Y-m-d H:i:s')]);
 
-                // OS JÁ APROVADA: atualiza o valor do custo no fluxo_caixa (período ainda está aberto)
-                if ($osJaAprovada) {
-                    $novoValorCusto = (float)$quantidade * (float)$custo;
-                    $fluxoCaixaModel = new \App\Models\FluxoCaixa();
-                    $fluxoCaixaModel->atualizarCusto($itemId, 'item_os', $novoValorCusto);
+                $fluxoCaixaModel = new \App\Models\FluxoCaixa();
+                $valorTotalCusto = (float)$quantidade * (float)$custo;
+                $dataLanc = $comprado ? ($dataCompra ?: date('Y-m-d')) : null;
+
+                if ($comprado && $valorTotalCusto > 0) {
+                    $fluxoCaixaModel->registrarCustoItemOs($itemId, $osId, $valorTotalCusto, $dataLanc);
+                } else {
+                    $fluxoCaixaModel->removerCustoGenerico($itemId, 'item_os');
                 }
 
                 $this->redirect('ordens/view?id=' . $osId);

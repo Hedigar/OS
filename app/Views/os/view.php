@@ -546,6 +546,16 @@ if (!function_exists('safe_val')) {
                     <input type="url" name="link_fornecedor" id="link_fornecedor" placeholder="Cole aqui o link do fornecedor da peça..." class="form-control">
                 </div>
             </div>
+            <!-- Campos de controle de custo -->
+            <div class="mt-3 p-3 bg-tertiary rounded d-flex align-center gap-3">
+                <div class="d-flex align-center gap-2">
+                    <input type="checkbox" name="comprado" id="comprado_add" value="1" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="comprado_add" class="m-0 cursor-pointer fw-bold text-success">✅ Item Comprado?</label>
+                </div>
+                <div class="flex-1">
+                    <input type="date" name="data_compra" id="data_compra_add" class="form-control" value="<?php echo date('Y-m-d'); ?>">
+                </div>
+            </div>
         </form>
     </div>
 
@@ -560,16 +570,17 @@ if (!function_exists('safe_val')) {
                 <table>
                     <thead>
                             <tr>
-                                <th style="width: 8%;">Tipo</th>
-                                <th style="width: 25%;">Descrição</th>
-                                <th style="width: 8%; text-align: right;">Qtd</th>
-                                <th style="width: 10%; text-align: right;">Custo</th>
-                                <th style="width: 10%; text-align: right;">Vlr Unit.</th>
-                                <th style="width: 10%; text-align: right;">M. Obra</th>
-                                <th style="width: 10%; text-align: right;">Desconto</th>
-                                <th style="width: 10%; text-align: right;">Vlr Total</th>
-                                <th style="width: 10%; text-align: center;">Compra</th>
-                                <th style="width: 9%; text-align: center;">Ações</th>
+                                <th style="width: 6%;">Tipo</th>
+                                <th style="width: 22%;">Descrição</th>
+                                <th style="width: 6%; text-align: right;">Qtd</th>
+                                <th style="width: 8%; text-align: right;">Custo</th>
+                                <th style="width: 8%; text-align: right;">Vlr Unit.</th>
+                                <th style="width: 8%; text-align: right;">M. Obra</th>
+                                <th style="width: 8%; text-align: right;">Desc.</th>
+                                <th style="width: 9%; text-align: right;">Vlr Total</th>
+                                <th style="width: 12%; text-align: center;">Comprado</th>
+                                <th style="width: 10%; text-align: center;">Compra Peça</th>
+                                <th style="width: 11%; text-align: center;">Ações</th>
                             </tr>
                     </thead>
                     <tbody>
@@ -599,6 +610,10 @@ if (!function_exists('safe_val')) {
                                     </td>
                                     <td class="text-end">
                                         <input type="number" name="desconto" value="<?php echo (float)safe_val($item, 'desconto', 0); ?>" step="0.01" class="form-control form-control-sm text-end" style="width: 90px; display: inline-block;">
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="comprado" value="1" <?php echo safe_val($item, 'comprado', 0) ? 'checked' : ''; ?> title="Item comprado">
+                                        <br><input type="date" name="data_compra" value="<?php echo safe_text($item, 'data_compra', date('Y-m-d')); ?>" class="form-control form-control-sm" style="width:80px;">
                                     </td>
                                     <td class="text-end fw-bold"><?php echo formatCurrency((float)(safe_val($item, 'valor_total', 0))); ?></td>
                                     <td class="text-center">

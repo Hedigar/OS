@@ -300,8 +300,8 @@ class FinanceReportService
                       WHERE fc.tipo = 'custo' AND DATE(fc.data) BETWEEN ? AND ?
                       AND (
                           fc.referencia_tipo NOT IN ('item_os', 'item_atendimento')
-                          OR (fc.referencia_tipo = 'item_os' AND ios_os.id IS NOT NULL AND ios_os.ativo = 1 AND os_fc.status_atual_id IN ($placeholders))
-                          OR (fc.referencia_tipo = 'item_atendimento' AND ios_at.id IS NOT NULL AND ios_at.ativo = 1 AND ae_fc.status = 'concluido')
+                          OR (fc.referencia_tipo = 'item_os' AND ios_os.id IS NOT NULL AND ios_os.ativo = 1 AND ios_os.comprado = 1 AND os_fc.status_atual_id IN ($placeholders))
+                          OR (fc.referencia_tipo = 'item_atendimento' AND ios_at.id IS NOT NULL AND ios_at.ativo = 1 AND ios_at.comprado = 1 AND ae_fc.status = 'concluido')
                       )
                       ORDER BY data_transacao DESC";
         

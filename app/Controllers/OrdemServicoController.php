@@ -316,6 +316,28 @@ class OrdemServicoController extends BaseController
         $transacoes = $pgModel->findByOrigem('os', $id);
         $totalPago = $pgModel->sumByOrigem('os', $id);
 
+        // Cálculos financeiros da OS
+        $calcSomaLiquida = 0;
+        $calcSomaCusto = 0;
+        foreach ($itens as $item) {
+            if ((int)($item['comprado'] ?? 0) === 1) {
+                $qtd = (float)($item['quantidade'] ?? 0);
+                $custo = (float)($item['custo'] ?? 0);
+                $vUnit = (float)($item['valor_unitario'] ?? 0);
+                $desc = (float)($item['desconto'] ?? 0);
+                $calcSomaLiquida += ($qtd * $vUnit) - $desc;
+                $calcSomaCusto += $qtd * $custo;
+            }
+        }
+        $calcSomaBruta = $calcSomaLiquida + $calcSomaCusto;
+        $totalLiquidoRecebido = 0;
+        foreach (($transacoes ?? []) as $t) {
+            $totalLiquidoRecebido += (float)($t['valor_liquido'] ?? $t['valor_bruto'] ?? 0);
+        }
+        $custoNF = (float)($ordem['valor_taxa_nf'] ?? 0);
+        $saldo = max(0, $calcSomaLiquida - (float)$totalPago);
+        $lucroLiquidoReal = $totalLiquidoRecebido - $calcSomaCusto - $custoNF;
+
         $this->render('os/view', [
             'title' => 'Ordem de Serviço #' . $id,
             'ordem' => $ordem,
@@ -849,4 +871,41 @@ class OrdemServicoController extends BaseController
         }
         $this->redirect('ordens');
     }
+
+    public function atualizarObsCompra()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+            $obs = trim(filter_input(INPUT_POST, 'observacao', FILTER_UNSAFE_RAW) ?? '');
+            if ($id) {
+                $osAtual = $this->osModel->find($id);
+                $statusId = $osAtual['status_atual_id'] ?? 0;
+                $this->historicoModel->create([
+                    'ordem_servico_id' => $id,
+                    'status_id' => $statusId,
+                    'usuario_id' => \App\Core\Auth::id(),
+                    'observacao' => $obs ?: 'Verificação de compra atualizada via dashboard'
+                ]);
+            }
+        }
+        $this->redirect('dashboard');
+    }
+
+    public function marcarPecaComprada()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+            if ($id) {
+                $this->osModel->update($id, ['status_atual_id' => 12, 'updated_at' => date('Y-m-d H:i:s')]);
+                $this->historicoModel->create([
+                    'ordem_servico_id' => $id,
+                    'status_id' => 12,
+                    'usuario_id' => \App\Core\Auth::id(),
+                    'observacao' => 'Peça marcada como comprada via dashboard'
+                ]);
+                $this->log("Marcou peça comprada", "OS #{$id}");
+            }
+        }
+        $this->redirect('dashboard');
+}
 }

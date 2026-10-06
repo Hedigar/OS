@@ -91,8 +91,7 @@ class ClienteService
         $sqlOS = "SELECT os.id, os.created_at, os.valor_total_os, os.status_pagamento, 
                          os.defeito_relatado, os.laudo_tecnico,
                          s.nome as status_nome, s.cor as status_cor,
-                         e.modelo as equipamento_modelo,
-                         (SELECT SUM(desconto) FROM itens_ordem_servico WHERE ordem_servico_id = os.id AND ativo = 1) as valor_desconto
+                         e.modelo as equipamento_modelo
                   FROM ordens_servico os
                   JOIN status_os s ON os.status_atual_id = s.id
                   LEFT JOIN equipamentos e ON os.equipamento_id = e.id
@@ -100,7 +99,27 @@ class ClienteService
                   ORDER BY os.id DESC";
         $stmtOS = $db->prepare($sqlOS);
         $stmtOS->execute(['cid' => $clienteId]);
-        $debitosOS = $stmtOS->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $debitosOSRaw = $stmtOS->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $debitosOS = [];
+        foreach ($debitosOSRaw as $os) {
+            $osId = (int)$os['id'];
+            // Soma apenas itens marcados como comprado
+            $stmtItens = $db->prepare("SELECT valor_total, desconto FROM itens_ordem_servico WHERE ordem_servico_id = ? AND ativo = 1 AND comprado = 1");
+            $stmtItens->execute([$osId]);
+            $itens = $stmtItens->fetchAll(\PDO::FETCH_ASSOC);
+            $valorTotalComprado = 0.0;
+            $valorDescontoComprado = 0.0;
+            foreach ($itens as $it) {
+                $valorTotalComprado += (float)($it['valor_total'] ?? 0);
+                $valorDescontoComprado += (float)($it['desconto'] ?? 0);
+            }
+            if ($valorTotalComprado > 0) {
+                $os['valor_total_os'] = $valorTotalComprado;
+                $os['valor_desconto'] = $valorDescontoComprado;
+                $debitosOS[] = $os;
+            }
+        }
 
         $sqlAE = "SELECT ae.id, ae.data_agendada, ae.pagamento, ae.valor_deslocamento, ae.descricao_problema, ae.detalhes_servico
                   FROM atendimentos_externos ae

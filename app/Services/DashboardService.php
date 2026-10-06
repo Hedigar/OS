@@ -276,4 +276,45 @@ class DashboardService
             'total_pos_venda' => $totalPosVendaGeral
         ];
     }
+
+    public function getOsParaCompra(): array
+    {
+        $db = $this->osModel->getConnection();
+        $statusIds = [11,12,7,8,13]; // Comprar Peça, Aguardando Peça, Para POA, Para POA Autorizado, Em POA
+        $placeholders = implode(',', array_fill(0, count($statusIds), '?'));
+        $sql = "
+            SELECT 
+                os.id,
+                os.status_pagamento,
+                os.created_at,
+                c.nome_completo as cliente_nome,
+                s.nome as status_nome,
+                s.id as status_id,
+                COALESCE(
+                    (SELECT MAX(h.created_at) 
+                     FROM ordens_servico_status_historico h 
+                     WHERE h.ordem_servico_id = os.id AND h.status_id = os.status_atual_id),
+                    os.updated_at,
+                    os.created_at
+                ) as data_entrada_status,
+                COALESCE((
+                    SELECT GROUP_CONCAT(DISTINCT i.descricao SEPARATOR ', ')
+                    FROM itens_ordem_servico i
+                    WHERE i.ordem_servico_id = os.id AND i.ativo = 1 AND i.comprar_peca = 1
+                ), '') as pecas,
+                COALESCE((
+                    SELECT GROUP_CONCAT(DISTINCT CONCAT(i.descricao, '||', COALESCE(i.link_fornecedor,'')) SEPARATOR ';;')
+                    FROM itens_ordem_servico i
+                    WHERE i.ordem_servico_id = os.id AND i.ativo = 1 AND i.comprar_peca = 1
+                ), '') as pecas_links
+            FROM ordens_servico os
+            JOIN clientes c ON os.cliente_id = c.id
+            JOIN status_os s ON os.status_atual_id = s.id
+            WHERE os.status_atual_id IN ($placeholders) AND os.ativo = 1
+            ORDER BY data_entrada_status ASC
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($statusIds);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
 }

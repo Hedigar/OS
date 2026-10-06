@@ -24,6 +24,10 @@ class DashboardController extends BaseController
         
         $tecnicoStats = $this->service->getTecnicoStats();
         $crmSemanaStats = $this->service->getCrmSemanaStats();
+        $osParaCompra = [];
+        if (Auth::isAdmin()) {
+            $osParaCompra = $this->service->getOsParaCompra();
+        }
 
         $this->render('dashboard/index', [
             'title' => 'Dashboard',
@@ -32,7 +36,8 @@ class DashboardController extends BaseController
             'atividades' => $atividades,
             'alertas' => $alertas,
             'tecnicoStats' => $tecnicoStats,
-            'crmSemanaStats' => $crmSemanaStats
+            'crmSemanaStats' => $crmSemanaStats,
+            'osParaCompra' => $osParaCompra
         ]);
     }
 }

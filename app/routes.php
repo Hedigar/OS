@@ -119,6 +119,8 @@ $router->get('ordens/print-receipt', 'OrdemServicoController@printReceipt'); // 
 $router->get('ordens/print-payment-receipt', 'OrdemServicoController@printPaymentReceipt'); // Impressão: Recibo Pagamento (80mm)
 $router->get('ordens/print-estimate', 'OrdemServicoController@printEstimate'); // Impressão: Orçamento (OS ou Atendimento)
 $router->post('ordens/deletar', 'OrdemServicoController@destroy');
+$router->post('ordens/atualizar-obs-compra', 'OrdemServicoController@atualizarObsCompra');
+$router->post('ordens/marcar-peca-comprada', 'OrdemServicoController@marcarPecaComprada');
 $router->get('ordens/search-client', 'OrdemServicoController@searchClient'); // Busca de cliente para Autocomplete na OS
 $router->get('ordens/search-equipamentos', 'OrdemServicoController@searchEquipamentos');
 $router->get('ordens/search-items', 'OrdemServicoController@searchItems');

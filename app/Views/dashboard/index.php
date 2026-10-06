@@ -8,9 +8,88 @@ $nivel = $user['nivel_acesso'] ?? 'usuario';
 $isAdmin = Auth::isAdmin();
 $stats = $stats ?? [];
 $alertas = $alertas ?? [];
+$osParaCompra = $osParaCompra ?? [];
+
+function formatCurrency($v){ return 'R$ '.number_format((float)$v,2,',','.'); }
 ?>
 
 <div class="container-fluid px-4">
+    <?php if ($isAdmin && !empty($osParaCompra)): ?>
+    <div id="modalCompraPeca" class="modal show" style="display:block; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
+        <div class="modal-content card" style="background: var(--bg-secondary, #fff); color: var(--text-primary, #000); margin: 3% auto; padding: 20px; width: 95%; max-width: 1100px; border-radius: 8px; border: 1px solid var(--border-color, #ccc); max-height:85vh; overflow:auto;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0">🛒 O que tem que comprar • OS em Comprar Peça / POA</h3>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('modalCompraPeca').style.display='none'">Fechar</button>
+            </div>
+            <p class="text-muted small mb-3">Lista atualizada a cada acesso. Atualize a observação para registrar a checagem.</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width:70px;">OS</th>
+                            <th>Cliente</th>
+                            <th>Peças a comprar</th>
+                            <th>Status</th>
+                            <th>Pagamento</th>
+                            <th style="width:150px;">Entrada no Status</th>
+                            <th style="width:180px;">Observar / Atualizar</th>
+                            <th style="width:120px;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($osParaCompra as $os): 
+                        $dataEntrada = date('d/m/Y H:i', strtotime($os['data_entrada_status']));
+                        $statusNome = htmlspecialchars($os['status_nome'] ?? '');
+                        $statusId = (int)($os['status_id'] ?? 0);
+                        $pecasLinksRaw = $os['pecas_links'] ?? '';
+                        $linksHtml = '';
+                        if (!empty($pecasLinksRaw)) {
+                            $items = explode(';;', $pecasLinksRaw);
+                            $parts = [];
+                            foreach ($items as $it) {
+                                [$desc,$link] = array_pad(explode('||', $it,2),2,'');
+                                $descE = htmlspecialchars($desc);
+                                if (!empty($link)) {
+                                    $parts[] = '<a href="'.htmlspecialchars($link).'" target="_blank" title="Fornecedor">'.$descE.' 🔗</a>';
+                                } else {
+                                    $parts[] = $descE;
+                                }
+                            }
+                            $linksHtml = implode('<br>', $parts);
+                        }
+                    ?>
+                        <tr>
+                            <td><a href="<?php echo BASE_URL; ?>ordens/view?id=<?php echo $os['id']; ?>">#<?php echo $os['id']; ?></a></td>
+                            <td><?php echo htmlspecialchars($os['cliente_nome'] ?? ''); ?></td>
+                            <td><?php echo $linksHtml ?: htmlspecialchars($os['pecas'] ?? '—'); ?></td>
+                            <td><?php echo $statusNome; ?></td>
+                            <td><?php echo htmlspecialchars($os['status_pagamento'] ?? 'pendente'); ?></td>
+                            <td><?php echo $dataEntrada; ?></td>
+                            <td>
+                                <form method="post" action="<?php echo BASE_URL; ?>ordens/atualizar-obs-compra" class="d-flex gap-1">
+                                    <input type="hidden" name="id" value="<?php echo $os['id']; ?>">
+                                    <input type="text" name="observacao" class="form-control form-control-sm" placeholder="Atualizar / Verificar" style="width:140px;">
+                                    <button class="btn btn-sm btn-outline-primary">Salvar</button>
+                                </form>
+                            </td>
+                            <td>
+                                <?php if ($statusId === 11): ?>
+                                <form method="post" action="<?php echo BASE_URL; ?>ordens/marcar-peca-comprada" style="display:inline;">
+                                    <input type="hidden" name="id" value="<?php echo $os['id']; ?>">
+                                    <button class="btn btn-sm btn-success">Peça comprada</button>
+                                </form>
+                                <?php else: ?>
+                                <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
     <!-- CABEÇALHO E AÇÕES RÁPIDAS -->
     <div class="row mb-4 align-items-center">
         <div class="col-md-6">

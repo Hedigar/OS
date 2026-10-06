@@ -229,13 +229,18 @@ if (!function_exists('safe_val')) {
             <input type="hidden" name="ordem_servico_id" value="<?php echo $ordem['id']; ?>">
             <input type="hidden" name="produto_id" id="item_produto_id">
             <input type="hidden" name="tipo" id="item_tipo">
-            <div class="form-grid align-end" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem;">
-                <div class="form-group">
+            <div class="form-grid" style="grid-template-columns: repeat(2, minmax(0,1fr)); gap:0.75rem;">
+                <div class="form-group" style="grid-column: span 2;">
                     <label>Buscar Item</label>
                     <input type="text" id="item_search" class="form-control" placeholder="Digite o nome do item..." autocomplete="off">
                     <div id="item_results" class="autocomplete-results"></div>
                 </div>
-                <div class="form-group"><label>Descrição</label><input type="text" name="descricao" id="item_descricao" class="form-control" required readonly title="Preenchido automaticamente a partir dos itens cadastrados"></div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Descrição</label>
+                    <input type="text" name="descricao" id="item_descricao" class="form-control" required readonly title="Preenchido automaticamente a partir dos itens cadastrados">
+                </div>
+            </div>
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem; margin-top:0.5rem;">
                 <div class="form-group"><label>Qtd</label><input type="number" name="quantidade" id="item_quantidade" class="form-control" value="1" step="0.01" required></div>
                 <div class="form-group"><label>Custo</label><input type="number" name="valor_custo" id="item_custo" class="form-control" step="0.01" value="0.00"></div>
                 <div class="form-group"><label>Venda</label><input type="number" name="valor_unitario" id="item_venda" class="form-control" step="0.01" required></div>
@@ -274,8 +279,7 @@ if (!function_exists('safe_val')) {
                                 <td class="text-end"><?php echo formatCurrency((float)safe_val($item, 'valor_mao_de_obra', 0)); ?></td>
                                 <td class="text-end"><?php echo formatCurrency((float)safe_val($item, 'desconto', 0)); ?></td>
                                 <td class="text-end fw-bold"><?php echo formatCurrency((float)(safe_val($item, 'valor_total', 0))); ?></td>
-                                <td class="text-center"><?php echo (safe_val($item, 'comprado', 0) == 1) ? '<span class="badge" style="background:#2ecc71; color:#fff;">✅ Sim</span>' : '<span class="badge" style="background:#e74c3c; color:#fff;">❌ Não</span>'; ?></td>
-                                <td class="text-center"><div class="d-flex gap-1 justify-center">
+                                <td class="text-center">
                                     <form action="<?php echo BASE_URL; ?>ordens/atualizar-item" method="POST" style="display:inline;">
                                         <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
                                         <input type="hidden" name="ordem_servico_id" value="<?php echo $ordem['id']; ?>">
@@ -285,16 +289,21 @@ if (!function_exists('safe_val')) {
                                         <input type="hidden" name="valor_unitario" value="<?php echo (float)safe_val($item, 'valor_unitario', 0); ?>">
                                         <input type="hidden" name="valor_mao_de_obra" value="<?php echo (float)safe_val($item, 'valor_mao_de_obra', 0); ?>">
                                         <input type="hidden" name="desconto" value="<?php echo (float)safe_val($item, 'desconto', 0); ?>">
-                                        <input type="hidden" name="comprado" value="<?php echo (safe_val($item, 'comprado', 0) == 1) ? 1 : 0; ?>">
-                                        <input type="hidden" name="data_compra" value="<?php echo safe_text($item, 'data_compra', date('Y-m-d')); ?>">
-                                        <button type="submit" class="btn btn-sm btn-success" title="Salvar alterações">💾</button>
+                                        <div class="d-flex align-center gap-1">
+                                            <input type="hidden" name="comprado" value="0">
+                                            <input type="checkbox" name="comprado" value="1" <?php echo (safe_val($item, 'comprado', 0) == 1) ? 'checked' : ''; ?> style="width:16px;height:16px;">
+                                            <input type="date" name="data_compra" value="<?php echo safe_text($item, 'data_compra', date('Y-m-d')); ?>" style="height:28px;">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Salvar">💾</button>
+                                        </div>
                                     </form>
+                                </td>
+                                <td class="text-center">
                                     <form action="<?php echo BASE_URL; ?>ordens/remover-item" method="POST" onsubmit="return confirm('Remover este item?');" style="display:inline;">
                                         <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
                                         <input type="hidden" name="ordem_servico_id" value="<?php echo $ordem['id']; ?>">
                                         <button type="submit" class="btn btn-sm btn-danger" title="Remover item">🗑️</button>
                                     </form>
-                                </div></td>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

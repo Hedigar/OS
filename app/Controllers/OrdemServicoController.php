@@ -324,18 +324,19 @@ class OrdemServicoController extends BaseController
                 $qtd = (float)($item['quantidade'] ?? 0);
                 $custo = (float)($item['custo'] ?? 0);
                 $vUnit = (float)($item['valor_unitario'] ?? 0);
+                $maoObra = (float)($item['valor_mao_de_obra'] ?? 0);
                 $desc = (float)($item['desconto'] ?? 0);
-                $calcSomaLiquida += ($qtd * $vUnit) - $desc;
+                $calcSomaLiquida += ($qtd * ($vUnit + $maoObra)) - $desc;
                 $calcSomaCusto += $qtd * $custo;
             }
         }
         $calcSomaBruta = $calcSomaLiquida + $calcSomaCusto;
         $totalLiquidoRecebido = 0;
         foreach (($transacoes ?? []) as $t) {
-            $totalLiquidoRecebido += (float)($t['valor_liquido'] ?? $t['valor_bruto'] ?? 0);
+            $totalLiquidoRecebido += (float)($t['valor_liquido'] ?? 0);
         }
         $custoNF = (float)($ordem['valor_taxa_nf'] ?? 0);
-        $saldo = max(0, $calcSomaLiquida - (float)$totalPago);
+        $saldo = max(0, $calcSomaLiquida - $totalLiquidoRecebido);
         $lucroLiquidoReal = $totalLiquidoRecebido - $calcSomaCusto - $custoNF;
 
         $this->render('os/view', [
@@ -346,10 +347,16 @@ class OrdemServicoController extends BaseController
             'statuses' => $statuses,
             'margem_lucro' => $margemLucro,
             'transacoes' => $transacoes,
-            'total_pago' => $totalPago,
+            'totalPago' => $totalLiquidoRecebido,
             'maquinas' => $maquinasEnabled,
             'formas' => $formas,
-            'bandeiras' => $bandeiras
+            'bandeiras' => $bandeiras,
+            'calcSomaLiquida' => $calcSomaLiquida,
+            'calcSomaCusto' => $calcSomaCusto,
+            'totalLiquidoRecebido' => $totalLiquidoRecebido,
+            'custoNF' => $custoNF,
+            'saldo' => $saldo,
+            'lucroLiquidoReal' => $lucroLiquidoReal
         ]);
     }
 
